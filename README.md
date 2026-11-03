@@ -1,78 +1,41 @@
-# React + TypeScript + Vite
+# Personnel Evaluation
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A workspace for Ilia State University staff to record and track personnel
+evaluations. Each evaluation scores teaching, research and service on a 0–5
+scale, keeps a notes field, and moves from **draft** to **submitted**. Records
+are private to the account that created them.
 
-Currently, two official plugins are available:
+Built on the [Agent-Native](https://agent-native.com) framework.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Run it
 
-## React Compiler
+Requires Node 22.22+ and pnpm 10.14 (`corepack enable` provides pnpm).
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+cp .env.example .env
+# For local use without sign-in, uncomment AUTH_DISABLED=true in .env.
+pnpm install
+pnpm db:migrate     # creates the local database (PGlite) in data/
+pnpm dev            # open the URL it prints (http://localhost:5173 by default)
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+For a hosted deployment, set `BETTER_AUTH_SECRET` (and `DATABASE_URL` for
+Postgres) and run `pnpm build` then `pnpm start`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## What's in it
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- `drizzle/schema.ts`: the `evaluations` table, with range checks on scores and
+  status values.
+- `actions/`: `list-evaluations`, `create-evaluation`, `update-evaluation`,
+  `delete-evaluation`. Every action is scoped to the signed-in user.
+- `app/routes/_index.tsx`: the dashboard, evaluation list, and entry form.
+- `DESIGN.md`: the visual direction (Oxblood Academy) the UI follows.
 
-```
+## Project layout
+
+- `app/`: routes and UI components
+- `actions/`: operations shared by the UI and the app's agent
+- `server/`: server plugins and the database client
+- `drizzle/`: schema and migrations; start with `drizzle/START_HERE.md`
+
+Framework docs: [agent-native.com/docs](https://agent-native.com/docs).

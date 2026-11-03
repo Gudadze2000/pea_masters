@@ -1,18 +1,20 @@
-# Logs
+.react-router/
+.generated/
+
 logs
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
 node_modules
+build/
 dist
 dist-ssr
+.output/
+.netlify/
+.deploy-tmp/
 *.local
 
-# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -22,3 +24,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.env
+.env.*
+!.env.example
+.tmp/
+
+**/data/
+data/pglite/
+data/uploads/
+data/settings.json
+data/.sessions.json
+
+learnings.md
+
+.vercel/
+.agent-native/
+data/*.lock
