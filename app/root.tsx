@@ -6,7 +6,7 @@ import { getThemeInitScript } from "@agent-native/core/client/ui";
 import { AppProviders } from "@agent-native/toolkit/app/providers";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
 import type { LinksFunction } from "react-router";
 
 import { Layout as AppLayout } from "@/components/layout/Layout";
@@ -75,12 +75,25 @@ function DbSyncSetup() {
   return null;
 }
 
+// Guest-accessible pages skip the sign-in gate. Keep in sync with
+// `publicPaths` in server/plugins/auth.ts.
+const PUBLIC_PAGE_PREFIXES = ["/profiles", "/people", "/publication"];
+
+function isPublicPage(pathname: string) {
+  return PUBLIC_PAGE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
+  );
+}
+
 export default function Root() {
   const [queryClient] = useState(() => createAgentNativeQueryClient());
+  const { pathname } = useLocation();
+  const publicPage = isPublicPage(pathname);
   return (
     <AppToolkitProvider>
-      <AppProviders queryClient={queryClient}>
-        <DbSyncSetup />
+      <AppProviders queryClient={queryClient} isPublicPath={publicPage}>
+        {/* DbSyncSetup needs the router and a signed-in session, so guests skip it. */}
+        {publicPage ? null : <DbSyncSetup />}
         <AppLayout>
           <Outlet />
         </AppLayout>

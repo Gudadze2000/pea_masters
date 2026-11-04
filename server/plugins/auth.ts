@@ -103,9 +103,6 @@ const loginHtml = `<!doctype html>
       }
       .submit:hover { background: #6f1b28; }
       .submit:disabled { opacity: 0.6; cursor: default; }
-      .switch { margin: 16px 0 0; text-align: center; font-size: 13px; color: #5e5658; }
-      .switch a { color: #8c2433; font-weight: 500; text-decoration: none; margin-left: 4px; }
-      .switch a:hover { text-decoration: underline; }
       .note {
         margin-top: 24px; display: flex; gap: 8px;
         padding: 12px;
@@ -213,15 +210,11 @@ const loginHtml = `<!doctype html>
             </div>
 
             <button class="submit" id="submit" type="submit">Sign in</button>
-            <p class="switch">
-              <span id="switch-text">No account yet?</span>
-              <a href="#" id="switch-mode">Create one</a>
-            </p>
           </form>
-
+          <p style="margin-top:16px;text-align:center;font-size:13px"><a href="/profiles" style="color:#8c2433;font-weight:500">Continue as guest</a></p>
           <div class="note">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
-            <span>Sign in with your account. New accounts can be created here with an email and a password of at least 8 characters.</span>
+            <span>Accounts are created by an administrator. Use the email your administrator registered.</span>
           </div>
         </div>
       </main>
@@ -236,33 +229,11 @@ const loginHtml = `<!doctype html>
         var error = document.getElementById("error");
         var errorBody = document.getElementById("error-body");
 
-        var mode = "signin";
-        var switchText = document.getElementById("switch-text");
-        var switchLink = document.getElementById("switch-mode");
-        var heading = document.getElementById("form-heading");
-
-        function setMode(next) {
-          mode = next;
-          var signup = mode === "signup";
-          submit.textContent = signup ? "Create account" : "Sign in";
-          password.setAttribute("autocomplete", signup ? "new-password" : "current-password");
-          switchText.textContent = signup ? "Already have an account?" : "No account yet?";
-          switchLink.textContent = signup ? "Sign in" : "Create one";
-          if (heading) heading.textContent = signup ? "Create account" : "Sign in";
-          error.hidden = true;
-        }
-
-        switchLink.addEventListener("click", function (event) {
-          event.preventDefault();
-          setMode(mode === "signin" ? "signup" : "signin");
-        });
-
         form.addEventListener("submit", function (event) {
           event.preventDefault();
           error.hidden = true;
           submit.disabled = true;
-          var endpoint = mode === "signup" ? "/_agent-native/auth/register" : "/_agent-native/auth/login";
-          fetch(endpoint, {
+          fetch("/_agent-native/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "same-origin",
@@ -292,6 +263,8 @@ const loginHtml = `<!doctype html>
 // Email/password auth with optional Google OAuth (enabled automatically when
 // GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set).
 export default createAuthPlugin({
-  rootAuth: false, // auth is not serverd on / by default
+  rootAuth: false, // auth is not served on / by default
   loginHtml,
+  // Guest-accessible: public profile pages and their read-only actions.
+  publicPaths: ["/profiles", "/people", "/publication", "/api/public"],
 });
