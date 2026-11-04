@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LoginForm } from "./LoginForm";
 import "./LoginPage.css";
 
 function LoginPage() {
@@ -63,7 +64,8 @@ function LoginPage() {
                    {l.toUpperCase()}
                    </button>
                ))}
-               </div> 
+               </div>
+                <LoginForm />
                 
             </section>
 

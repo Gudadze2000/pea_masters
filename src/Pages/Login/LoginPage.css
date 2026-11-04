@@ -101,3 +101,52 @@
     gap: 0.75rem;
   }
 }
+
+/* Form adapted from giorgiKekelidze server/plugins/auth.ts. */
+      .login-content .card { width: 400px; max-width: 100%; }
+      .login-content .card h2 { margin: 0; font-size: 24px; font-weight: 600; line-height: 32px; }
+      .login-content .card .lead { margin: 6px 0 0; color: #5e5658; }
+      .login-content .field { margin-top: 24px; }
+      .login-content .field label { display: block; font-size: 13px; font-weight: 500; line-height: 20px; color: #443d3f; }
+      .login-content .input-wrap { position: relative; margin-top: 6px; }
+      .login-content .input-wrap svg {
+        position: absolute; left: 13px; top: 12px;
+        width: 16px; height: 16px; color: #7c7476; pointer-events: none;
+      }
+      .login-content .input-wrap input {
+        width: 100%; height: 40px; padding: 0 12px 0 37px;
+        border: 1px solid #cfc9ca; border-radius: 8px;
+        background: #ffffff; color: #1e1a1b;
+        font: inherit; font-size: 14px;
+        outline: none;
+      }
+      .login-content .input-wrap input::placeholder { color: #a79fa1; }
+      .login-content .input-wrap input:focus { border-color: #8c2433; box-shadow: 0 0 0 3px #fbf2f3; }
+      .login-content .submit {
+        margin-top: 24px; width: 100%; height: 40px;
+        border: 0; border-radius: 8px;
+        background: #8c2433; color: #ffffff;
+        font: inherit; font-size: 14px; font-weight: 500;
+        cursor: pointer;
+      }
+      .login-content .submit:hover { background: #6f1b28; }
+      .login-content .submit:disabled { opacity: 0.6; cursor: default; }
+      .login-content .note {
+        margin-top: 24px; display: flex; gap: 8px;
+        padding: 12px;
+        border-radius: 10px;
+        background: #f7f5f5;
+        color: #5e5658; font-size: 12px; font-weight: 500; line-height: 16px;
+      }
+      .login-content .note svg, .login-content .banner svg { flex: 0 0 16px; width: 16px; height: 16px; margin-top: 0; }
+      .login-content .banner {
+        display: flex; gap: 12px;
+        padding: 16px;
+        margin-top: 24px;
+        border-radius: 10px;
+        background: #fbe7e7;
+        color: #5e5658;
+      }
+      .login-content .banner svg { color: #b42b2b; width: 20px; height: 20px; flex-basis: 20px; }
+      .login-content .banner strong { display: block; font-size: 14px; font-weight: 500; color: #b42b2b; }
+      .login-content .banner p { margin: 4px 0 0; font-size: 13px; line-height: 20px; }
