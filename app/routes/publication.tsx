@@ -47,13 +47,13 @@ export default function PublicationPage() {
         ) : query.isError ? (
           <p className="mt-6 text-sm text-destructive">Could not load this publication. Please refresh.</p>
         ) : !data ? (
-          <div className="mt-6 rounded-[10px] border border-dashed border-border px-8 py-14 text-center">
-            <h1 className="text-base font-semibold">Publication not available</h1>
+          <div className="mt-6 rounded-lg border border-dashed border-border px-8 py-14 text-center">
+            <h1 className="text-h3">Publication not available</h1>
             <p className="mt-2 text-sm text-muted-foreground">It was removed, or its owner's profile is private.</p>
           </div>
         ) : (
           <>
-            <h1 className="mt-6 text-2xl font-semibold tracking-tight">{data.publication.title}</h1>
+            <h1 className="mt-6 text-h1">{data.publication.title}</h1>
             <dl className="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
               <Detail label="Year" value={String(data.publication.year)} />
               <Detail label="Type" value={data.publication.type} />

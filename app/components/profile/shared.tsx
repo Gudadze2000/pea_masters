@@ -12,7 +12,7 @@ export const PUBLICATION_TYPES = [
 ];
 
 export const inputClass =
-  "h-10 w-full rounded-[8px] border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30";
+  "h-control w-full rounded-md border border-input bg-card px-3 text-sm placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30";
 
 export function useSignedIn() {
   const me = useActionQuery("get-my-profile", {});
@@ -32,10 +32,10 @@ export function AppBar({ title }: { title?: string }) {
   return (
     <header className="flex items-center justify-between gap-4 border-b border-border px-6 py-4 lg:px-10">
       <div className="flex min-w-0 items-center gap-4">
-        <Link to="/" className="shrink-0 rounded-[8px] border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent">
+        <Link to="/" className="shrink-0 rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent">
           {signedIn ? "← Home" : "← Sign in"}
         </Link>
-        {title && <h1 className="truncate text-base font-semibold tracking-tight">{title}</h1>}
+        {title && <h1 className="truncate text-h3 tracking-tight">{title}</h1>}
       </div>
       <nav className="flex shrink-0 items-center gap-4 text-sm">
         {!onResearchers && (
@@ -69,7 +69,7 @@ export function PublicationList({
   return (
     <ul className="flex flex-col gap-3">
       {items.map((p) => (
-        <li key={p.id} className="flex items-start justify-between gap-4 rounded-[10px] border border-border bg-card px-5 py-4">
+        <li key={p.id} className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card px-5 py-4">
           <div className="min-w-0">
             {linkTitles ? (
               <Link to={`/publication?id=${encodeURIComponent(p.id)}`} className="text-sm font-semibold hover:text-primary hover:underline">

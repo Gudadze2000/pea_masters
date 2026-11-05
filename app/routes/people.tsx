@@ -67,8 +67,8 @@ export default function PublicProfilePage() {
         ) : query.isError ? (
           <p className="mt-6 text-sm text-destructive">Could not load this profile. Please refresh.</p>
         ) : !data ? (
-          <div className="mt-6 rounded-[10px] border border-dashed border-border px-8 py-14 text-center">
-            <h1 className="text-base font-semibold">Profile not available</h1>
+          <div className="mt-6 rounded-lg border border-dashed border-border px-8 py-14 text-center">
+            <h1 className="text-h3">Profile not available</h1>
             <p className="mt-2 text-sm text-muted-foreground">This profile does not exist or is private.</p>
           </div>
         ) : (
@@ -81,7 +81,7 @@ export default function PublicProfilePage() {
                   className="h-24 w-24 rounded-full object-cover"
                 />
               ) : null}
-              <h1 className="text-2xl font-semibold tracking-tight">{fullName(data.profile)}</h1>
+              <h1 className="text-h1">{fullName(data.profile)}</h1>
             </div>
             <dl className="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
               <Detail label="University" value={data.profile.university} />
@@ -92,7 +92,7 @@ export default function PublicProfilePage() {
 
             {data.profile.bio && (
               <section className="mt-8">
-                <h2 className="text-base font-semibold">Biography</h2>
+                <h2 className="text-h3">Biography</h2>
                 <p className="mt-2 whitespace-pre-line text-sm leading-[22px]">{data.profile.bio}</p>
               </section>
             )}
@@ -102,10 +102,10 @@ export default function PublicProfilePage() {
               if (items.length === 0) return null;
               return (
                 <section key={sec} className="mt-8">
-                  <h2 className="text-base font-semibold">{SECTION_LABELS[sec]}</h2>
+                  <h2 className="text-h3">{SECTION_LABELS[sec]}</h2>
                   <ul className="mt-3 flex flex-col gap-3">
                     {items.map((e) => (
-                      <li key={e.id} className="rounded-[10px] border border-border bg-card px-5 py-4">
+                      <li key={e.id} className="rounded-lg border border-border bg-card px-5 py-4">
                         <p className="text-sm font-semibold">{e.title}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {[categoryLabel(e.category), e.role, e.organisation, e.period].filter(Boolean).join(" · ")}
@@ -134,7 +134,7 @@ export default function PublicProfilePage() {
             })}
 
             <section className="mt-8">
-              <h2 className="text-base font-semibold">Publications ({data.publications.length})</h2>
+              <h2 className="text-h3">Publications ({data.publications.length})</h2>
               <div className="mt-4">
                 <PublicationList items={data.publications} emptyText="No publications listed." linkTitles />
               </div>

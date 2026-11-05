@@ -71,7 +71,7 @@ export default function MyProfile() {
         <div className="flex flex-col gap-8">
           <AddPublicationCard onAdded={() => query.refetch()} />
           <section>
-            <h2 className="mb-4 text-base font-semibold">Publications ({data.publications.length})</h2>
+            <h2 className="mb-4 text-h3">Publications ({data.publications.length})</h2>
             <PublicationList
               items={data.publications}
               emptyText="No publications yet. Add one above."
@@ -81,7 +81,7 @@ export default function MyProfile() {
           </section>
           {data.deleted.length > 0 && (
             <section>
-              <h2 className="mb-4 text-base font-semibold text-muted-foreground">Removed from profile</h2>
+              <h2 className="mb-4 text-h3 text-muted-foreground">Removed from profile</h2>
               <p className="mb-3 text-xs text-muted-foreground">
                 Restore a publication to show it again, or delete it permanently. Permanent deletion cannot be undone.
               </p>
@@ -131,19 +131,19 @@ function VisibilityCard({ profile, onChanged }: { profile: Profile; onChanged: (
   };
 
   return (
-    <section className="rounded-[12px] border border-border bg-card p-6">
-      <h2 className="text-base font-semibold">Profile visibility</h2>
+    <section className="rounded-xl border border-border bg-card p-6 shadow-card">
+      <h2 className="text-h3">Profile visibility</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         {profile.isPublic
           ? "Public: anyone, including guests who are not signed in, can see your profile and publications."
           : "Private: only you can see your profile and publications."}
       </p>
-      <div className="mt-4 inline-flex rounded-[8px] border border-border p-1">
+      <div className="mt-4 inline-flex rounded-md border border-border p-1">
         <button
           type="button"
           disabled={update.isPending}
           onClick={() => setPublic(false)}
-          className={`rounded-[6px] px-4 py-1.5 text-sm ${!profile.isPublic ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+          className={`rounded-sm px-4 py-1.5 text-sm ${!profile.isPublic ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
         >
           Private
         </button>
@@ -151,7 +151,7 @@ function VisibilityCard({ profile, onChanged }: { profile: Profile; onChanged: (
           type="button"
           disabled={update.isPending}
           onClick={() => setPublic(true)}
-          className={`rounded-[6px] px-4 py-1.5 text-sm ${profile.isPublic ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+          className={`rounded-sm px-4 py-1.5 text-sm ${profile.isPublic ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
         >
           Public
         </button>
@@ -212,8 +212,8 @@ function DetailsCard({ profile, onSaved }: { profile: Profile; onSaved: () => vo
   };
 
   return (
-    <section className="rounded-[12px] border border-border bg-card p-6">
-      <h2 className="text-base font-semibold">Details</h2>
+    <section className="rounded-xl border border-border bg-card p-6 shadow-card">
+      <h2 className="text-h3">Details</h2>
       <p className="mt-1 text-xs text-muted-foreground">Shown on your public profile when it's set to Public.</p>
       <form onSubmit={save} className="mt-4 flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
@@ -284,8 +284,8 @@ function AddPublicationCard({ onAdded }: { onAdded: () => void }) {
   };
 
   return (
-    <section className="rounded-[12px] border border-border bg-card p-6">
-      <h2 className="text-base font-semibold">Add a publication</h2>
+    <section className="rounded-xl border border-border bg-card p-6 shadow-card">
+      <h2 className="text-h3">Add a publication</h2>
       <form onSubmit={submit} className="mt-4 flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm font-medium">
           Title
@@ -432,8 +432,8 @@ function PhotoCard() {
 
   const busy = setPhoto.isPending || removePhoto.isPending;
   return (
-    <section className="rounded-[12px] border border-border bg-card p-6">
-      <h2 className="text-base font-semibold">Profile photo</h2>
+    <section className="rounded-xl border border-border bg-card p-6 shadow-card">
+      <h2 className="text-h3">Profile photo</h2>
       <p className="mt-1 text-xs text-muted-foreground">JPEG, PNG or WebP, up to {MAX_PHOTO_MB} MB. Shown on your public profile when it's public.</p>
       <div className="mt-4 flex items-center gap-5">
         {dataUrl ? (
@@ -442,7 +442,7 @@ function PhotoCard() {
           <div className="flex h-24 w-24 items-center justify-center rounded-full bg-accent text-xs text-muted-foreground">No photo</div>
         )}
         <div className="flex flex-col gap-2">
-          <label className={`inline-flex cursor-pointer items-center justify-center rounded-[8px] bg-primary px-3 py-2 text-xs font-medium text-primary-foreground ${busy ? "opacity-60" : ""}`}>
+          <label className={`inline-flex cursor-pointer items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground ${busy ? "opacity-60" : ""}`}>
             {dataUrl ? "Change photo" : "Upload photo"}
             <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={busy} onChange={(e) => pick(e.target.files?.[0])} />
           </label>

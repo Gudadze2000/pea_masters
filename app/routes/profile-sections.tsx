@@ -74,13 +74,13 @@ export default function ProfileSectionsPage() {
       <AppBar title="Edit profile content" />
 
       <main className="mx-auto max-w-3xl p-6 lg:p-10">
-        <div className="inline-flex rounded-[8px] border border-border p-1">
+        <div className="inline-flex rounded-md border border-border p-1">
           {SECTIONS.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => { setSection(s); setEditing(null); setAdding(false); }}
-              className={`rounded-[6px] px-4 py-1.5 text-sm ${section === s ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              className={`rounded-sm px-4 py-1.5 text-sm ${section === s ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
             >
               {s === "professional" ? "Professional" : s === "teaching" ? "Teaching" : "Research"}
             </button>
@@ -94,7 +94,7 @@ export default function ProfileSectionsPage() {
             <p className="mt-1 text-xs text-muted-foreground">Read-only. Only the person who shared these can change them.</p>
             <ul className="mt-3 flex flex-col gap-3">
               {sharedWithMe.map((e) => (
-                <li key={`${e.id}-shared`} className="rounded-[10px] border border-dashed border-border bg-card px-5 py-4">
+                <li key={`${e.id}-shared`} className="rounded-lg border border-dashed border-border bg-card px-5 py-4">
                   <p className="text-sm font-semibold">{e.title}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {[categoryLabel(e.category), e.role, e.period].filter(Boolean).join(" · ")} · Shared by {e.ownerName}
@@ -185,7 +185,7 @@ function EntryRow({
   };
 
   return (
-    <li className="rounded-[10px] border border-border bg-card px-5 py-4">
+    <li className="rounded-lg border border-border bg-card px-5 py-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-sm font-semibold">{entry.title}</p>
@@ -193,7 +193,7 @@ function EntryRow({
             {[categoryLabel(entry.category), entry.role, entry.organisation, entry.period].filter(Boolean).join(" · ")}
           </p>
         </div>
-        <span className={`shrink-0 rounded-[8px] border px-2.5 py-1 text-xs ${entry.visible ? "border-primary/30 text-primary" : "border-border text-muted-foreground"}`}>
+        <span className={`shrink-0 rounded-md border px-2.5 py-1 text-xs ${entry.visible ? "border-primary/30 text-primary" : "border-border text-muted-foreground"}`}>
           {entry.visible ? "Shown" : "Hidden"}
         </span>
       </div>
@@ -347,8 +347,8 @@ function EntryForm({
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4 rounded-[12px] border border-border bg-card p-6">
-      <h2 className="text-base font-semibold">{initial ? "Edit entry" : "New entry"}</h2>
+    <form onSubmit={submit} className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-card">
+      <h2 className="text-h3">{initial ? "Edit entry" : "New entry"}</h2>
       <label className="flex flex-col gap-1.5 text-sm font-medium">
         Category
         <select className={inputClass} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>

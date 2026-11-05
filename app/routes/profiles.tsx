@@ -58,7 +58,7 @@ export default function ProfilesDirectory() {
               <li key={p.ownerEmail}>
                 <Link
                   to={`/people?email=${encodeURIComponent(p.ownerEmail)}`}
-                  className="flex gap-4 rounded-[10px] border border-border bg-card px-5 py-4 hover:border-primary/40 hover:bg-accent"
+                  className="flex gap-4 rounded-lg border border-border bg-card px-5 py-4 hover:border-primary/40 hover:bg-accent"
                 >
                   {p.hasPhoto ? (
                     <img

@@ -40,7 +40,7 @@ export default function HomeRoute() {
       </header>
 
       <main className="mx-auto max-w-4xl p-6 lg:p-10">
-        <h1 className="text-2xl font-semibold tracking-tight">{name ? `Welcome, ${name}` : "Welcome"}</h1>
+        <h1 className="text-h1">{name ? `Welcome, ${name}` : "Welcome"}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {data
             ? data.profile.isPublic
@@ -54,9 +54,9 @@ export default function HomeRoute() {
             <Link
               key={c.to}
               to={c.to}
-              className="rounded-[12px] border border-border bg-card p-6 hover:border-primary/40 hover:bg-accent"
+              className="rounded-xl border border-border bg-card p-6 shadow-card hover:border-primary/40 hover:bg-accent"
             >
-              <h2 className="text-base font-semibold">{c.title}</h2>
+              <h2 className="text-h3">{c.title}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{c.text}</p>
             </Link>
           ))}

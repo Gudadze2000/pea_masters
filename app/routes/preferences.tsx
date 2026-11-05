@@ -118,8 +118,8 @@ function PreferencesForm({ initial }: { initial: Prefs }) {
           role={message.kind === "error" ? "alert" : "status"}
           className={
             message.kind === "error"
-              ? "rounded-[8px] border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-              : "rounded-[8px] border border-primary/30 bg-accent px-3 py-2 text-sm text-primary"
+              ? "rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+              : "rounded-md border border-primary/30 bg-accent px-3 py-2 text-sm text-primary"
           }
         >
           {message.kind === "ok" ? "✓ " : ""}{message.text}
@@ -134,8 +134,8 @@ function PreferencesForm({ initial }: { initial: Prefs }) {
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-[12px] border border-border bg-card p-6">
-      <h2 className="text-base font-semibold">{title}</h2>
+    <section className="rounded-xl border border-border bg-card p-6 shadow-card">
+      <h2 className="text-h3">{title}</h2>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       <div className="mt-4">{children}</div>
     </section>

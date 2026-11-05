@@ -96,16 +96,16 @@ export default function HomeRoute() {
             PEA
           </div>
           <div>
-            <p className="text-[15px] font-semibold leading-[22px]">Personnel Evaluation</p>
-            <p className="text-xs font-medium leading-4 text-[#E9BFC5]">Ilia State University</p>
+            <p className="text-h3">Personnel Evaluation</p>
+            <p className="text-caption text-brand-200">Ilia State University</p>
           </div>
         </div>
 
         <div>
-          <h1 className="text-[32px] font-semibold leading-10 tracking-tight">
+          <h1 className="text-display">
             Evaluations, reviewed on time.
           </h1>
-          <p className="mt-4 max-w-md text-sm leading-[22px] text-[#E9BFC5]">
+          <p className="mt-4 max-w-md text-sm leading-[22px] text-brand-200">
             Score teaching, research and service on a five-point scale, keep drafts
             until a cycle closes, and submit when each record is final.
           </p>
@@ -116,7 +116,7 @@ export default function HomeRoute() {
           </dl>
         </div>
 
-        <p className="text-xs text-[#E9BFC5]">Scores run from 0 (none) to 5 (exemplary).</p>
+        <p className="text-xs text-brand-200">Scores run from 0 (none) to 5 (exemplary).</p>
       </aside>
 
       {/* Work panel */}
@@ -128,7 +128,7 @@ export default function HomeRoute() {
             </div>
             <p className="text-sm font-semibold">Personnel Evaluation</p>
           </div>
-          <h2 className="hidden text-2xl font-semibold tracking-tight lg:block">
+          <h2 className="hidden text-h1 lg:block">
             {showForm ? (editing ? "Edit evaluation" : "New evaluation") : "Evaluations"}
           </h2>
           <div className="flex items-center gap-2">
@@ -166,7 +166,7 @@ export default function HomeRoute() {
                   <button
                     type="button"
                     onClick={() => setEditingId(e.id)}
-                    className="flex w-full items-center justify-between gap-4 rounded-[10px] border border-border bg-card px-5 py-4 text-left transition-colors hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex w-full items-center justify-between gap-4 rounded-lg border border-border bg-card px-5 py-4 text-left transition-colors hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{e.employeeName}</p>
@@ -182,8 +182,8 @@ export default function HomeRoute() {
                       <span
                         className={
                           e.status === "submitted"
-                            ? "rounded-[8px] border border-primary/30 bg-accent px-2.5 py-1 text-xs font-medium text-primary"
-                            : "rounded-[8px] border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                            ? "rounded-md border border-primary/30 bg-accent px-2.5 py-1 text-xs font-medium text-primary"
+                            : "rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground"
                         }
                       >
                         {e.status === "submitted" ? "Submitted" : "Draft"}
@@ -203,19 +203,19 @@ export default function HomeRoute() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-[#E9BFC5]">{label}</dt>
-      <dd className="mt-1 text-[32px] font-semibold leading-10 tabular-nums">{value}</dd>
+      <dt className="text-xs font-medium text-brand-200">{label}</dt>
+      <dd className="mt-1 text-display tabular-nums">{value}</dd>
     </div>
   );
 }
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center rounded-[10px] border border-dashed border-border px-8 py-14 text-center">
+    <div className="mx-auto flex max-w-md flex-col items-center rounded-lg border border-dashed border-border px-8 py-14 text-center">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-lg font-semibold text-primary">
         0
       </div>
-      <h3 className="text-base font-semibold">No evaluations yet</h3>
+      <h3 className="text-h3">No evaluations yet</h3>
       <p className="mt-2 text-sm text-muted-foreground">
         Start your first record. Drafts stay private to you until you submit them.
       </p>
@@ -288,11 +288,11 @@ function EvaluationForm({
   };
 
   const inputClass =
-    "h-10 w-full rounded-[8px] border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30";
+    "h-control w-full rounded-md border border-input bg-card px-3 text-sm placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30";
 
   return (
-    <div className="mx-auto w-full max-w-[400px] rounded-[12px] border border-border bg-card p-8">
-      <h3 className="text-2xl font-semibold leading-8 tracking-tight">
+    <div className="mx-auto w-full max-w-[400px] rounded-xl border border-border bg-card p-8">
+      <h3 className="text-h1">
         {initial ? initial.employeeName : "Evaluation details"}
       </h3>
       <p className="mt-1 text-sm text-muted-foreground">
@@ -321,7 +321,7 @@ function EvaluationForm({
           <input className={inputClass} value={form.cycle} onChange={(e) => set("cycle", e.target.value)} placeholder="2026 Spring" />
         </Field>
 
-        <fieldset className="flex flex-col gap-4 rounded-[10px] border border-border p-4">
+        <fieldset className="flex flex-col gap-4 rounded-lg border border-border p-4">
           <legend className="px-1 text-xs font-medium text-muted-foreground">Scores (0–5)</legend>
           {SCORE_FIELDS.map((f) => (
             <div key={f.key}>
@@ -360,7 +360,7 @@ function EvaluationForm({
         </Field>
 
         {error && (
-          <p role="alert" className="rounded-[8px] border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}

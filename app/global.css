@@ -5,6 +5,90 @@
 
 @source "./**/*.{ts,tsx}";
 
+/* ---------- PEA design tokens (from the team's shared stylesheet) ----------
+   Raw palette, type scale, shadows and sizes become Tailwind utilities:
+   bg-brand-600, text-neutral-500, text-h1, text-body, shadow-card, h-control ...
+   Semantic variables further down (--primary, --background ...) stay in HSL channel
+   form because the framework's own CSS reads them as hsl(var(--x)). */
+@theme {
+  --color-brand-50:  #FBF2F3;
+  --color-brand-100: #F5E1E4;
+  --color-brand-200: #E9BFC5;
+  --color-brand-500: #A63446;
+  --color-brand-600: #8C2433;
+  --color-brand-700: #6F1B28;
+
+  --color-neutral-0:   #FFFFFF;
+  --color-neutral-25:  #FCFBFB;
+  --color-neutral-50:  #F7F5F5;
+  --color-neutral-100: #EFECEC;
+  --color-neutral-200: #E3DFDF;
+  --color-neutral-300: #CFC9CA;
+  --color-neutral-400: #A79FA1;
+  --color-neutral-500: #7C7476;
+  --color-neutral-600: #5E5658;
+  --color-neutral-700: #443D3F;
+  --color-neutral-900: #1E1A1B;
+
+  --color-success-50:  #E6F4EC;
+  --color-success-600: #1E7A4C;
+  --color-warning-50:  #FDF2DC;
+  --color-warning-600: #A8680B;
+  --color-danger-50:   #FBE7E7;
+  --color-danger-600:  #B42B2B;
+  --color-info-50:     #E4EEF9;
+  --color-info-600:    #2A62A8;
+
+  --text-display: 32px;
+  --text-display--line-height: 40px;
+  --text-display--font-weight: 600;
+  --text-h1: 24px;
+  --text-h1--line-height: 32px;
+  --text-h1--font-weight: 600;
+  --text-h2: 18px;
+  --text-h2--line-height: 26px;
+  --text-h2--font-weight: 600;
+  --text-h3: 15px;
+  --text-h3--line-height: 22px;
+  --text-h3--font-weight: 600;
+  --text-body: 14px;
+  --text-body--line-height: 22px;
+  --text-small: 13px;
+  --text-small--line-height: 20px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+  --text-overline: 11px;
+  --text-overline--line-height: 16px;
+  --text-overline--letter-spacing: 0.06em;
+  --text-overline--font-weight: 600;
+
+  --shadow-card:  0 2px 8px rgb(31 26 26 / 0.07);
+  --shadow-modal: 0 12px 32px rgb(31 26 26 / 0.18);
+
+  --spacing-sidebar: 264px;
+  --spacing-topbar: 64px;
+  --spacing-control: 40px;
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", "Inter", "Noto Sans Georgian", ui-sans-serif, system-ui, sans-serif;
+
+  /* Radii: 6 / 8 buttons+inputs / 10 / 12 banners / 14 cards / 16 modals */
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  10px;
+  --radius-xl:  12px;
+  --radius-2xl: 14px;
+  --radius-3xl: 16px;
+
+  /* Status colours as utilities: bg-success-soft, text-success, ... */
+  --color-success: var(--color-success-600);  --color-success-soft: var(--color-success-50);
+  --color-warning: var(--color-warning-600);  --color-warning-soft: var(--color-warning-50);
+  --color-info:    var(--color-info-600);     --color-info-soft:    var(--color-info-50);
+  --color-danger:  var(--color-danger-600);   --color-danger-soft:  var(--color-danger-50);
+}
+
 :root {
   --background: 0 0% 100%;
   --foreground: 0 0% 10%;
@@ -282,53 +366,76 @@
   background: hsl(var(--muted-foreground) / 0.34);
 }
 
-/* Oxblood Academy palette (see DESIGN.md). Warm neutrals with a pink-brown
-   undertone; oxblood as the single accent for both light and dark. */
+/* PEA palette applied to the semantic variables. HSL channel form on purpose. */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 330 8% 10%;
+  --radius: 0.625rem;
+  --background: 0 11.1% 96.5%;
+  --foreground: 345 7.1% 11%;
   --card: 0 0% 100%;
-  --card-foreground: 330 8% 10%;
+  --card-foreground: 345 7.1% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 330 8% 10%;
-  --primary: 351 61% 27%;
+  --popover-foreground: 345 7.1% 11%;
+  --primary: 351.3 59.1% 34.5%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 330 10% 96%;
-  --secondary-foreground: 330 8% 15%;
-  --muted: 330 10% 96%;
-  --muted-foreground: 330 4% 40%;
-  --accent: 351 40% 96%;
-  --accent-foreground: 351 61% 27%;
-  --destructive: 0 62% 42%;
+  --secondary: 0 8.6% 93.1%;
+  --secondary-foreground: 345 7.1% 11%;
+  --muted: 0 8.6% 93.1%;
+  --muted-foreground: 345 3.3% 47.1%;
+  --accent: 353.3 52.9% 96.7%;
+  --accent-foreground: 350.7 60.9% 27.1%;
+  --destructive: 0 61.4% 43.7%;
   --destructive-foreground: 0 0% 100%;
-  --border: 330 8% 89%;
-  --input: 330 8% 89%;
-  --ring: 351 61% 27%;
-  --radius: 0.5rem;
+  --border: 0 6.7% 88.2%;
+  --input: 350 5.9% 80%;
+  --ring: 350.5 52.3% 42.7%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 342.9 5.4% 25.3%;
+  --sidebar-primary: 351.3 59.1% 34.5%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 353.3 52.9% 96.7%;
+  --sidebar-accent-foreground: 350.7 60.9% 27.1%;
+  --sidebar-border: 0 6.7% 88.2%;
+  --sidebar-ring: 350.5 52.3% 42.7%;
 }
 
+/* Derived dark fallback (the design file defines no dark theme). */
 .dark {
-  --background: 330 6% 9%;
-  --foreground: 330 20% 96%;
-  --card: 330 6% 12%;
-  --card-foreground: 330 20% 96%;
-  --popover: 330 6% 12%;
-  --popover-foreground: 330 20% 96%;
-  --primary: 351 55% 46%;
+  --background: 345 7.1% 11%;
+  --foreground: 0 11.1% 96.5%;
+  --card: 342.9 5.4% 25.3%;
+  --card-foreground: 0 11.1% 96.5%;
+  --popover: 342.9 5.4% 25.3%;
+  --popover-foreground: 0 11.1% 96.5%;
+  --primary: 350.5 52.3% 42.7%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 330 6% 16%;
-  --secondary-foreground: 330 20% 96%;
-  --muted: 330 6% 16%;
-  --muted-foreground: 330 6% 65%;
-  --accent: 330 6% 18%;
-  --accent-foreground: 330 20% 96%;
-  --destructive: 0 70% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 330 6% 22%;
-  --input: 330 6% 22%;
-  --ring: 351 55% 46%;
+  --secondary: 342.9 5.4% 25.3%;
+  --secondary-foreground: 0 11.1% 96.5%;
+  --muted: 342.9 5.4% 25.3%;
+  --muted-foreground: 345 4.3% 63.9%;
+  --accent: 342.9 5.4% 25.3%;
+  --accent-foreground: 0 11.1% 96.5%;
+  --destructive: 0 61.4% 43.7%;
+  --border: 345 4.4% 35.3%;
+  --input: 345 4.4% 35.3%;
+  --ring: 350.5 52.3% 42.7%;
+  --sidebar-background: 342.9 5.4% 25.3%;
+  --sidebar-foreground: 0 11.1% 96.5%;
+  --sidebar-primary: 350.5 52.3% 42.7%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 345 4.4% 35.3%;
+  --sidebar-accent-foreground: 0 11.1% 96.5%;
+  --sidebar-border: 345 4.4% 35.3%;
+  --sidebar-ring: 350.5 52.3% 42.7%;
 }
 
-body {
-  font-family: Inter, "Noto Sans Georgian", ui-sans-serif, system-ui, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply text-body antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
 }
