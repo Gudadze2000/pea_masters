@@ -1,5 +1,7 @@
 import { useState, type CSSProperties, type ReactNode } from "react"
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { useNavigate } from "react-router"
+import { SidebarProvider } from "@/components/ui/sidebar"
+import { AppTopbar } from "@/components/layout/AppTopbar"
 import { AppSidebar, DashboardIcon as Icon } from "@/components/ui/app-sidebar"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -32,22 +34,14 @@ function NotificationList() {
   return <div className="notification-list">{notifications.map(item => <div className="notification-row" key={item.title}><span className={`icon-tile ${item.tone}`}><Icon name={item.icon} /></span><div><p>{item.title}</p><small>{item.detail}</small></div></div>)}</div>
 }
 export function HomePage() {
-  const [language, setLanguage] = useState("EN")
+  const navigate = useNavigate()
   const [panel, setPanel] = useState<string | null>(null)
   const open = (name: string) => { if (name !== "Dashboard") setPanel(name) }
   return (
     <SidebarProvider style={{ "--sidebar-width": "264px" } as CSSProperties}>
       <AppSidebar onNavigate={open} />
       <main className="dashboard-main">
-        <header className="dashboard-topbar">
-          <div className="topbar-title"><SidebarTrigger /><span>Dashboard</span></div>
-          <div className="topbar-actions">
-            <span className="faculty-pill"><Icon name="imgIconBuilding" />Natural Sciences &amp; Medicine</span>
-            <div className="language-switch" aria-label="Language">{["KA", "EN"].map(lang => <button key={lang} aria-pressed={language === lang} onClick={() => setLanguage(lang)}>{lang}</button>)}</div>
-            <button className="notification-button" aria-label="Open notifications" onClick={() => open("Notifications")}><Icon name="imgNotifications" /></button>
-            <button className="dashboard-avatar" aria-label="Open my profile" onClick={() => open("My profile")}>NB</button>
-          </div>
-        </header>
+        <AppTopbar onNavigate={open}><span>Dashboard</span></AppTopbar>
         <div className="dashboard-content">
           <div className="page-heading"><div><h1>Good evening, Nino</h1><p>Biology · Associate Professor · Faculty of Natural Sciences and Medicine</p></div><Button variant="outline" className="dashboard-button" onClick={() => open("Download CV")}><Icon name="imgIconDownload" />Download CV</Button></div>
           <section className="evaluation-banner"><Icon name="imgIconAlert" /><div><p>Evaluation 2025–2026 is open — your form is still a draft</p><small>Submit before 30 November 2026. You will get an email reminder as the deadline approaches.</small></div><Button onClick={() => open("Evaluation form")}>Continue</Button></section>
@@ -65,7 +59,7 @@ export function HomePage() {
             <div className="dashboard-stack">
               <Card title="Evaluation period"><div className="period-content"><div className="period-title"><span className="open-badge"><Icon name="imgDot" />Open</span><span>Annual evaluation 2025–2026</span></div><small>Opened 1 Oct 2026 · Closes 30 Nov 2026</small><Progress warning value={38.4} label="Evaluation period elapsed" /><Button className="dashboard-button w-full" onClick={() => open("Evaluation form")}><Icon name="imgIconFile2" />Continue evaluation</Button></div></Card>
               <Card title="Notifications" action={<button className="text-action" onClick={() => open("Notifications")}>View all</button>}><NotificationList /></Card>
-              <Card title="Quick actions" className="quick-actions">{[["Update my profile", "imgIconUser1"], ["Build a CV", "imgIconBook1"], ["Request edit access", "imgIconUnlock"]].map(([label, icon]) => <Button key={label} variant="outline" className="dashboard-button w-full" onClick={() => open(label)}><Icon name={icon} />{label}</Button>)}</Card>
+              <Card title="Quick actions" className="quick-actions">{[["Update my profile", "imgIconUser1"], ["Build a CV", "imgIconBook1"], ["Request edit access", "imgIconUnlock"]].map(([label, icon]) => <Button key={label} variant="outline" className="dashboard-button w-full" onClick={() => label === "Update my profile" ? navigate("/profile/general") : open(label)}><Icon name={icon} />{label}</Button>)}</Card>
             </div>
           </div>
         </div>
