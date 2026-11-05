@@ -1,0 +1,42 @@
+/* Dashboard-only styles. Shell, cards and buttons live in components/layout/app-shell.css */
+.attention-row [data-variant="outline"] { background: var(--card); border-color: var(--input); }
+.evaluation-banner { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 12px; background: var(--warning-soft); }
+.evaluation-banner > div { flex: 1; min-width: 0; }
+.evaluation-banner p, .attention-row p { font-weight: 500; }
+.evaluation-banner small, .attention-row small { display: block; font-size: 13px; line-height: 20px; color: var(--color-neutral-700); margin-top: 2px; }
+.dashboard-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.stat-card { padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.stat-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stat-heading h2 { font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.icon-tile { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px; }
+.neutral { background: var(--muted); }.brand { background: var(--color-brand-50); }.warning { background: var(--warning-soft); }.danger { background: var(--danger-soft); }.info { background: var(--info-soft); }.success { background: var(--success-soft); }
+.stat-value { font-size: 32px; line-height: 40px; font-weight: 600; margin: 10px 0; }
+.stat-card small, .period-content > small { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.dashboard-columns { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+.dashboard-stack { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.soft-button { background: var(--accent); color: var(--primary); font-size: 13px; gap: 8px; padding: 6px 12px; }
+.progress-list { display: flex; flex-direction: column; gap: 16px; max-width: 640px; }
+.progress-label { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; font-size: 13px; line-height: 20px; font-weight: 500; }
+.progress-label small { font-size: 12px; color: var(--muted-foreground); }
+.dashboard-progress { height: 8px; border-radius: 99px; background: var(--muted); overflow: hidden; }
+.dashboard-progress > div { height: 100%; background: var(--primary); border-radius: inherit; }
+.dashboard-progress.warning > div { background: var(--warning); }
+.attention-list { display: flex; flex-direction: column; gap: 16px; }
+.attention-row { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border-radius: 10px; }
+.attention-row > div { flex: 1; min-width: 0; }
+.attention-row button { flex-shrink: 0; font-size: 13px; height: 34px; padding: 6px 12px; }
+.attention-row .danger-button { border-color: var(--destructive); color: var(--destructive); }
+.period-content { display: flex; flex-direction: column; gap: 10px; }
+.period-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+.open-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; background: var(--success-soft); color: var(--success); font-size: 12px; line-height: 16px; }
+.period-content .dashboard-button { height: 40px; }
+.notification-list { display: flex; flex-direction: column; gap: 16px; }
+.notification-row { display: flex; align-items: flex-start; gap: 12px; }
+.notification-row p { font-size: 13px; line-height: 20px; font-weight: 500; }
+.notification-row small { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.quick-actions { display: flex; flex-direction: column; gap: 10px; }
+.quick-actions .card-heading { margin-bottom: 0; }
+@media (max-width: 1199px) { .dashboard-columns { grid-template-columns: minmax(0, 1fr); } .dashboard-columns > .dashboard-stack:last-child { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+@media (max-width: 767px) { .dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .stat-card { padding: 16px; } .stat-value { font-size: 28px; } .evaluation-banner { flex-wrap: wrap; } .evaluation-banner > div { flex-basis: calc(100% - 32px); } .evaluation-banner > button { margin-left: 32px; } .dashboard-columns > .dashboard-stack:last-child { display: flex; } .attention-row { flex-wrap: wrap; } .attention-row > div { flex-basis: calc(100% - 32px); } .attention-row > button { margin-left: 30px; } }
+.attention-row button.bg-background { background: var(--card); border-color: var(--input); }
+.attention-row button.danger-button { border-color: var(--destructive); }

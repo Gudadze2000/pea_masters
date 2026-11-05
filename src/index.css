@@ -1,64 +1,173 @@
-/* PEA theme for shadcn/ui (Tailwind v4). Paste into src/index.css (or globals.css),
-   replacing the default :root block and @theme inline mappings. Values come from the
-   PEA/Colors variables in the Figma file. */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-  --radius: 0.625rem;              /* md = 8px (buttons, inputs), xl = 14px (cards) */
+/* ---------- PEA palette (PEA/Colors) ----------
+   Raw scales, exposed as utilities: bg-brand-600, text-neutral-500, ... */
+@theme {
+  /* Uncomment to remove Tailwind's default palette so only PEA colors exist */
+  /* --color-*: initial; */
 
-  --background: oklch(1 0 0);           /* neutral/50  – app canvas */
-  --foreground: oklch(0.145 0 0);           /* neutral/900 */
-  --card: oklch(1 0 0);                 /* neutral/0 */
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --color-brand-50:  #FBF2F3;
+  --color-brand-100: #F5E1E4;
+  --color-brand-200: #E9BFC5;
+  --color-brand-500: #A63446;
+  --color-brand-600: #8C2433;
+  --color-brand-700: #6F1B28;
 
-  --primary: oklch(0.205 0 0);              /* brand/600 */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);            /* neutral/100 */
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);                /* neutral/100 */
-  --muted-foreground: oklch(0.556 0 0);     /* neutral/500 */
-  --accent: oklch(0.97 0 0);               /* brand/50  – active nav, soft buttons */
-  --accent-foreground: oklch(0.205 0 0);    /* brand/700 */
-  --destructive: oklch(0.577 0.245 27.325);          /* danger/600 */
-  --destructive-foreground: #FFFFFF;
+  --color-neutral-0:   #FFFFFF;
+  --color-neutral-25:  #FCFBFB;
+  --color-neutral-50:  #F7F5F5;
+  --color-neutral-100: #EFECEC;
+  --color-neutral-200: #E3DFDF;
+  --color-neutral-300: #CFC9CA;
+  --color-neutral-400: #A79FA1;
+  --color-neutral-500: #7C7476;
+  --color-neutral-600: #5E5658;
+  --color-neutral-700: #443D3F;
+  --color-neutral-900: #1E1A1B;
 
-  --border: oklch(0.922 0 0);               /* neutral/200 */
-  --input: oklch(0.922 0 0);                /* neutral/300 */
-  --ring: oklch(0.708 0 0);                 /* brand/500 */
+  --color-success-50:  #E6F4EC;
+  --color-success-600: #1E7A4C;
+  --color-warning-50:  #FDF2DC;
+  --color-warning-600: #A8680B;
+  --color-danger-50:   #FBE7E7;
+  --color-danger-600:  #B42B2B;
+  --color-info-50:     #E4EEF9;
+  --color-info-600:    #2A62A8;
 
-  /* Status colours (badges, banners) – not part of stock shadcn */
-  --success: #1E7A4C;  --success-soft: #E6F4EC;
-  --warning: #A8680B;  --warning-soft: #FDF2DC;
-  --info:    #2A62A8;  --info-soft:    #E4EEF9;
-  --danger-soft: #FBE7E7;
-  --brand-100: #F5E1E4; --brand-200: #E9BFC5; --brand-700: #6F1B28;
+  /* ---------- Type scale (PEA/* text styles) ---------- */
+  --text-display: 32px;
+  --text-display--line-height: 40px;
+  --text-display--font-weight: 600;
 
-  --chart-1: oklch(0.87 0 0); --chart-2: oklch(0.556 0 0); --chart-3: oklch(0.439 0 0); --chart-4: oklch(0.371 0 0); --chart-5: oklch(0.269 0 0);
+  --text-h1: 24px;
+  --text-h1--line-height: 32px;
+  --text-h1--font-weight: 600;
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);           /* neutral/700 */
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --text-h2: 18px;
+  --text-h2--line-height: 26px;
+  --text-h2--font-weight: 600;
+
+  --text-h3: 15px;
+  --text-h3--line-height: 22px;
+  --text-h3--font-weight: 600;
+
+  --text-body: 14px;
+  --text-body--line-height: 22px;
+
+  --text-small: 13px;
+  --text-small--line-height: 20px;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+
+  --text-overline: 11px;
+  --text-overline--line-height: 16px;
+  --text-overline--letter-spacing: 0.06em;
+  --text-overline--font-weight: 600;
+
+  /* ---------- Shadows ---------- */
+  --shadow-card:  0 2px 8px rgb(31 26 26 / 0.07);
+  --shadow-modal: 0 12px 32px rgb(31 26 26 / 0.18);
+
+  /* ---------- Layout sizes (w-sidebar, h-topbar, h-control) ---------- */
+  --spacing-sidebar: 264px;
+  --spacing-topbar: 64px;
+  --spacing-control: 40px;
 }
 
-@theme inline {
-  --font-sans: 'Geist Variable', sans-serif;
+/* ---------- Semantic tokens (shadcn contract) ----------
+   shadcn components only talk to these names; the PEA palette feeds them. */
+:root {
+  --radius: 0.625rem;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --background: var(--color-neutral-50);          /* app canvas */
+  --foreground: var(--color-neutral-900);
+  --card: var(--color-neutral-0);
+  --card-foreground: var(--color-neutral-900);
+  --popover: var(--color-neutral-0);
+  --popover-foreground: var(--color-neutral-900);
+
+  --primary: var(--color-brand-600);
+  --primary-foreground: var(--color-neutral-0);
+  --secondary: var(--color-neutral-100);
+  --secondary-foreground: var(--color-neutral-900);
+  --muted: var(--color-neutral-100);
+  --muted-foreground: var(--color-neutral-500);
+  --accent: var(--color-brand-50);                /* active nav, soft buttons */
+  --accent-foreground: var(--color-brand-700);
+  --destructive: var(--color-danger-600);
+  --destructive-foreground: var(--color-neutral-0);
+
+  --border: var(--color-neutral-200);
+  --input: var(--color-neutral-300);
+  --ring: var(--color-brand-500);
+
+  /* Status colours (badges, banners) – not part of stock shadcn */
+  --success: var(--color-success-600);  --success-soft: var(--color-success-50);
+  --warning: var(--color-warning-600);  --warning-soft: var(--color-warning-50);
+  --info:    var(--color-info-600);     --info-soft:    var(--color-info-50);
+  --danger-soft: var(--color-danger-50);
+
+  --chart-1: var(--color-brand-600);
+  --chart-2: var(--color-info-600);
+  --chart-3: var(--color-success-600);
+  --chart-4: var(--color-warning-600);
+  --chart-5: var(--color-neutral-500);
+
+  --sidebar: var(--color-neutral-0);
+  --sidebar-foreground: var(--color-neutral-700);
+  --sidebar-primary: var(--color-brand-600);
+  --sidebar-primary-foreground: var(--color-neutral-0);
+  --sidebar-accent: var(--color-brand-50);
+  --sidebar-accent-foreground: var(--color-brand-700);
+  --sidebar-border: var(--color-neutral-200);
+  --sidebar-ring: var(--color-brand-500);
+}
+
+/* The Figma file defines no dark theme; this is a derived fallback for shadcn's .dark class. */
+.dark {
+  --background: var(--color-neutral-900);
+  --foreground: var(--color-neutral-50);
+  --card: var(--color-neutral-700);
+  --card-foreground: var(--color-neutral-50);
+  --popover: var(--color-neutral-700);
+  --popover-foreground: var(--color-neutral-50);
+  --primary: var(--color-brand-500);
+  --primary-foreground: var(--color-neutral-0);
+  --secondary: var(--color-neutral-700);
+  --secondary-foreground: var(--color-neutral-50);
+  --muted: var(--color-neutral-700);
+  --muted-foreground: var(--color-neutral-400);
+  --accent: var(--color-neutral-700);
+  --accent-foreground: var(--color-neutral-50);
+  --destructive: var(--color-danger-600);
+  --border: rgb(255 255 255 / 10%);
+  --input: rgb(255 255 255 / 15%);
+  --ring: var(--color-brand-500);
+  --sidebar: var(--color-neutral-700);
+  --sidebar-foreground: var(--color-neutral-50);
+  --sidebar-accent: var(--color-neutral-600);
+  --sidebar-accent-foreground: var(--color-neutral-50);
+  --sidebar-border: rgb(255 255 255 / 10%);
+}
+
+/* Aliases: they point at other variables, so they are defined as `inline` */
+@theme inline {
+  --font-sans: "Inter", "Noto Sans Georgian", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+
+  /* Figma radii: 6 / 8 buttons+inputs / 10 / 12 banners / 14 cards / 16 modals */
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  10px;
+  --radius-xl:  12px;
+  --radius-2xl: 14px;
+  --radius-3xl: 16px;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -80,14 +189,16 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-success: var(--success);   --color-success-soft: var(--success-soft);
-  --color-warning: var(--warning);   --color-warning-soft: var(--warning-soft);
-  --color-info: var(--info);         --color-info-soft: var(--info-soft);
+  --color-success: var(--success);  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);        --color-info-soft: var(--info-soft);
   --color-danger-soft: var(--danger-soft);
-  --color-brand-100: var(--brand-100); --color-brand-200: var(--brand-200); --color-brand-700: var(--brand-700);
 
-  --color-chart-1: var(--chart-1); --color-chart-2: var(--chart-2); --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4); --color-chart-5: var(--chart-5);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -97,50 +208,19 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-heading: var(--font-sans);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 @layer base {
-  * { @apply border-border outline-ring/50; }
-  body { @apply font-sans bg-background text-foreground; }
+  * {
+    @apply border-border outline-ring/50;
+  }
   html {
     @apply font-sans;
   }
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  body {
+    @apply bg-background text-foreground font-sans text-body antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
 }
