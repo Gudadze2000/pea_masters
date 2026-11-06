@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, Info, Plus, Save, Trash2 } from "lucide-react"
+import { Check, Eye, Info, Plus, Save, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { useQualifications } from "./qualifications-store"
+import { SectionNav } from "./SectionNav"
 import { LANGUAGES, LEVELS } from "./languages"
 import type { Entry } from "./sections"
 import "@/components/forms/forms.css"
@@ -112,83 +113,97 @@ export function LanguagesPage() {
       { label: "Professional & qualifications", to: "/profile/qualifications" },
       { label: "Languages" },
     ]}>
-      {() => (
+      {openPanel => (
         <div className="dashboard-content">
           <div className="page-heading">
             <div>
-              <h1>Languages</h1>
-              <p>Add every language you read, write or speak, with your level for each skill.</p>
+              <h1>Professional &amp; qualifications</h1>
+              <p>Awards, memberships, patents, committees, employment, education, languages, consultancy and more.</p>
             </div>
-            <div className="page-actions">
-              <Button variant="outline" className="dashboard-button" onClick={addRow}><Plus />Add language</Button>
-              <Button className="dashboard-button" disabled={!dirty} onClick={save}><Save />Save</Button>
-            </div>
+            <Button variant="outline" className="dashboard-button" onClick={() => openPanel("Preview public profile")}><Eye />Preview public profile</Button>
           </div>
 
-          {(notice || errorCount > 0) && (
-            <p className={errorCount > 0 ? "form-error-summary" : "section-notice"} role={errorCount > 0 ? "alert" : "status"}>
-              {errorCount > 0
-                ? `Complete the highlighted ${errorCount === 1 ? "row" : "rows"}: each language needs a level for reading, writing and speaking.`
-                : <><Check aria-hidden="true" />{notice}</>}
-            </p>
-          )}
+          <div className="qualifications-layout">
+            <SectionNav currentId={SECTION_ID} />
 
-          <section className="dashboard-card languages-card" aria-label="Languages">
-            <div ref={tableRef} className="languages-table" role="table" aria-label="Your languages">
-              <div className="languages-row languages-head" role="row">
-                <span role="columnheader">Language</span>
-                {SKILLS.map(skill => <span key={skill.key} role="columnheader">{skill.label}</span>)}
-                <span role="columnheader"><span className="sr-only">Actions</span></span>
+            <section className="section-panel" aria-labelledby="section-heading">
+              <div className="section-heading">
+                <div>
+                  <h2 id="section-heading">Languages</h2>
+                  <p>Add every language you read, write or speak, with your level for each skill.</p>
+                </div>
+                <div className="page-actions">
+                  <Button variant="outline" className="dashboard-button" onClick={addRow}><Plus />Add language</Button>
+                  <Button className="dashboard-button" disabled={!dirty} onClick={save}><Save />Save</Button>
+                </div>
               </div>
 
-              {rows.map((row, index) => {
-                const rowErrors = errors[row.id] ?? {}
-                const name = row.language || `row ${index + 1}`
-                return (
-                  <div key={row.id} className="languages-row" role="row">
-                    <div role="cell" className="languages-cell" data-label="Language">
-                      <select
-                        id={`language-${row.id}`}
-                        className="form-control"
-                        aria-label={`Language, row ${index + 1}`}
-                        aria-invalid={rowErrors.language || undefined}
-                        data-empty={!row.language || undefined}
-                        value={row.language}
-                        onChange={e => update(row.id, "language", e.target.value)}
-                      >
-                        <option value="" disabled>Select language…</option>
-                        {LANGUAGES.map(language => (
-                          // A language can only be listed once
-                          <option key={language} value={language} disabled={language !== row.language && chosenLanguages.has(language) && language !== "Other"}>{language}</option>
-                        ))}
-                      </select>
-                    </div>
-                    {SKILLS.map(skill => (
-                      <div key={skill.key} role="cell" className="languages-cell" data-label={skill.label}>
-                        <select
-                          id={`${skill.key}-${row.id}`}
-                          className="form-control"
-                          aria-label={`${skill.label} level for ${name}`}
-                          aria-invalid={rowErrors[skill.key] || undefined}
-                          data-empty={!row[skill.key] || undefined}
-                          value={row[skill.key]}
-                          onChange={e => update(row.id, skill.key, e.target.value)}
-                        >
-                          <option value="" disabled>Level…</option>
-                          {LEVELS.map(level => <option key={level.value} value={level.value}>{level.label}</option>)}
-                        </select>
-                      </div>
-                    ))}
-                    <div role="cell" className="languages-cell languages-remove">
-                      <Button variant="outline" size="icon" className="icon-button danger" aria-label={`Remove ${name}`} onClick={() => removeRow(row.id)}><Trash2 /></Button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+              {(notice || errorCount > 0) && (
+                <p className={errorCount > 0 ? "form-error-summary" : "section-notice"} role={errorCount > 0 ? "alert" : "status"}>
+                  {errorCount > 0
+                    ? `Complete the highlighted ${errorCount === 1 ? "row" : "rows"}: each language needs a level for reading, writing and speaking.`
+                    : <><Check aria-hidden="true" />{notice}</>}
+                </p>
+              )}
 
-            <p className="languages-note"><Info aria-hidden="true" />Levels follow the CEFR scale (A1–C2). Choose “Native” for your first language.</p>
-          </section>
+              <section className="dashboard-card languages-card" aria-label="Languages">
+                <div ref={tableRef} className="languages-table" role="table" aria-label="Your languages">
+                  <div className="languages-row languages-head" role="row">
+                    <span role="columnheader">Language</span>
+                    {SKILLS.map(skill => <span key={skill.key} role="columnheader">{skill.label}</span>)}
+                    <span role="columnheader"><span className="sr-only">Actions</span></span>
+                  </div>
+
+                  {rows.map((row, index) => {
+                    const rowErrors = errors[row.id] ?? {}
+                    const name = row.language || `row ${index + 1}`
+                    return (
+                      <div key={row.id} className="languages-row" role="row">
+                        <div role="cell" className="languages-cell" data-label="Language">
+                          <select
+                            id={`language-${row.id}`}
+                            className="form-control"
+                            aria-label={`Language, row ${index + 1}`}
+                            aria-invalid={rowErrors.language || undefined}
+                            data-empty={!row.language || undefined}
+                            value={row.language}
+                            onChange={e => update(row.id, "language", e.target.value)}
+                          >
+                            <option value="" disabled>Select language…</option>
+                            {LANGUAGES.map(language => (
+                              // A language can only be listed once
+                              <option key={language} value={language} disabled={language !== row.language && chosenLanguages.has(language) && language !== "Other"}>{language}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {SKILLS.map(skill => (
+                          <div key={skill.key} role="cell" className="languages-cell" data-label={skill.label}>
+                            <select
+                              id={`${skill.key}-${row.id}`}
+                              className="form-control"
+                              aria-label={`${skill.label} level for ${name}`}
+                              aria-invalid={rowErrors[skill.key] || undefined}
+                              data-empty={!row[skill.key] || undefined}
+                              value={row[skill.key]}
+                              onChange={e => update(row.id, skill.key, e.target.value)}
+                            >
+                              <option value="" disabled>Level…</option>
+                              {LEVELS.map(level => <option key={level.value} value={level.value}>{level.label}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                        <div role="cell" className="languages-cell languages-remove">
+                          <Button variant="outline" size="icon" className="icon-button danger" aria-label={`Remove ${name}`} onClick={() => removeRow(row.id)}><Trash2 /></Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <p className="languages-note"><Info aria-hidden="true" />Levels follow the CEFR scale (A1–C2). Choose “Native” for your first language.</p>
+              </section>
+            </section>
+          </div>
         </div>
       )}
     </WorkspaceLayout>

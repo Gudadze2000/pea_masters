@@ -36,7 +36,31 @@
 .notification-row small { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 .quick-actions { display: flex; flex-direction: column; gap: 10px; }
 .quick-actions .card-heading { margin-bottom: 0; }
-@media (max-width: 1199px) { .dashboard-columns { grid-template-columns: minmax(0, 1fr); } .dashboard-columns > .dashboard-stack:last-child { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
-@media (max-width: 767px) { .dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .stat-card { padding: 16px; } .stat-value { font-size: 28px; } .evaluation-banner { flex-wrap: wrap; } .evaluation-banner > div { flex-basis: calc(100% - 32px); } .evaluation-banner > button { margin-left: 32px; } .dashboard-columns > .dashboard-stack:last-child { display: flex; } .attention-row { flex-wrap: wrap; } .attention-row > div { flex-basis: calc(100% - 32px); } .attention-row > button { margin-left: 30px; } }
+/* Laptop and tablet: side column moves under the main one, as two cards side by side
+   with "Quick actions" across the full width and its buttons in a row */
+@media (max-width: 1199.98px) {
+  .dashboard-columns { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-columns > .dashboard-stack:last-child { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+  .dashboard-columns > .dashboard-stack:last-child > .quick-actions { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .quick-actions .card-heading { grid-column: 1 / -1; }
+}
+@media (max-width: 767.98px) {
+  .dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .stat-card { padding: 16px; }
+  .stat-value { font-size: 28px; }
+  .evaluation-banner { flex-wrap: wrap; }
+  .evaluation-banner > div { flex-basis: calc(100% - 32px); }
+  .evaluation-banner > button { margin-left: 32px; }
+  .attention-row { flex-wrap: wrap; }
+  .attention-row > div { flex-basis: calc(100% - 32px); }
+  .attention-row > button { margin-left: 30px; }
+}
+/* Phones: one column, every card full width */
+@media (max-width: 575.98px) {
+  .dashboard-columns > .dashboard-stack:last-child { display: flex; flex-direction: column; align-items: stretch; }
+  .dashboard-columns > .dashboard-stack:last-child > .quick-actions { display: flex; flex-direction: column; gap: 10px; }
+  .stat-value { font-size: 24px; line-height: 32px; margin: 6px 0; }
+  .stat-card { padding: 14px; }
+}
 .attention-row button.bg-background { background: var(--card); border-color: var(--input); }
 .attention-row button.danger-button { border-color: var(--destructive); }
