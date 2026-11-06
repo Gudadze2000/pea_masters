@@ -3,7 +3,7 @@ import { Check, Pencil, Plus, Save, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { KeywordInput } from "@/components/forms/KeywordInput"
-import { RecordSheet } from "@/components/forms/RecordSheet"
+import { InlineRecordForm } from "@/components/forms/InlineRecordForm"
 import type { FieldDef } from "@/components/forms/field-types"
 import "@/components/forms/forms.css"
 import { initialResearch, PROJECT_ROLES, PROJECT_TYPES, type Collaboration, type Project, type ResearchOverview } from "./researchMock"
@@ -39,14 +39,13 @@ const sameData = (a: ResearchOverview, b: ResearchOverview) => JSON.stringify(a)
 
 type Editor =
   | { kind: "project"; id: string | null; session: number }
-  | { kind: "collaboration"; id: null; session: number }
+  | { kind: "collaboration"; id: string | null; session: number }
 
 /** /profile/research */
 export function ResearchPage() {
   const [saved, setSaved] = useState<ResearchOverview>(initialResearch)
   const [data, setData] = useState<ResearchOverview>(initialResearch)
   const [editor, setEditor] = useState<Editor | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState(false)
   const session = useRef(0)
@@ -72,7 +71,6 @@ export function ResearchPage() {
   const openEditor = (next: Omit<Editor, "session">) => {
     session.current += 1
     setEditor({ ...next, session: session.current } as Editor)
-    setSheetOpen(true)
   }
 
   const save = () => {
@@ -86,6 +84,7 @@ export function ResearchPage() {
     }, 500)
   }
 
+  const editingCollaboration = editor?.kind === "collaboration" && editor.id ? data.collaborations.find(person => person.id === editor.id) : undefined
   const editingProject = editor?.kind === "project" && editor.id ? data.projects.find(project => project.id === editor.id) : undefined
 
   return (
@@ -99,8 +98,8 @@ export function ResearchPage() {
             </div>
             <div className="page-actions">
               <span className="save-status" role="status">{notice && !dirty && <><Check aria-hidden="true" />Changes saved</>}</span>
-              {dirty && <Button variant="outline" className="dashboard-button" disabled={saving} onClick={() => setData(saved)}>Discard changes</Button>}
-              <Button className="dashboard-button" disabled={!dirty || saving} onClick={save}><Save />{saving ? "Saving…" : "Save"}</Button>
+              {dirty && <Button variant="outline" className="dashboard-button" disabled={saving || editor !== null} onClick={() => setData(saved)}>Discard changes</Button>}
+              <Button className="dashboard-button" disabled={!dirty || saving || editor !== null} onClick={save}><Save />{saving ? "Saving…" : "Save"}</Button>
             </div>
           </div>
 
@@ -120,8 +119,33 @@ export function ResearchPage() {
           <section className="dashboard-card research-card" aria-labelledby="projects-heading">
             <div className="card-heading">
               <h2 id="projects-heading">Projects</h2>
-              <Button className="dashboard-button compact" onClick={() => openEditor({ kind: "project", id: null })}><Plus />Add project</Button>
+              <Button className="dashboard-button compact" disabled={editor !== null} onClick={() => openEditor({ kind: "project", id: null })}><Plus />Add project</Button>
             </div>
+          {editor?.kind === "project" && (
+            <InlineRecordForm
+              key={editor.session}
+              onCancel={() => setEditor(null)}
+              idPrefix="project"
+              title={editingProject ? "Edit project" : "Add project"}
+              description="Research projects you led or took part in."
+              fields={projectFields}
+              initialValues={editingProject ? { ...editingProject } : {}}
+              submitLabel={editingProject ? "Save project" : "Add project"}
+              validate={(values): Record<string, string> => values.endYear && values.endYear < values.startYear ? { endYear: "Can't be before the start year." } : {}}
+              onSave={values => {
+                const project: Project = {
+                  id: editingProject?.id ?? crypto.randomUUID(),
+                  title: values.title, donor: values.donor, startYear: values.startYear, endYear: values.endYear ?? "",
+                  type: values.type as Project["type"], role: values.role,
+                }
+                change(current => ({
+                  ...current,
+                  projects: editingProject ? current.projects.map(item => item.id === project.id ? project : item) : [project, ...current.projects],
+                }))
+                setEditor(null)
+              }}
+            />
+          )}
             <div className="data-table-wrap">
               <table className="data-table projects-table">
                 <thead>
@@ -142,8 +166,8 @@ export function ResearchPage() {
                         <td>{project.role}</td>
                         <td>
                           <div className="row-actions">
-                            <Button variant="outline" size="icon" className="icon-button" aria-label={`Edit ${project.title}`} onClick={() => openEditor({ kind: "project", id: project.id })}><Pencil /></Button>
-                            <Button variant="outline" size="icon" className="icon-button danger" aria-label={`Delete ${project.title}`} onClick={() => change(current => ({ ...current, projects: current.projects.filter(item => item.id !== project.id) }))}><Trash2 /></Button>
+                            <Button variant="outline" size="icon" className="icon-button" aria-label={`Edit ${project.title}`} disabled={editor !== null} onClick={() => openEditor({ kind: "project", id: project.id })}><Pencil /></Button>
+                            <Button variant="outline" size="icon" className="icon-button danger" aria-label={`Delete ${project.title}`} disabled={editor !== null} onClick={() => change(current => ({ ...current, projects: current.projects.filter(item => item.id !== project.id) }))}><Trash2 /></Button>
                           </div>
                         </td>
                       </tr>
@@ -156,8 +180,25 @@ export function ResearchPage() {
           <section className="dashboard-card research-card" aria-labelledby="collaboration-heading">
             <div className="card-heading">
               <h2 id="collaboration-heading">Research collaboration with other researchers</h2>
-              <Button variant="outline" className="dashboard-button compact" onClick={() => openEditor({ kind: "collaboration", id: null })}><Plus />Add collaboration</Button>
+              <Button variant="outline" className="dashboard-button compact" disabled={editor !== null} onClick={() => openEditor({ kind: "collaboration", id: null })}><Plus />Add collaboration</Button>
             </div>
+          {editor?.kind === "collaboration" && (
+            <InlineRecordForm
+              key={editor.session}
+              onCancel={() => setEditor(null)}
+              idPrefix="collaboration"
+              title={editingCollaboration ? "Edit collaboration" : "Add collaboration"}
+              description="A researcher you work with, at Ilia State University or elsewhere."
+              fields={collaborationFields}
+              initialValues={editingCollaboration ? { ...editingCollaboration } : {}}
+              submitLabel={editingCollaboration ? "Save collaboration" : "Add collaboration"}
+              onSave={values => {
+                const person: Collaboration = { id: editingCollaboration?.id ?? crypto.randomUUID(), name: values.name, institution: values.institution, topic: values.topic }
+                change(current => ({ ...current, collaborations: editingCollaboration ? current.collaborations.map(item => item.id === person.id ? person : item) : [person, ...current.collaborations] }))
+                setEditor(null)
+              }}
+            />
+          )}
             <div className="data-table-wrap">
               <table className="data-table collaborations-table">
                 <thead>
@@ -176,7 +217,8 @@ export function ResearchPage() {
                         <td>{person.topic}</td>
                         <td>
                           <div className="row-actions">
-                            <Button variant="outline" size="icon" className="icon-button danger" aria-label={`Remove ${person.name}`} onClick={() => change(current => ({ ...current, collaborations: current.collaborations.filter(item => item.id !== person.id) }))}><Trash2 /></Button>
+                            <Button variant="outline" size="icon" className="icon-button" aria-label={`Edit ${person.name}`} disabled={editor !== null} onClick={() => openEditor({ kind: "collaboration", id: person.id })}><Pencil /></Button>
+                            <Button variant="outline" size="icon" className="icon-button danger" aria-label={`Remove ${person.name}`} disabled={editor !== null} onClick={() => change(current => ({ ...current, collaborations: current.collaborations.filter(item => item.id !== person.id) }))}><Trash2 /></Button>
                           </div>
                         </td>
                       </tr>
@@ -201,50 +243,6 @@ export function ResearchPage() {
             />
           </section>
 
-          {editor?.kind === "project" && (
-            <RecordSheet
-              open={sheetOpen}
-              onOpenChange={setSheetOpen}
-              formKey={editor.session}
-              idPrefix="project"
-              title={editingProject ? "Edit project" : "Add project"}
-              description="Research projects you led or took part in."
-              fields={projectFields}
-              initialValues={editingProject ? { ...editingProject } : {}}
-              submitLabel={editingProject ? "Save project" : "Add project"}
-              validate={(values): Record<string, string> => values.endYear && values.endYear < values.startYear ? { endYear: "Can't be before the start year." } : {}}
-              onSave={values => {
-                const project: Project = {
-                  id: editingProject?.id ?? crypto.randomUUID(),
-                  title: values.title, donor: values.donor, startYear: values.startYear, endYear: values.endYear ?? "",
-                  type: values.type as Project["type"], role: values.role,
-                }
-                change(current => ({
-                  ...current,
-                  projects: editingProject ? current.projects.map(item => item.id === project.id ? project : item) : [project, ...current.projects],
-                }))
-                setSheetOpen(false)
-              }}
-            />
-          )}
-          {editor?.kind === "collaboration" && (
-            <RecordSheet
-              open={sheetOpen}
-              onOpenChange={setSheetOpen}
-              formKey={editor.session}
-              idPrefix="collaboration"
-              title="Add collaboration"
-              description="A researcher you work with, at Ilia State University or elsewhere."
-              fields={collaborationFields}
-              initialValues={{}}
-              submitLabel="Add collaboration"
-              onSave={values => {
-                const person: Collaboration = { id: crypto.randomUUID(), name: values.name, institution: values.institution, topic: values.topic }
-                change(current => ({ ...current, collaborations: [...current.collaborations, person] }))
-                setSheetOpen(false)
-              }}
-            />
-          )}
         </div>
       )}
     </WorkspaceLayout>

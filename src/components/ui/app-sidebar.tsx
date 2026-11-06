@@ -29,9 +29,8 @@ const navigation: NavItem[] = [
   { label: "Professional & qualifications", to: "/profile/qualifications" },
   { label: "Teaching", to: "/profile/teaching" },
   { label: "Research overview", to: "/profile/research" },
-  { label: "Evaluation form", icon: "imgIconFile" },
+  { label: "Evaluation form", icon: "imgIconFile", to: "/evaluation-form" },
   { label: "CV builder", icon: "imgIconBook", to: "/cv-builder" },
-  { label: "History", icon: "imgIconHistory" },
   { label: "Settings", icon: "imgIconSettings" },
 ]
 

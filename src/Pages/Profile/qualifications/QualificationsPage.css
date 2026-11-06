@@ -58,6 +58,11 @@
 .entry-page-side { position: sticky; top: 24px; }
 .form-card .card-heading { margin-bottom: 20px; }
 
+/* Form stays in the section above the existing entries. */
+.profile-entry-fields { display: flex; flex-direction: column; gap: 20px; }
+.profile-entry-editor .form-card { padding: 0; border: 0; background: transparent; border-radius: 0; }
+.profile-entry-documents { padding-top: 20px; border-top: 1px solid var(--border); }
+
 /* Entry status card */
 .status-card .card-heading { margin-bottom: 12px; }
 .status-rows { display: flex; flex-direction: column; gap: 10px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }

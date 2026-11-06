@@ -36,7 +36,7 @@ function NotificationList() {
 export function HomePage() {
   const navigate = useNavigate()
   const [panel, setPanel] = useState<string | null>(null)
-  const open = (name: string) => { if (name !== "Dashboard") setPanel(name) }
+  const open = (name: string) => { if (name === "Evaluation form") navigate("/evaluation-form"); else if (name !== "Dashboard") setPanel(name) }
   return (
     <SidebarProvider style={{ "--sidebar-width": "264px" } as CSSProperties}>
       <AppSidebar onNavigate={open} />
