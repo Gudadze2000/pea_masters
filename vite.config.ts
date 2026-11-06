@@ -1,25 +1,19 @@
-import { agentNative } from "@agent-native/core/vite";
-import { reactRouter } from "@react-router/dev/vite";
-import { defineConfig } from "vite";
+import path from "path"
+import tailwindcss from "@tailwindcss/vite"
+import react, { reactCompilerPreset } from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
+import { defineConfig } from 'vite'
 
-const reactRouterPlugins = reactRouter as unknown as () => any[];
-const agentNativePlugins = agentNative as unknown as (
-  options?: Parameters<typeof agentNative>[0],
-) => any[];
+// https://vite.dev/config/
 export default defineConfig({
-  optimizeDeps: {
-    entries: [
-      "app/entry.client.tsx",
-      "app/root.tsx",
-      "app/components/layout/{Layout,Sidebar}.tsx",
-      "app/components/chat/ChatRouteContent.tsx",
-      "app/routes/{home,chat.$threadId}.tsx",
-    ],
-  },
   plugins: [
-    ...reactRouterPlugins(),
-    ...agentNativePlugins({
-      ssrStubs: ["shiki"],
-    }),
+    react(),
+    tailwindcss(),
+    babel({ presets: [reactCompilerPreset()] })
   ],
-});
+  resolve:{
+    alias:{
+       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+})

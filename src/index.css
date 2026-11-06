@@ -1,111 +1,234 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------- PEA palette (PEA/Colors) ----------
+   Raw scales, exposed as utilities: bg-brand-600, text-neutral-500, ... */
+@theme {
+  /* Uncomment to remove Tailwind's default palette so only PEA colors exist */
+  /* --color-*: initial; */
+
+  --color-brand-50:  #FBF2F3;
+  --color-brand-100: #F5E1E4;
+  --color-brand-200: #E9BFC5;
+  --color-brand-500: #A63446;
+  --color-brand-600: #8C2433;
+  --color-brand-700: #6F1B28;
+
+  --color-neutral-0:   #FFFFFF;
+  --color-neutral-25:  #FCFBFB;
+  --color-neutral-50:  #F7F5F5;
+  --color-neutral-100: #EFECEC;
+  --color-neutral-200: #E3DFDF;
+  --color-neutral-300: #CFC9CA;
+  --color-neutral-400: #A79FA1;
+  --color-neutral-500: #7C7476;
+  --color-neutral-600: #5E5658;
+  --color-neutral-700: #443D3F;
+  --color-neutral-900: #1E1A1B;
+
+  --color-success-50:  #E6F4EC;
+  --color-success-600: #1E7A4C;
+  --color-warning-50:  #FDF2DC;
+  --color-warning-600: #A8680B;
+  --color-danger-50:   #FBE7E7;
+  --color-danger-600:  #B42B2B;
+  --color-info-50:     #E4EEF9;
+  --color-info-600:    #2A62A8;
+
+  /* ---------- Type scale (PEA/* text styles) ---------- */
+  --text-display: 32px;
+  --text-display--line-height: 40px;
+  --text-display--font-weight: 600;
+
+  --text-h1: 24px;
+  --text-h1--line-height: 32px;
+  --text-h1--font-weight: 600;
+
+  --text-h2: 18px;
+  --text-h2--line-height: 26px;
+  --text-h2--font-weight: 600;
+
+  --text-h3: 15px;
+  --text-h3--line-height: 22px;
+  --text-h3--font-weight: 600;
+
+  --text-body: 14px;
+  --text-body--line-height: 22px;
+
+  --text-small: 13px;
+  --text-small--line-height: 20px;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+
+  --text-overline: 11px;
+  --text-overline--line-height: 16px;
+  --text-overline--letter-spacing: 0.06em;
+  --text-overline--font-weight: 600;
+
+  /* ---------- Shadows ---------- */
+  --shadow-card:  0 2px 8px rgb(31 26 26 / 0.07);
+  --shadow-modal: 0 12px 32px rgb(31 26 26 / 0.18);
+
+  /* ---------- Layout sizes (w-sidebar, h-topbar, h-control) ---------- */
+  --spacing-sidebar: 264px;
+  --spacing-topbar: 64px;
+  --spacing-control: 40px;
+
+  /* ---------- Breakpoints (the four PEA screen sizes) ----------
+     < 576 mobile · sm 576+ large phone · md 768+ tablet · lg 992+ laptop (fixed sidebar) · xl 1200+ desktop.
+     Plain CSS files use the same values: max-width 575.98 / 767.98 / 991.98 / 1199.98px. */
+  --breakpoint-sm: 36rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 62rem;
+  --breakpoint-xl: 75rem;
+}
+
+/* ---------- Semantic tokens (shadcn contract) ----------
+   shadcn components only talk to these names; the PEA palette feeds them. */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --radius: 0.625rem;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --background: var(--color-neutral-50);          /* app canvas */
+  --foreground: var(--color-neutral-900);
+  --card: var(--color-neutral-0);
+  --card-foreground: var(--color-neutral-900);
+  --popover: var(--color-neutral-0);
+  --popover-foreground: var(--color-neutral-900);
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --primary: var(--color-brand-600);
+  --primary-foreground: var(--color-neutral-0);
+  --secondary: var(--color-neutral-100);
+  --secondary-foreground: var(--color-neutral-900);
+  --muted: var(--color-neutral-100);
+  --muted-foreground: var(--color-neutral-500);
+  --accent: var(--color-brand-50);                /* active nav, soft buttons */
+  --accent-foreground: var(--color-brand-700);
+  --destructive: var(--color-danger-600);
+  --destructive-foreground: var(--color-neutral-0);
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+  --border: var(--color-neutral-200);
+  --input: var(--color-neutral-300);
+  --ring: var(--color-brand-500);
+
+  /* Status colours (badges, banners) – not part of stock shadcn */
+  --success: var(--color-success-600);  --success-soft: var(--color-success-50);
+  --warning: var(--color-warning-600);  --warning-soft: var(--color-warning-50);
+  --info:    var(--color-info-600);     --info-soft:    var(--color-info-50);
+  --danger-soft: var(--color-danger-50);
+
+  --chart-1: var(--color-brand-600);
+  --chart-2: var(--color-info-600);
+  --chart-3: var(--color-success-600);
+  --chart-4: var(--color-warning-600);
+  --chart-5: var(--color-neutral-500);
+
+  --sidebar: var(--color-neutral-0);
+  --sidebar-foreground: var(--color-neutral-700);
+  --sidebar-primary: var(--color-brand-600);
+  --sidebar-primary-foreground: var(--color-neutral-0);
+  --sidebar-accent: var(--color-brand-50);
+  --sidebar-accent-foreground: var(--color-brand-700);
+  --sidebar-border: var(--color-neutral-200);
+  --sidebar-ring: var(--color-brand-500);
+}
+
+/* The Figma file defines no dark theme; this is a derived fallback for shadcn's .dark class. */
+.dark {
+  --background: var(--color-neutral-900);
+  --foreground: var(--color-neutral-50);
+  --card: var(--color-neutral-700);
+  --card-foreground: var(--color-neutral-50);
+  --popover: var(--color-neutral-700);
+  --popover-foreground: var(--color-neutral-50);
+  --primary: var(--color-brand-500);
+  --primary-foreground: var(--color-neutral-0);
+  --secondary: var(--color-neutral-700);
+  --secondary-foreground: var(--color-neutral-50);
+  --muted: var(--color-neutral-700);
+  --muted-foreground: var(--color-neutral-400);
+  --accent: var(--color-neutral-700);
+  --accent-foreground: var(--color-neutral-50);
+  --destructive: var(--color-danger-600);
+  --border: rgb(255 255 255 / 10%);
+  --input: rgb(255 255 255 / 15%);
+  --ring: var(--color-brand-500);
+  --sidebar: var(--color-neutral-700);
+  --sidebar-foreground: var(--color-neutral-50);
+  --sidebar-accent: var(--color-neutral-600);
+  --sidebar-accent-foreground: var(--color-neutral-50);
+  --sidebar-border: rgb(255 255 255 / 10%);
+}
+
+/* Aliases: they point at other variables, so they are defined as `inline` */
+@theme inline {
+  --font-sans: "Inter", "Noto Sans Georgian", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+
+  /* Figma radii: 6 / 8 buttons+inputs / 10 / 12 banners / 14 cards / 16 modals */
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  10px;
+  --radius-xl:  12px;
+  --radius-2xl: 14px;
+  --radius-3xl: 16px;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);        --color-info-soft: var(--info-soft);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  html {
+    @apply font-sans;
   }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+  body {
+    @apply bg-background text-foreground font-sans text-body antialiased;
   }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
   }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }
