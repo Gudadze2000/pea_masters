@@ -1,0 +1,31 @@
+/* My profile → Research overview. Shell, tables, chips and forms come from shared CSS */
+.page-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.research-card { display: flex; flex-direction: column; gap: 16px; }
+.research-card .card-heading { margin-bottom: 0; }
+.dashboard-button.compact { height: 36px; padding: 6px 14px; font-size: 14px; }
+
+/* Project type pills */
+.type-pill { display: inline-flex; padding: 2px 10px; border-radius: 99px; font-size: 12px; line-height: 18px; font-weight: 500; white-space: nowrap; }
+.type-pill.international { background: var(--info-soft); color: var(--info); }
+.type-pill.local { background: var(--muted); color: var(--color-neutral-700); }
+
+.nowrap { white-space: nowrap; }
+.row-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.projects-table th:nth-child(2) { width: 16%; }
+.projects-table th:nth-child(3) { width: 14%; }
+.projects-table th:nth-child(4) { width: 12%; }
+.projects-table th:nth-child(5) { width: 10%; }
+.projects-table th:last-child, .collaborations-table th:last-child { width: 1%; }
+.collaborations-table th:nth-child(1) { width: 38%; }
+.collaborations-table th:nth-child(2) { width: 26%; }
+
+/* Researcher name with initials avatar */
+.researcher { display: inline-flex; align-items: center; gap: 12px; font-weight: 500; }
+.researcher-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--color-brand-100); color: var(--color-brand-700); font-size: 12px; font-weight: 500; }
+
+@media (max-width: 767px) {
+  .page-actions { width: 100%; flex-wrap: wrap; }
+  .save-status:empty { display: none; }
+  .research-card .card-heading { flex-wrap: wrap; }
+  .data-table.projects-table { min-width: 720px; }
+}

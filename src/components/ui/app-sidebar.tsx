@@ -1,20 +1,46 @@
+import type { CSSProperties } from "react"
+import { useLocation, useNavigate } from "react-router"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
+import "@/components/layout/app-shell.css"
 
 export function DashboardIcon({ name }: { name: string }) {
   return <img className="dashboard-icon" src={`/dashboard/${name}.svg`} alt="" />
 }
 
-const navigation = [
-  ["Dashboard", "imgIconHome"], ["My profile", "imgIconUser"],
-  ["General information", ""], ["Professional & qualifications", ""],
-  ["Teaching", ""], ["Research overview", ""],
-  ["Evaluation form", "imgIconFile"], ["CV builder", "imgIconBook"],
-  ["History", "imgIconHistory"], ["Settings", "imgIconSettings"],
+/** Same Figma SVGs as DashboardIcon, rendered as a mask so the colour follows the active state. */
+function NavIcon({ name }: { name: string }) {
+  return <span className="nav-icon" aria-hidden="true" style={{ "--icon": `url(/dashboard/${name}.svg)` } as CSSProperties} />
+}
+
+type NavItem = {
+  label: string
+  icon?: string
+  /** Route this item opens. Items without one open a placeholder panel via onNavigate. */
+  to?: string
+  /** Section items are highlighted (brand text, no background) while any route under this prefix is open. */
+  section?: string
+}
+
+const navigation: NavItem[] = [
+  { label: "Dashboard", icon: "imgIconHome", to: "/home" },
+  { label: "My profile", icon: "imgIconUser", to: "/profile/general", section: "/profile" },
+  { label: "General information", to: "/profile/general" },
+  { label: "Professional & qualifications", to: "/profile/qualifications" },
+  { label: "Teaching", to: "/profile/teaching" },
+  { label: "Research overview", to: "/profile/research" },
+  { label: "Evaluation form", icon: "imgIconFile" },
+  { label: "CV builder", icon: "imgIconBook" },
+  { label: "History", icon: "imgIconHistory" },
+  { label: "Settings", icon: "imgIconSettings" },
 ]
 
 export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void }) {
   const { setOpenMobile, isMobile } = useSidebar()
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const currentPath = pathname === "/" ? "/home" : pathname
+
   return (
     <Sidebar className="dashboard-sidebar">
       <SidebarHeader className="dashboard-brand">
@@ -25,11 +51,27 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
         <SidebarGroup className="dashboard-nav">
           <p className="workspace-label">RESEARCHER WORKSPACE</p>
           <SidebarMenu className="gap-1" aria-label="Researcher workspace">
-            {navigation.map(([label, icon]) => <SidebarMenuItem key={label}>
-              <SidebarMenuButton isActive={label === "Dashboard"} aria-current={label === "Dashboard" ? "page" : undefined} className={icon ? "dashboard-nav-link" : "dashboard-nav-link dashboard-sub-link"} onClick={() => { onNavigate(label); if (isMobile) setOpenMobile(false) }}>
-                {icon && <DashboardIcon name={icon} />}<span>{label}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>)}
+            {navigation.map(item => {
+              const active = !item.section && item.to !== undefined && (currentPath === item.to || currentPath.startsWith(`${item.to}/`))
+              const sectionActive = item.section !== undefined && currentPath.startsWith(item.section)
+              const classes = ["dashboard-nav-link", !item.icon && "dashboard-sub-link", sectionActive && "is-section-active"].filter(Boolean).join(" ")
+              return (
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton
+                    isActive={active}
+                    aria-current={active ? "page" : undefined}
+                    className={classes}
+                    onClick={() => {
+                      if (item.to) navigate(item.to)
+                      else onNavigate(item.label)
+                      if (isMobile) setOpenMobile(false)
+                    }}
+                  >
+                    {item.icon && <NavIcon name={item.icon} />}<span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
