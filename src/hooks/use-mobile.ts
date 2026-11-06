@@ -1,6 +1,7 @@
 import * as React from "react"
 
-const MOBILE_BREAKPOINT = 768
+// Below this width the sidebar becomes a slide-out sheet (tablets and phones); keep in sync with --breakpoint-lg
+const MOBILE_BREAKPOINT = 992
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)

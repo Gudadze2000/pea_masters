@@ -23,7 +23,7 @@
 .researcher { display: inline-flex; align-items: center; gap: 12px; font-weight: 500; }
 .researcher-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--color-brand-100); color: var(--color-brand-700); font-size: 12px; font-weight: 500; }
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .page-actions { width: 100%; flex-wrap: wrap; }
   .save-status:empty { display: none; }
   .research-card .card-heading { flex-wrap: wrap; }

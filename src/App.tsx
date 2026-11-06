@@ -8,6 +8,7 @@ import { LanguagesPage } from "./Pages/Profile/qualifications/LanguagesPage"
 import { TeachingPage } from "./Pages/Profile/teaching/TeachingPage"
 import { ResearchPage } from "./Pages/Profile/research/ResearchPage"
 import { QualificationsProvider } from "./Pages/Profile/qualifications/QualificationsProvider"
+import { CvBuilderPage } from "./Pages/CvBuilder/CvBuilderPage"
 
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/profile/qualifications/:sectionId?" element={<QualificationsPage />} />
         <Route path="/profile/qualifications/:sectionId/new" element={<EntryFormPage />} />
         <Route path="/profile/qualifications/:sectionId/:entryId/edit" element={<EntryFormPage />} />
+        <Route path="/cv-builder" element={<CvBuilderPage />} />
       </Routes>
     </QualificationsProvider>
   )

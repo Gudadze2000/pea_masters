@@ -98,11 +98,12 @@
 .dashboard-button.danger-solid { background: var(--destructive); color: var(--destructive-foreground); }
 .dashboard-button.danger-solid:hover { background: color-mix(in srgb, var(--destructive) 85%, black); }
 
-@media (max-width: 1199px) {
-  .entry-page { grid-template-columns: minmax(0, 1fr) 280px; }
-}
-@media (max-width: 1023px) {
+/* Below desktop (1200px) the section menu and the entry status card no longer fit beside
+   the content (on laptops the 264px sidebar is still open), so both move on top / below. */
+@media (max-width: 1199.98px) {
   .entry-page { grid-template-columns: minmax(0, 1fr); }
+  /* Status and supporting-document cards sit side by side under the form */
+  .entry-page-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   .entry-page-side { position: static; }
   .qualifications-layout { grid-template-columns: minmax(0, 1fr); }
   .section-nav { position: static; padding: 8px; overflow-x: auto; }
@@ -110,7 +111,8 @@
   .section-nav button { width: auto; white-space: nowrap; }
   .section-nav button > span:first-of-type { overflow: visible; }
 }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
+  .entry-page-side { display: flex; }
   .section-heading { flex-direction: column; }
   .entry-card { padding: 16px; }
   .entry-card-heading { flex-wrap: wrap; }
