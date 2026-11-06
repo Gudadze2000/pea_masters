@@ -78,6 +78,14 @@
   --spacing-sidebar: 264px;
   --spacing-topbar: 64px;
   --spacing-control: 40px;
+
+  /* ---------- Breakpoints (the four PEA screen sizes) ----------
+     < 576 mobile · sm 576+ large phone · md 768+ tablet · lg 992+ laptop (fixed sidebar) · xl 1200+ desktop.
+     Plain CSS files use the same values: max-width 575.98 / 767.98 / 991.98 / 1199.98px. */
+  --breakpoint-sm: 36rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 62rem;
+  --breakpoint-xl: 75rem;
 }
 
 /* ---------- Semantic tokens (shadcn contract) ----------

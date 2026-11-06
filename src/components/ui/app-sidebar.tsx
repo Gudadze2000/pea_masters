@@ -30,7 +30,7 @@ const navigation: NavItem[] = [
   { label: "Teaching", to: "/profile/teaching" },
   { label: "Research overview", to: "/profile/research" },
   { label: "Evaluation form", icon: "imgIconFile" },
-  { label: "CV builder", icon: "imgIconBook" },
+  { label: "CV builder", icon: "imgIconBook", to: "/cv-builder" },
   { label: "History", icon: "imgIconHistory" },
   { label: "Settings", icon: "imgIconSettings" },
 ]

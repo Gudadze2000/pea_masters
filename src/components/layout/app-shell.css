@@ -34,7 +34,7 @@
 .breadcrumb button { cursor: pointer; border-radius: 4px; }
 .breadcrumb button:hover { color: var(--foreground); }
 .breadcrumb [aria-current="page"] { color: var(--color-neutral-600); }
-.topbar-actions { display: flex; align-items: center; gap: 16px; }
+.topbar-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
 .faculty-pill { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 99px; font-size: 12px; line-height: 16px; background: var(--muted); color: var(--color-neutral-700); }
 .language-switch { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--muted); }
 .language-switch button { padding: 4px 10px; font-size: 12px; line-height: 16px; border-radius: 6px; cursor: pointer; }
@@ -78,11 +78,30 @@
 .status-rejected, .status-withdrawn { background: var(--danger-soft); color: var(--destructive); }
 .status-draft, .status-completed { background: var(--muted); color: var(--color-neutral-600); }
 
-@media (max-width: 1199px) { .faculty-pill { display: none; } }
-@media (max-width: 767px) {
+/* Breakpoints (see --breakpoint-* in index.css):
+   < 576 mobile · 576–767 large phone · 768–991 tablet (sidebar slides in) · 992–1199 laptop · 1200+ desktop */
+@media (max-width: 1199.98px) { .faculty-pill { display: none; } }
+/* Tablet: the sidebar is a slide-out sheet, so the page uses the full width */
+@media (max-width: 991.98px) {
+  .dashboard-content { padding: 28px 24px; }
+  .dashboard-topbar { padding: 0 24px; }
+  .topbar-title [data-slot="sidebar-trigger"] { margin-left: -8px; }
+}
+@media (max-width: 767.98px) {
   .dashboard-content { padding: 20px 16px; gap: 20px; }
   .dashboard-topbar { padding: 0 16px; }
   .topbar-actions { gap: 8px; }
   .page-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
   .dashboard-card { padding: 20px; }
+}
+/* Mobile: only the current page in the breadcrumb, so the 64px top bar never wraps */
+@media (max-width: 575.98px) {
+  .breadcrumb { flex-wrap: nowrap; min-width: 0; }
+  .breadcrumb li:not(:last-child) { display: none; }
+  .breadcrumb li + li::before { content: none; }
+  .breadcrumb li:last-child { min-width: 0; }
+  .breadcrumb [aria-current="page"] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar-title nav { min-width: 0; }
+  .dashboard-card { padding: 16px; }
+  .page-heading h1 { font-size: 22px; line-height: 30px; }
 }

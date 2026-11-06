@@ -37,7 +37,8 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator { cursor: poi
 .field-error { font-size: 12px; line-height: 16px; color: var(--destructive); }
 
 /* Read-only / editable data tables */
-.data-table-wrap { border: 1px solid var(--border); border-radius: var(--radius-xl); overflow-x: auto; }
+/* position: relative keeps absolutely positioned children (e.g. .sr-only headers) inside the scroll area */
+.data-table-wrap { position: relative; border: 1px solid var(--border); border-radius: var(--radius-xl); overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 22px; }
 .data-table th { padding: 12px 16px; background: var(--background); border-bottom: 1px solid var(--border); font-size: 11px; line-height: 16px; letter-spacing: .06em; font-weight: 600; text-transform: uppercase; color: var(--muted-foreground); text-align: left; white-space: nowrap; }
 .data-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
@@ -53,7 +54,7 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator { cursor: poi
 .form-sheet-footer { display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--border); }
 .form-sheet-footer .dashboard-button { height: 40px; }
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .form-field.span-4, .form-field.span-2 { grid-column: 1 / -1; }
   .data-table { min-width: 560px; }

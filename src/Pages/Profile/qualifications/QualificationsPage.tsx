@@ -4,6 +4,7 @@ import { AlertDialog } from "@base-ui/react/alert-dialog"
 import { Check, Eye, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
+import { SectionNav } from "./SectionNav"
 import { StatusBadge } from "./StatusBadge"
 import { useQualifications } from "./qualifications-store"
 import { attachmentMeta, capitalize, findSection, sections, type Entry, type SectionDef } from "./sections"
@@ -93,23 +94,7 @@ export function QualificationsPage() {
           </div>
 
           <div className="qualifications-layout">
-            <nav className="dashboard-card section-nav" aria-label="Qualification sections">
-              <ul>
-                {sections.map(item => {
-                  const Icon = item.icon
-                  const count = entries[item.id]?.length ?? 0
-                  return (
-                    <li key={item.id}>
-                      <button aria-current={item.id === section.id ? "page" : undefined} onClick={() => navigate(`/profile/qualifications/${item.id}`)}>
-                        <Icon aria-hidden="true" />
-                        <span>{item.label}</span>
-                        <span className="count-badge" aria-label={`${count} entries`}>{count}</span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </nav>
+            <SectionNav currentId={section.id} />
 
             <section className="section-panel" aria-labelledby="section-heading">
               <div className="section-heading">
