@@ -20,6 +20,9 @@
 .dashboard-nav-link[data-active] .nav-icon, .dashboard-nav-link.is-section-active .nav-icon { background-color: var(--primary); }
 .dashboard-sidebar-footer { padding: 0; margin-top: 20px; }
 .user-card { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.user-card-profile { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; margin: -4px; padding: 4px; border-radius: var(--radius-md); text-align: left; cursor: pointer; }
+.user-card-profile:hover { background: var(--muted); }
+.user-card-profile:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
 .user-card p { font-size: 13px; line-height: 20px; font-weight: 500; color: var(--foreground); }
 .dashboard-avatar { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: var(--color-brand-100); color: var(--color-brand-700); font-size: 12px; font-weight: 500; }
 [data-slot="sidebar"][data-mobile="true"] { padding: 20px 16px; }
