@@ -66,3 +66,14 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator { cursor: poi
   .form-field.span-4, .form-field.span-2 { grid-column: 1 / -1; }
   .data-table { min-width: 560px; }
 }
+
+/* On/off switch (Switch.tsx) */
+.switch { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; width: 40px; height: 24px; padding: 2px; border-radius: 99px; background: var(--color-neutral-300); cursor: pointer; transition: background-color .15s; }
+.switch[aria-checked="true"] { background: var(--primary); }
+.switch:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 30%, transparent); }
+.switch:disabled { opacity: .5; cursor: not-allowed; }
+.switch-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--card); box-shadow: 0 1px 2px rgb(0 0 0 / 20%); transition: transform .15s; }
+.switch[aria-checked="true"] .switch-thumb { transform: translateX(16px); }
+
+/* Checkbox styled with the brand colour */
+.form-checkbox { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }

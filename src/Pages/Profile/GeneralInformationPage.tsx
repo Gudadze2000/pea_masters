@@ -172,7 +172,7 @@ export function GeneralInformationPage() {
               <ReadOnlyField label="Academic position" value={institution.position} />
             </dl>
             <InfoBanner title="Managed by your faculty admin">
-              To change your faculty, direction or position, contact your admin. Your previous affiliations are kept in History.
+              To change your faculty, direction or position, contact your admin.
             </InfoBanner>
           </section>
         </div>

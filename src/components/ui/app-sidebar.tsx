@@ -31,7 +31,7 @@ const navigation: NavItem[] = [
   { label: "Research overview", to: "/profile/research" },
   { label: "Evaluation form", icon: "imgIconFile", to: "/evaluation-form" },
   { label: "CV builder", icon: "imgIconBook", to: "/cv-builder" },
-  { label: "Settings", icon: "imgIconSettings" },
+  { label: "Settings", icon: "imgIconSettings", to: "/settings" },
 ]
 
 export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void }) {
@@ -75,7 +75,15 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="dashboard-sidebar-footer">
-        <div className="user-card"><div className="dashboard-avatar">NB</div><div className="grow"><p>Nino Beridze</p><small>Researcher</small></div><Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={() => onNavigate("Sign out")}><DashboardIcon name="imgIconLogout" /></Button></div>
+        <div className="user-card">
+          <button
+            className="user-card-profile"
+            aria-label="Open my profile"
+            onClick={() => { navigate("/profile/general"); if (isMobile) setOpenMobile(false) }}
+          >
+            <div className="dashboard-avatar">NB</div><div className="grow"><p>Nino Beridze</p><small>Researcher</small></div>
+          </button>
+          <Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={() => onNavigate("Sign out")}><DashboardIcon name="imgIconLogout" /></Button></div>
       </SidebarFooter>
     </Sidebar>
   )

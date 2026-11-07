@@ -10,7 +10,6 @@ const languages: Language[] = ["KA", "EN"]
 /** Top bar shared by every workspace page. `children` is the page title or breadcrumb. */
 export function AppTopbar({ children, onNavigate }: { children: ReactNode; onNavigate: (name: string) => void }) {
   const { language, setLanguage } = useLanguage()
-  const navigate = useNavigate()
   return (
     <header className="dashboard-topbar">
       <div className="topbar-title"><SidebarTrigger />{children}</div>
@@ -20,7 +19,6 @@ export function AppTopbar({ children, onNavigate }: { children: ReactNode; onNav
           {languages.map(lang => <button key={lang} aria-pressed={language === lang} onClick={() => setLanguage(lang)}>{lang}</button>)}
         </div>
         <button className="notification-button" aria-label="Open notifications" onClick={() => onNavigate("Notifications")}><Icon name="imgNotifications" /></button>
-        <button className="dashboard-avatar" aria-label="Open my profile" onClick={() => navigate("/profile/general")}>NB</button>
       </div>
     </header>
   )
