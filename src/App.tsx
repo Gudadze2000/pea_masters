@@ -18,8 +18,10 @@ function App() {
     // Qualification entries live above the routes so they survive moving between pages
     <QualificationsProvider>
         <Routes>
-        <Route path="/" element={<HomePage />} />
+        {/* Landing page is the login screen; it forwards to /home when already signed in. No route is restricted yet. */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<LoginPage mode="register" />} />
         <Route path="/home" element={<HomePage />} />
         <Route path="/profile" element={<Navigate to="/profile/general" replace />} />
         <Route path="/profile/general" element={<GeneralInformationPage />} />

@@ -6,6 +6,7 @@ import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { Switch } from "@/components/forms/Switch"
 import "@/components/forms/forms.css"
 import { useLanguage } from "@/lib/language-context"
+import { signOut } from "@/lib/auth"
 import { applyDisplaySettings, loadSettings, saveSettings, type NotificationChannel, type NotificationEvent, type Settings } from "@/lib/settings"
 import { institutionalInformation as account } from "../Profile/profileMock"
 import { initialSessions, passwordLastChanged, timeZones } from "./settingsMock"
@@ -150,7 +151,7 @@ export function SettingsPage() {
 
   return (
     <WorkspaceLayout breadcrumb={[{ label: "Settings", to: "/settings/account" }, { label: section.label }]}>
-      {openPanel => (
+      {() => (
         <div className="dashboard-content">
           <div className="page-heading">
             <div>
@@ -191,7 +192,7 @@ export function SettingsPage() {
               )}
               {section.id === "language" && <LanguageSection settings={draft} onChange={update} />}
               {section.id === "privacy" && <PrivacySection settings={draft} onChange={update} />}
-              {section.id === "data" && <DataSection settings={saved} onSignOut={() => openPanel("Sign out")} />}
+              {section.id === "data" && <DataSection settings={saved} onSignOut={() => { signOut(); navigate("/login", { replace: true }) }} />}
             </div>
           </div>
         </div>

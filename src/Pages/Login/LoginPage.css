@@ -133,6 +133,21 @@
       }
       .login-content .submit:hover { background: #6f1b28; }
       .login-content .submit:disabled { opacity: 0.6; cursor: default; }
+      .login-content .field .hint { margin: 6px 0 0; font-size: 12px; line-height: 16px; color: #5e5658; }
+      .login-content .switch-mode { margin: 16px 0 0; text-align: center; font-size: 13px; color: #5e5658; }
+      .login-content .switch-mode a { color: #8c2433; font-weight: 500; }
+      .login-content .switch-mode a:hover { text-decoration: underline; }
+      .login-content .divider { display: flex; align-items: center; gap: 12px; margin-top: 20px; font-size: 12px; color: #a79fa1; }
+      .login-content .divider::before, .login-content .divider::after { content: ""; flex: 1; height: 1px; background: #e7e2e3; }
+      .login-content .guest {
+        margin-top: 16px; width: 100%; height: 40px;
+        border: 1px solid #e7e2e3; border-radius: 8px;
+        background: #ffffff; color: #443d3f;
+        font: inherit; font-size: 14px; font-weight: 500;
+        cursor: pointer;
+      }
+      .login-content .guest:hover { background: #f7f5f5; }
+      .login-content .guest:disabled { opacity: 0.6; cursor: default; }
       .login-content .note {
         margin-top: 24px; display: flex; gap: 8px;
         padding: 12px;

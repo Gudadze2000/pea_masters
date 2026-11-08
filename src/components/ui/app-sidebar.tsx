@@ -2,6 +2,7 @@ import type { CSSProperties } from "react"
 import { useLocation, useNavigate } from "react-router"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
+import { initials, signOut, useSession } from "@/lib/auth"
 import "@/components/layout/app-shell.css"
 
 export function DashboardIcon({ name }: { name: string }) {
@@ -39,6 +40,14 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const currentPath = pathname === "/" ? "/home" : pathname
+  const session = useSession()
+  const displayName = session?.name ?? "Nino Beridze"
+
+  function handleSignOut() {
+    signOut()
+    if (isMobile) setOpenMobile(false)
+    navigate("/login", { replace: true })
+  }
 
   return (
     <Sidebar className="dashboard-sidebar">
@@ -81,9 +90,9 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
             aria-label="Open my profile"
             onClick={() => { navigate("/profile/general"); if (isMobile) setOpenMobile(false) }}
           >
-            <div className="dashboard-avatar">NB</div><div className="grow"><p>Nino Beridze</p><small>Researcher</small></div>
+            <div className="dashboard-avatar">{initials(displayName)}</div><div className="grow"><p>{displayName}</p><small>{session?.role === "guest" ? "Guest" : "Researcher"}</small></div>
           </button>
-          <Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={() => onNavigate("Sign out")}><DashboardIcon name="imgIconLogout" /></Button></div>
+          <Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={handleSignOut}><DashboardIcon name="imgIconLogout" /></Button></div>
       </SidebarFooter>
     </Sidebar>
   )
