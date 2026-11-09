@@ -20,6 +20,32 @@ function readImage(file: File) {
   })
 }
 
+const AVATAR_SIZE = 512
+
+/**
+ * Centre-crops the photo to a square and scales it to 512×512 JPEG (~50–100 KB), so it fits in browser storage
+ * (a 5 MB upload would not) and stays small enough to send to the server later.
+ */
+function toAvatar(dataUrl: string) {
+  return new Promise<string>((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => {
+      const side = Math.min(image.naturalWidth, image.naturalHeight)
+      const canvas = document.createElement("canvas")
+      canvas.width = canvas.height = AVATAR_SIZE
+      const context = canvas.getContext("2d")
+      if (!context) return reject(new Error("canvas"))
+      context.fillStyle = "#ffffff" // transparent PNG areas would otherwise turn black in JPEG
+      context.fillRect(0, 0, AVATAR_SIZE, AVATAR_SIZE)
+      context.imageSmoothingQuality = "high"
+      context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE)
+      resolve(canvas.toDataURL("image/jpeg", 0.88))
+    }
+    image.onerror = () => reject(new Error("decode"))
+    image.src = dataUrl
+  })
+}
+
 export function PhotoUpload({ photo, initials, onChange }: { photo: string | null; initials: string; onChange: (photo: string | null) => void }) {
   const input = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
@@ -32,7 +58,7 @@ export function PhotoUpload({ photo, initials, onChange }: { photo: string | nul
       const { dataUrl, width, height } = await readImage(file)
       if (width < MIN_SIZE || height < MIN_SIZE) return setError(`The photo is ${width}×${height} px. Use one at least ${MIN_SIZE}×${MIN_SIZE} px.`)
       setError(null)
-      onChange(dataUrl)
+      onChange(await toAvatar(dataUrl))
     } catch {
       setError("This file could not be read as an image.")
     }

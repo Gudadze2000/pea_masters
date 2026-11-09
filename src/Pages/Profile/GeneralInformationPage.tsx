@@ -9,7 +9,8 @@ import { useLanguage } from "@/lib/language-context"
 import { RichTextEditor } from "./RichTextEditor"
 import { htmlTextLength } from "./html-text"
 import { PhotoUpload } from "./PhotoUpload"
-import { BIOGRAPHY_MAX_LENGTH, initialGeneralInformation, institutionalInformation as institution, type GeneralInformation } from "./profileMock"
+import { BIOGRAPHY_MAX_LENGTH, institutionalInformation as institution, type GeneralInformation } from "./profileMock"
+import { saveProfile, useProfile } from "@/lib/profile"
 import "./GeneralInformationPage.css"
 
 const AUTOSAVE_DELAY = 1200
@@ -58,8 +59,10 @@ export function GeneralInformationPage() {
   const { language } = useLanguage()
   const copy = languageCopy[language]
 
-  const [saved, setSaved] = useState<GeneralInformation>(initialGeneralInformation)
-  const [draft, setDraft] = useState<GeneralInformation>(initialGeneralInformation)
+  // Saved values live in the shared profile store, so the photo shows in the sidebar and survives leaving the page
+  const saved = useProfile()
+  const [draft, setDraft] = useState<GeneralInformation>(saved)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [editorVersion, setEditorVersion] = useState(0)
   const [saving, setSaving] = useState(false)
   const [savedNotice, setSavedNotice] = useState(false)
@@ -109,7 +112,8 @@ export function GeneralInformationPage() {
     setSaving(true)
     // TODO: replace with the real API call
     window.setTimeout(() => {
-      setSaved(draft)
+      const persisted = saveProfile(draft)
+      setSaveError(persisted ? null : "Saved for this visit only: the browser has no room left to keep it after a reload.")
       setSaving(false)
       setSavedNotice(true)
       setLastAutoSaved(Date.now())
@@ -131,7 +135,7 @@ export function GeneralInformationPage() {
               <p>Your biography and photo appear on your public profile.</p>
             </div>
             <div className="page-actions">
-              <span className="save-status" role="status">{savedNotice && !dirty && <><Check aria-hidden="true" />Changes saved</>}</span>
+              <span className="save-status" role="status">{savedNotice && !dirty && (saveError ?? <><Check aria-hidden="true" />Changes saved</>)}</span>
               <Button variant="outline" className="dashboard-button" disabled={!dirty || saving} onClick={cancel}>Cancel</Button>
               <Button className="dashboard-button" disabled={!dirty || saving || overLimit} onClick={save}><Save />{saving ? "Saving…" : "Save changes"}</Button>
             </div>

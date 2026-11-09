@@ -31,7 +31,8 @@
 
 /* Account */
 .settings-account { display: flex; align-items: center; gap: 16px; }
-.settings-account-avatar { display: grid; place-items: center; width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; background: var(--color-brand-100); color: var(--color-brand-700); font-size: 16px; font-weight: 500; }
+.settings-account-avatar { display: grid; place-items: center; width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; background: var(--color-brand-100); color: var(--color-brand-700); font-size: 16px; font-weight: 500; overflow: hidden; }
+.settings-account-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .settings-account-name { font-size: 16px; line-height: 24px; font-weight: 600; }
 .settings-account small { font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
 .settings-readonly-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; }

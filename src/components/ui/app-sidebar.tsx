@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { initials, signOut, useSession } from "@/lib/auth"
+import { useProfile } from "@/lib/profile"
 import "@/components/layout/app-shell.css"
 
 export function DashboardIcon({ name }: { name: string }) {
@@ -42,6 +43,7 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
   const currentPath = pathname === "/" ? "/home" : pathname
   const session = useSession()
   const displayName = session?.name ?? "Nino Beridze"
+  const { photo } = useProfile()
 
   function handleSignOut() {
     signOut()
@@ -90,7 +92,7 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
             aria-label="Open my profile"
             onClick={() => { navigate("/profile/general"); if (isMobile) setOpenMobile(false) }}
           >
-            <div className="dashboard-avatar">{initials(displayName)}</div><div className="grow"><p>{displayName}</p><small>{session?.role === "guest" ? "Guest" : "Researcher"}</small></div>
+            <div className="dashboard-avatar">{photo ? <img src={photo} alt="" /> : initials(displayName)}</div><div className="grow"><p>{displayName}</p><small>{session?.role === "guest" ? "Guest" : "Researcher"}</small></div>
           </button>
           <Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={handleSignOut}><DashboardIcon name="imgIconLogout" /></Button></div>
       </SidebarFooter>

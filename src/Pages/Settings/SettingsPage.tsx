@@ -7,6 +7,7 @@ import { Switch } from "@/components/forms/Switch"
 import "@/components/forms/forms.css"
 import { useLanguage } from "@/lib/language-context"
 import { signOut } from "@/lib/auth"
+import { useProfile } from "@/lib/profile"
 import { applyDisplaySettings, loadSettings, saveSettings, type NotificationChannel, type NotificationEvent, type Settings } from "@/lib/settings"
 import { institutionalInformation as account } from "../Profile/profileMock"
 import { initialSessions, passwordLastChanged, timeZones } from "./settingsMock"
@@ -205,6 +206,7 @@ export function SettingsPage() {
 /* ---------- Account ---------- */
 
 function AccountSection({ onEditProfile }: { onEditProfile: () => void }) {
+  const { photo } = useProfile()
   return (
     <>
       <section className="dashboard-card settings-card" aria-labelledby="account-heading">
@@ -213,7 +215,7 @@ function AccountSection({ onEditProfile }: { onEditProfile: () => void }) {
           <Button variant="outline" className="dashboard-button settings-small-button" onClick={onEditProfile}>Edit public profile</Button>
         </div>
         <div className="settings-account">
-          <div className="settings-account-avatar" aria-hidden="true">{account.initials}</div>
+          <div className="settings-account-avatar" aria-hidden="true">{photo ? <img src={photo} alt="" /> : account.initials}</div>
           <div>
             <p className="settings-account-name">{account.fullName}</p>
             <small>{account.position} · {account.faculty}</small>
