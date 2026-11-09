@@ -1,5 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@fontsource-variable/inter'
+import '@fontsource-variable/noto-sans-georgian'
 import './index.css'
 import { BrowserRouter } from 'react-router'
 import App from './App'

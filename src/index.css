@@ -166,7 +166,8 @@
 
 /* Aliases: they point at other variables, so they are defined as `inline` */
 @theme inline {
-  --font-sans: "Inter", "Noto Sans Georgian", ui-sans-serif, system-ui, sans-serif;
+  /* Bundled web fonts (imported in main.tsx), so the app and the exported CV PDF look the same on every computer */
+  --font-sans: "Inter Variable", "Noto Sans Georgian Variable", ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-sans);
 
   /* Figma radii: 6 / 8 buttons+inputs / 10 / 12 banners / 14 cards / 16 modals */

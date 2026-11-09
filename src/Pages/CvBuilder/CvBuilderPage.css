@@ -201,7 +201,7 @@
 /* Templates */
 .template-classic .cv-header { align-items: center; text-align: center; }
 .template-classic .cv-contact, .template-classic .cv-identifiers { justify-content: center; }
-.template-classic .cv-name, .template-classic .cv-section-title { font-family: Georgia, "Times New Roman", "Noto Serif Georgian", serif; }
+.template-classic .cv-name, .template-classic .cv-section-title { font-family: Georgia, "Times New Roman", "Noto Sans Georgian Variable", serif; }
 .template-classic .cv-name { font-weight: 500; }
 .template-classic .cv-section-title { letter-spacing: .12em; font-weight: 600; }
 
