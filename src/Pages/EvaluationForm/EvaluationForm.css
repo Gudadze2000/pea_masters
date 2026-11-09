@@ -96,3 +96,33 @@
   .evaluation-actions { flex-wrap: wrap; }
   .evaluation-modal-footer { flex-wrap: wrap; }
 }
+
+/* ---------- ISU self-assessment parts ---------- */
+/* The baseline is an inset shadow (not a border + negative margin) so horizontal scrolling on phones adds no vertical scrollbar */
+.evaluation-tabs { display: flex; gap: 4px; overflow-x: auto; overflow-y: hidden; box-shadow: inset 0 -1px var(--border); }
+.evaluation-tabs button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 2px solid transparent; font-size: 14px; line-height: 22px; font-weight: 500; color: var(--color-neutral-600); white-space: nowrap; cursor: pointer; }
+.evaluation-tabs button:hover { color: var(--foreground); }
+.evaluation-tabs button[aria-selected="true"] { border-bottom-color: var(--primary); color: var(--color-brand-700); }
+.evaluation-tabs button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; border-radius: 6px; }
+.evaluation-tab-score { padding: 1px 8px; border-radius: 99px; background: var(--muted); font-size: 12px; line-height: 18px; color: var(--color-neutral-700); }
+.evaluation-part-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; border-radius: 14px; background: var(--color-brand-50); }
+.evaluation-part-header h2 { font-size: 17px; line-height: 24px; font-weight: 600; }
+.evaluation-part-header h2 small { margin-left: 6px; font-size: 13px; font-weight: 400; color: var(--muted-foreground); }
+.evaluation-part-header p { margin-top: 2px; font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
+.evaluation-part-score { flex-shrink: 0; text-align: right; }
+.evaluation-part-score strong { display: block; font-size: 24px; line-height: 30px; font-weight: 600; color: var(--color-brand-700); }
+.evaluation-part-score span { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.evaluation-record-code { display: inline-block; min-width: 36px; margin-right: 8px; padding: 0 6px; border-radius: 6px; background: var(--muted); font-size: 12px; line-height: 20px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; vertical-align: 1px; }
+.evaluation-record-empty .evaluation-record-header { padding-block: 14px; }
+.evaluation-record-empty .evaluation-subtotal strong { color: var(--color-neutral-500); }
+.evaluation-parts { display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 20px; }
+.evaluation-parts > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.evaluation-parts dt .text-action { font-weight: 500; }
+.evaluation-parts dd { display: flex; align-items: baseline; gap: 6px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.evaluation-parts dd small { font-weight: 400; }
+.evaluation-parts-total { padding-top: 8px; border-top: 1px solid var(--border); font-weight: 600; }
+.evaluation-short { color: var(--color-warning-600); }
+@media (max-width: 767.98px) {
+  .evaluation-part-header { flex-direction: column; align-items: flex-start; }
+  .evaluation-part-score { text-align: left; }
+}

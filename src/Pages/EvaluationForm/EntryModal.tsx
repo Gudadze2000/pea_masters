@@ -2,13 +2,14 @@ import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/forms/FormField'
 import { EvaluationIcon as Icon, EvaluationModal } from './EvaluationModal'
-import { records, type EvaluationEntry, type RecordId } from './evaluation-model'
+import { findRecord, type EvaluationEntry, type RecordId } from './evaluation-model'
 
 export function EntryModal({ recordId, entry, onClose, onSave }: {
   recordId: RecordId; entry?: EvaluationEntry; onClose: () => void; onSave: (entry: EvaluationEntry) => void
 }) {
-  const record = records.find(record => record.id === recordId)!
+  const record = findRecord(recordId)!
   const [description, setDescription] = useState(entry?.description ?? '')
+  const [points, setPoints] = useState(entry?.points !== undefined ? String(entry.points) : '')
   const [detail, setDetail] = useState(entry?.detail ?? '')
   const [files, setFiles] = useState(entry?.files ?? [])
   const [error, setError] = useState('')
@@ -29,13 +30,19 @@ export function EntryModal({ recordId, entry, onClose, onSave }: {
     event.preventDefault()
     const asDraft = (event.nativeEvent as SubmitEvent).submitter?.getAttribute('value') === 'draft'
     if (!description.trim()) { setError('Description is required.'); return }
+    const claimed = Number(points)
+    if (record.variablePoints && (points.trim() === '' || !Number.isFinite(claimed) || claimed < 0)) { setError('Enter the points for this entry (0 or more).'); return }
     if (!asDraft && files.length === 0) { setError('Attach an evidence file, or save this entry as a draft.'); return }
-    onSave({ id: entry?.id ?? crypto.randomUUID(), description: description.trim(), detail: detail.trim(), files, status: 'Draft' })
+    onSave({ id: entry?.id ?? crypto.randomUUID(), description: description.trim(), detail: detail.trim(), files, status: 'Draft', ...(record.variablePoints ? { points: claimed } : {}) })
   }
-  return <EvaluationModal open onClose={onClose} wide title={`${entry ? 'Edit' : 'Add'} entry — ${record.name}`} description={`${record.points} points per approved entry · ${record.georgian}`}>
+  const title = record.code ? `${record.code} ${record.name}` : record.name
+  const scoring = record.variablePoints ? 'Points stated per entry' : `${record.points} points per approved entry`
+  const descriptionHint = record.hint ?? (recordId === 'article' ? 'Full citation with journal, year and DOI.' : 'Describe the activity and include the relevant year and details.')
+  return <EvaluationModal open onClose={onClose} wide title={`${entry ? 'Edit' : 'Add'} entry — ${title}`} description={`${scoring} · ${record.georgian}`}>
     <form onSubmit={save}>
       <div className="evaluation-modal-body evaluation-entry-fields">
-        <FormField idPrefix="evaluation" field={{ name: 'description', label: 'Description', type: 'textarea', required: true, hint: recordId === 'article' ? 'Full citation with journal, year and DOI.' : 'Describe the activity and include the relevant year and details.' }} value={description} onChange={setDescription} />
+        <FormField idPrefix="evaluation" field={{ name: 'description', label: record.code ? 'Performance indicator' : 'Description', type: 'textarea', required: true, hint: descriptionHint }} value={description} onChange={setDescription} />
+        {record.variablePoints && <FormField idPrefix="evaluation" field={{ name: 'points', label: 'Points for this entry', type: 'text', required: true, hint: record.variablePoints }} value={points} onChange={setPoints} />}
         <FormField idPrefix="evaluation" field={{ name: 'detail', label: recordId === 'article' ? 'DOI' : 'Additional details', type: 'text' }} value={detail} onChange={setDetail} />
         <div className="form-field">
           <label htmlFor="evaluation-evidence">Evidence file *</label>
