@@ -115,7 +115,8 @@ export function SettingsPage() {
     return () => window.removeEventListener("beforeunload", warn)
   }, [dirty])
 
-  const section = sections.find(item => item.id === sectionId)
+  // /settings with no section shows Account directly (redirecting would flash an empty frame)
+  const section = sectionId === undefined ? sections[0] : sections.find(item => item.id === sectionId)
   if (!section) return <Navigate to="/settings/account" replace />
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {

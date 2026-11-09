@@ -33,8 +33,7 @@ function App() {
         <Route path="/profile/qualifications/:sectionId/:entryId/edit" element={<QualificationsPage />} />
         <Route path="/cv-builder" element={<CvBuilderPage />} />
         <Route path="/evaluation-form" element={<EvaluationForm />} />
-        <Route path="/settings" element={<Navigate to="/settings/account" replace />} />
-        <Route path="/settings/:sectionId" element={<SettingsPage />} />
+        <Route path="/settings/:sectionId?" element={<SettingsPage />} />
       </Routes>
     </QualificationsProvider>
   )

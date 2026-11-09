@@ -68,7 +68,9 @@ export function QualificationsPage() {
   const { entries, deleteEntry, notice, flash } = useQualifications()
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
-  const section = findSection(sectionId)
+  // No section in the URL (the sidebar link): show the first one directly. A <Navigate> here would render
+  // an empty frame first (router updates are transitions), which shows up as a flicker.
+  const section = sectionId === undefined ? sections[0] : findSection(sectionId)
   if (!section) return <Navigate to={`/profile/qualifications/${sections[0].id}`} replace />
 
   const base = `/profile/qualifications/${section.id}`
