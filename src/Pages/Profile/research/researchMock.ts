@@ -26,7 +26,7 @@ export const PROJECT_ROLES = ["PI", "Co-PI", "Coordinator", "Member", "Consultan
 export const initialResearch: ResearchOverview = {
   interests: ["Plant molecular genetics", "Climate adaptation", "Caucasian flora", "Landraces"],
   projects: [
-    { id: "p1", title: "GENDROUGHT — Drought-response genes of wheat", donor: "Horizon Europe", startYear: "2022", endYear: "2025", type: "International", role: "PI" },
+    { id: "p1", title: "GENDROUGHT - Drought-response genes of wheat", donor: "Horizon Europe", startYear: "2022", endYear: "2025", type: "International", role: "PI" },
     { id: "p2", title: "Alpine soil microbiome atlas", donor: "GNSF", startYear: "2021", endYear: "2023", type: "Local", role: "Co-PI" },
     { id: "p3", title: "Seed bank digitisation", donor: "ISU Grant", startYear: "2020", endYear: "2021", type: "Local", role: "Member" },
   ],

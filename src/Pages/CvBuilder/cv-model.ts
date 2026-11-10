@@ -15,7 +15,7 @@ export type Publication = {
   id: string
   type: PublicationType
   status: PublicationStatus
-  /** "Beridze N; Schulz K" — family name then initials, separated by semicolons */
+  /** "Beridze N; Schulz K" - family name then initials, separated by semicolons */
   authors: string
   title: string
   venue: string
@@ -116,10 +116,10 @@ export const initialCv: CvData = {
   profiles: { orcid: "", scopus: "", researcherId: "", scholar: "", researchGate: "", semanticScholar: "", website: "", github: "" },
   interests: ["Plant molecular genetics", "Climate adaptation", "Caucasian flora", "Landraces"],
   publications: [
-    { id: "pub1", type: "Journal article", status: "Published", authors: "Beridze N; Mchedlidze D; Schulz K", title: "Allelic variation in drought-response genes of Caucasian wheat landraces", venue: "Plant Genetic Resources", year: "2024", volume: "22", issue: "3", pages: "145–158", doi: "10.5555/pea.2024.0145", url: "" },
-    { id: "pub2", type: "Conference paper", status: "Published", authors: "Gelashvili A; Beridze N", title: "Root architecture of drought-tolerant wheat accessions under field conditions", venue: "Proceedings of the European Plant Science Conference", year: "2022", volume: "", issue: "", pages: "88–91", doi: "", url: "" },
+    { id: "pub1", type: "Journal article", status: "Published", authors: "Beridze N; Mchedlidze D; Schulz K", title: "Allelic variation in drought-response genes of Caucasian wheat landraces", venue: "Plant Genetic Resources", year: "2024", volume: "22", issue: "3", pages: "145-158", doi: "10.5555/pea.2024.0145", url: "" },
+    { id: "pub2", type: "Conference paper", status: "Published", authors: "Gelashvili A; Beridze N", title: "Root architecture of drought-tolerant wheat accessions under field conditions", venue: "Proceedings of the European Plant Science Conference", year: "2022", volume: "", issue: "", pages: "88-91", doi: "", url: "" },
     { id: "pub3", type: "Journal article", status: "In press", authors: "Beridze N; Tabatadze I; Kapanadze G", title: "A CRISPR screen for osmotic-stress regulators in Arabidopsis", venue: "Journal of Experimental Botany", year: "2025", volume: "", issue: "", pages: "", doi: "", url: "" },
-    { id: "pub4", type: "Book chapter", status: "Published", authors: "Beridze N", title: "Wheat landraces of Georgia", venue: "Crop Wild Relatives of the Caucasus", year: "2021", volume: "", issue: "", pages: "201–224", doi: "", url: "" },
+    { id: "pub4", type: "Book chapter", status: "Published", authors: "Beridze N", title: "Wheat landraces of Georgia", venue: "Crop Wild Relatives of the Caucasus", year: "2021", volume: "", issue: "", pages: "201-224", doi: "", url: "" },
   ],
   talks: [
     { id: "talk1", title: "Mining landraces for drought tolerance", event: "Gordon Research Conference on Plant Stress", location: "Waterville Valley, USA", date: "2024-07", type: "Invited talk" },

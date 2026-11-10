@@ -1,7 +1,7 @@
 import type { RecordDef } from './evaluation-model'
 
 /**
- * ISU School of Technology — academic staff self-assessment form (based on the 2023 Google Form).
+ * ISU School of Technology - academic staff self-assessment form (based on the 2023 Google Form).
  * Each numbered item is a record type: one entry = one unit (one article, one semester, one grant …).
  * `maxPoints` comes from the answer options of the original form; items whose form offered
  * "more than …" have no cap. The four "write your total" questions (1.8, 2.46, 3.9, 4.0) are calculated.
@@ -65,7 +65,7 @@ export const parts: Part[] = [
         icon: 'imgIconBook1',
         variablePoints: '20 points per semester at the contract minimum. Below the minimum: −2 points per missing hour; above it: +4 points per extra hour (per semester). Add one entry per semester.',
       }),
-      item('1.2', 2.5, null, 'Lecture at a partner university (San Diego State University – Georgia)', 'პარტნიორ უნივერსიტეტებში (სან-დიეგოს სახელმწიფო უნივერსიტეტი- საქართველო) ჩატარებული ლექცია', 'Lecture name(s) for the semester.', { icon: 'imgIconUsers' }),
+      item('1.2', 2.5, null, 'Lecture at a partner university (San Diego State University - Georgia)', 'პარტნიორ უნივერსიტეტებში (სან-დიეგოს სახელმწიფო უნივერსიტეტი- საქართველო) ჩატარებული ლექცია', 'Lecture name(s) for the semester.', { icon: 'imgIconUsers' }),
       item('1.3', 15, 60, 'Leading an academic programme (per academic year)', 'ერთი აკადემიური პროგრამის ხელმძღვანელობა', 'Programme name(s).', { icon: 'imgIconGrad' }),
       item('1.4', 10, null, 'Supervising a bachelor’s thesis (per semester)', 'ერთი საბაკალავრო ნაშრომის ხელმძღვანელობა', 'Student name(s) by semester.', { icon: 'imgIconGrad' }),
       item('1.5', 5, 30, 'Developing the core documents of a new study programme (not a new course)', 'ახალი სასწავლო პროგრამის ძირითადი დოკუმენტების შემუშავებაში მონაწილეობა (გარდა ახალი სასწავლო კურსის შემუშავებისა)', 'Programme name.', { icon: 'imgIconEdit' }),
@@ -81,8 +81,8 @@ export const parts: Part[] = [
     rule: 'Required · at least 60 points',
     min: 60,
     items: [
-      item('2.1', 50, 300, 'Article in an indexed journal — impact factor above 0.5 (Clarivate WoS) or CiteScore above 0.5 (Scopus)', 'სტატია საერთაშორისო ბაზებში შემავალ რეფერირებად ჟურნალში - 0.5-ზე მეტი იმპაქტ ფაქტორით ან ციტირების ქულით', article),
-      item('2.2', 40, 80, 'Article in an indexed journal — impact factor or CiteScore of 0.5 or less', 'სტატია საერთაშორისო ბაზებში შემავალ რეფერირებად ჟურნალში - არა უმეტეს 0.5 იმპაქტ ფაქტორით ან ციტირების ქულით', article),
+      item('2.1', 50, 300, 'Article in an indexed journal - impact factor above 0.5 (Clarivate WoS) or CiteScore above 0.5 (Scopus)', 'სტატია საერთაშორისო ბაზებში შემავალ რეფერირებად ჟურნალში - 0.5-ზე მეტი იმპაქტ ფაქტორით ან ციტირების ქულით', article),
+      item('2.2', 40, 80, 'Article in an indexed journal - impact factor or CiteScore of 0.5 or less', 'სტატია საერთაშორისო ბაზებში შემავალ რეფერირებად ჟურნალში - არა უმეტეს 0.5 იმპაქტ ფაქტორით ან ციტირების ქულით', article),
       item('2.3', 30, 120, 'Article in an international scientific collection', 'სტატია საერთაშორისო სამეცნიერო კრებულში', article),
       item('2.4', 10, 60, 'Article in a local peer-reviewed journal or collection', 'სტატია ადგილობრივ რეფერირებად სამეცნიერო ჟურნალში და/ან კრებულში', article),
       item('2.5', 70, 210, 'Monograph published abroad (recognised Western publisher)', 'უცხოეთში გამოცემული სამეცნიერო მონოგრაფია', book, { icon: 'imgIconBook1' }),

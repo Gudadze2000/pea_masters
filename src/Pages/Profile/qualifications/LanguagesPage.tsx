@@ -26,7 +26,7 @@ const toRow = (entry: Entry): Row => ({ id: entry.id, language: entry.values.lan
 const isBlank = (row: Row) => !row.language && SKILLS.every(skill => !row[skill.key])
 const sameRow = (a: Row, b: Row) => a.language === b.language && SKILLS.every(skill => a[skill.key] === b[skill.key])
 
-/** /profile/qualifications/languages — all languages edited at once in a table */
+/** /profile/qualifications/languages - all languages edited at once in a table */
 export function LanguagesPage() {
   const { entries, replaceSection, notice, flash } = useQualifications()
   const saved = entries[SECTION_ID] ?? []
@@ -200,7 +200,7 @@ export function LanguagesPage() {
                   })}
                 </div>
 
-                <p className="languages-note"><Info aria-hidden="true" />Levels follow the CEFR scale (A1–C2). Choose “Native” for your first language.</p>
+                <p className="languages-note"><Info aria-hidden="true" />Levels follow the CEFR scale (A1-C2). Choose “Native” for your first language.</p>
               </section>
             </section>
           </div>

@@ -68,7 +68,7 @@ export function formatDate(value: string | undefined) {
 
 export function formatPeriod(start: string | undefined, end: string | undefined) {
   if (!start && !end) return ""
-  return `${formatDate(start) || "?"} – ${end ? formatDate(end) : "present"}`
+  return `${formatDate(start) || "?"} - ${end ? formatDate(end) : "present"}`
 }
 
 /** "https://gnsf.ge/x" → "gnsf.ge/x" */
@@ -140,7 +140,7 @@ export const sections: SectionDef[] = [
     descriptionOf: v => v.reason,
     entries: [
       entry("approved", { title: "Young Scientist Award", date: "2023-06-15", body: "Georgian National Science Foundation", country: "Georgia", url: "https://gnsf.ge/awards/2023", reason: "Awarded for outstanding contribution to plant molecular genetics by an early-career researcher." }, { documents: [pdf("young-scientist-award.pdf", 840_000)] }),
-      entry("submitted", { title: "Best Poster — European Plant Science Conference", date: "2022-09-08", body: "EPSO", country: "Italy", reason: "Poster on drought-response genes in Caucasian wheat landraces." }),
+      entry("submitted", { title: "Best Poster - European Plant Science Conference", date: "2022-09-08", body: "EPSO", country: "Italy", reason: "Poster on drought-response genes in Caucasian wheat landraces." }),
       entry("rejected", { title: "Faculty Teaching Excellence Prize", date: "2021-03-20", body: "Ilia State University", country: "Georgia", reason: "Recognition for innovative teaching in bioinformatics." }, { comment: "Please add a supporting document or URL.", reviewer: "Giorgi Kapanadze" }),
     ],
   },
@@ -209,7 +209,7 @@ export const sections: SectionDef[] = [
     metaOf: v => meta([{ icon: FileText, text: v.kind }, { icon: Hash, text: v.number }, v.grantDate ? dateMeta(v.grantDate) : dateMeta(v.submissionDate), placeMeta(v.country), urlMeta(v.url)]),
     descriptionOf: v => v.abstract,
     entries: [
-      entry("approved", { kind: "Patent", country: "Georgia", title: "Method for detecting drought-response alleles in cereal landraces", inventors: "N. Beridze, D. Mchedlidze", number: "GE P 2023 7421", submissionDate: "2021-03-12", grantDate: "2023-07-04", expiryDate: "2041-03-12", licence: "Exclusive licence — AgroGen Ltd.", abstract: "The invention relates to a PCR-based method for identifying alleles associated with drought tolerance in Caucasian wheat landraces." }, { documents: [pdf("patent-certificate.pdf", 1_250_000)] }),
+      entry("approved", { kind: "Patent", country: "Georgia", title: "Method for detecting drought-response alleles in cereal landraces", inventors: "N. Beridze, D. Mchedlidze", number: "GE P 2023 7421", submissionDate: "2021-03-12", grantDate: "2023-07-04", expiryDate: "2041-03-12", licence: "Exclusive licence - AgroGen Ltd.", abstract: "The invention relates to a PCR-based method for identifying alleles associated with drought tolerance in Caucasian wheat landraces." }, { documents: [pdf("patent-certificate.pdf", 1_250_000)] }),
     ],
   },
   {

@@ -19,7 +19,7 @@ const publicationFields: FieldDef[] = [
   { name: "year", label: "Year", type: "text", span: 1, placeholder: "2024" },
   { name: "volume", label: "Volume", type: "text", span: 1 },
   { name: "issue", label: "Issue", type: "text", span: 1 },
-  { name: "pages", label: "Pages", type: "text", span: 1, placeholder: "145–158" },
+  { name: "pages", label: "Pages", type: "text", span: 1, placeholder: "145-158" },
   { name: "doi", label: "DOI", type: "text", span: 2, placeholder: "10.1000/xyz123" },
   { name: "url", label: "Link (if no DOI)", type: "url", span: 2, placeholder: "https://" },
 ]
@@ -143,7 +143,7 @@ export function PublicationsTab({ cv, change }: { cv: CvData; change: ChangeCv }
               authors: values.authors.split(";").map(name => name.trim()).filter(Boolean).join("; "),
               title: values.title.replace(/\s+/g, " "),
               venue: values.venue ?? "", year: values.year ?? "", volume: values.volume ?? "", issue: values.issue ?? "",
-              pages: (values.pages ?? "").replace(/\s*-+\s*/g, "–"),
+              pages: (values.pages ?? "").replace(/\s*[-\u2013]+\s*/g, "-"),
               doi: cleanDoi(values.doi ?? ""), url: values.url ?? "",
             }
             change(current => ({

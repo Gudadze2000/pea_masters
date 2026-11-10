@@ -1,10 +1,12 @@
-import { useState, type CSSProperties, type ReactNode } from "react"
+import { useState, type ReactNode } from "react"
+import { ContentScrollbar } from "@/components/layout/ContentScrollbar"
 import { useNavigate } from "react-router"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { WorkspaceSidebarProvider } from "@/components/layout/WorkspaceSidebarProvider"
 import { AppTopbar } from "@/components/layout/AppTopbar"
 import { AppSidebar, DashboardIcon as Icon } from "@/components/ui/app-sidebar"
 import { Button } from "@/components/ui/button"
 import { useSession } from "@/lib/auth"
+import { findEntryNeedingAttention, readDraft, type EvaluationLinkState } from "@/Pages/EvaluationForm/evaluation-model"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import "./HomePage.css"
 
@@ -39,15 +41,30 @@ export function HomePage() {
   const [panel, setPanel] = useState<string | null>(null)
   const session = useSession()
   const firstName = session?.name.split(/\s+/)[0] || "Nino"
-  const open =(name: string) => { if (name === "Evaluation form") navigate("/evaluation-form"); else if (name !== "Dashboard") setPanel(name) }
+  // Entries the attention rows point at, read from the saved evaluation draft (so a fixed entry isn't linked again)
+  const [attention] = useState(() => {
+    const draft = readDraft()
+    return { rejected: findEntryNeedingAttention(draft, "rejected", "article"), missingFile: findEntryNeedingAttention(draft, "missing-file", "conference") }
+  })
+  /** Opens the evaluation form, with that entry's edit dialog open when there is one */
+  const openEntry = (target: { recordId: string; entryId: string } | null) => {
+    const state: EvaluationLinkState | undefined = target ? { edit: target } : undefined
+    navigate("/evaluation-form", { state })
+  }
+  const open = (name: string) => {
+    if (name === "Evaluation form") navigate("/evaluation-form")
+    else if (name === "Build a CV") navigate("/cv-builder")
+    else if (name === "Download CV") navigate("/cv-builder", { state: { download: true } })
+    else if (name !== "Dashboard") setPanel(name)
+  }
   return (
-    <SidebarProvider style={{ "--sidebar-width": "264px" } as CSSProperties}>
+    <WorkspaceSidebarProvider>
       <AppSidebar onNavigate={open} />
       <main className="dashboard-main">
         <AppTopbar onNavigate={open}><span>Dashboard</span></AppTopbar>
         <div className="dashboard-content">
           <div className="page-heading"><div><h1>Good evening, {firstName}</h1><p>Biology · Associate Professor · Faculty of Natural Sciences and Medicine</p></div><Button variant="outline" className="dashboard-button" onClick={() => open("Download CV")}><Icon name="imgIconDownload" />Download CV</Button></div>
-          <section className="evaluation-banner"><Icon name="imgIconAlert" /><div><p>Evaluation 2025–2026 is open — your form is still a draft</p><small>Submit before 30 November 2026. You will get an email reminder as the deadline approaches.</small></div><Button onClick={() => open("Evaluation form")}>Continue</Button></section>
+          <section className="evaluation-banner"><Icon name="imgIconAlert" /><div><p>Evaluation 2025-2026 is open - your form is still a draft</p><small>Submit before 30 November 2026. You will get an email reminder as the deadline approaches.</small></div><Button onClick={() => open("Evaluation form")}>Continue</Button></section>
           <div className="dashboard-stats">{stats.map(stat => <section className="stat-card" key={stat.label}><div className="stat-heading"><h2>{stat.label}</h2><span className={`icon-tile ${stat.tone}`}><Icon name={stat.icon} /></span></div><p className="stat-value">{stat.value}</p><small>{stat.detail}</small></section>)}</div>
           <div className="dashboard-columns">
             <div className="dashboard-stack">
@@ -55,19 +72,20 @@ export function HomePage() {
                 <div className="progress-list">{progress.map(item => <div key={item.label}><div className="progress-label"><span>{item.label}</span><small>{item.done} / {item.total}</small></div><Progress value={item.done / item.total * 100} label={item.label} /></div>)}</div>
               </Card>
               <Card title="Needs your attention">
-                <div className="attention-list"><div className="attention-row danger"><Icon name="imgIconAlert1" /><div><p>Article (Scopus) — entry #2 was rejected</p><small>“DOI does not match the attached PDF. Please upload the correct file.” — Giorgi Kapanadze</small></div><Button variant="outline" className="danger-button" onClick={() => open("Fix rejected article")}>Fix</Button></div>
-                <div className="attention-row warning"><Icon name="imgIconClock1" /><div><p>Conference presentation — missing attachment</p><small>Attach a certificate or programme page (PDF or image).</small></div><Button variant="outline" onClick={() => open("Add attachment")}>Add file</Button></div></div>
+                <div className="attention-list"><div className="attention-row danger"><Icon name="imgIconAlert1" /><div><p>Article (Scopus) - entry #2 was rejected</p><small>“DOI does not match the attached PDF. Please upload the correct file.” - Giorgi Kapanadze</small></div><Button variant="outline" className="danger-button" onClick={() => openEntry(attention.rejected)}>Fix</Button></div>
+                <div className="attention-row warning"><Icon name="imgIconClock1" /><div><p>Conference presentation - missing attachment</p><small>Attach a certificate or programme page (PDF or image).</small></div><Button variant="outline" onClick={() => openEntry(attention.missingFile)}>Add file</Button></div></div>
               </Card>
             </div>
             <div className="dashboard-stack">
-              <Card title="Evaluation period"><div className="period-content"><div className="period-title"><span className="open-badge"><Icon name="imgDot" />Open</span><span>Annual evaluation 2025–2026</span></div><small>Opened 1 Oct 2026 · Closes 30 Nov 2026</small><Progress warning value={38.4} label="Evaluation period elapsed" /><Button className="dashboard-button w-full" onClick={() => open("Evaluation form")}><Icon name="imgIconFile2" />Continue evaluation</Button></div></Card>
+              <Card title="Evaluation period"><div className="period-content"><div className="period-title"><span className="open-badge"><Icon name="imgDot" />Open</span><span>Annual evaluation 2025-2026</span></div><small>Opened 1 Oct 2026 · Closes 30 Nov 2026</small><Progress warning value={38.4} label="Evaluation period elapsed" /><Button className="dashboard-button w-full" onClick={() => open("Evaluation form")}><Icon name="imgIconFile2" />Continue evaluation</Button></div></Card>
               <Card title="Notifications" action={<button className="text-action" onClick={() => open("Notifications")}>View all</button>}><NotificationList /></Card>
               <Card title="Quick actions" className="quick-actions">{[["Update my profile", "imgIconUser1"], ["Build a CV", "imgIconBook1"], ["Request edit access", "imgIconUnlock"]].map(([label, icon]) => <Button key={label} variant="outline" className="dashboard-button w-full" onClick={() => label === "Update my profile" ? navigate("/profile/general") : open(label)}><Icon name={icon} />{label}</Button>)}</Card>
             </div>
           </div>
         </div>
+        <ContentScrollbar />
       </main>
       <Sheet open={panel !== null} onOpenChange={value => { if (!value) setPanel(null) }}><SheetContent className="dashboard-panel"><SheetHeader><SheetTitle>{panel}</SheetTitle><SheetDescription>{panel === "Notifications" ? "Updates about your evaluation." : "This dashboard preview uses sample data. This feature will be connected when the rest of the application is built."}</SheetDescription></SheetHeader>{panel === "Notifications" && <NotificationList />}</SheetContent></Sheet>
-    </SidebarProvider>
+    </WorkspaceSidebarProvider>
   )
 }

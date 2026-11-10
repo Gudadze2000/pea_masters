@@ -9,9 +9,9 @@ export type StudentStatus = "Active" | "Approved" | "Completed" | "Withdrawn"
 export const initialInterests = ["Molecular biology", "Bioinformatics", "Genetics", "Research methods"]
 
 export const programmes: { id: string; name: string; level: ProgrammeLevel; year: string; ects: number }[] = [
-  { id: "p1", name: "Molecular Biology II", level: "BA", year: "2025–26", ects: 6 },
-  { id: "p2", name: "Bioinformatics Methods", level: "MA", year: "2025–26", ects: 6 },
-  { id: "p3", name: "Plant Genetics (PhD seminar)", level: "PhD", year: "2024–25", ects: 10 },
+  { id: "p1", name: "Molecular Biology II", level: "BA", year: "2025-26", ects: 6 },
+  { id: "p2", name: "Bioinformatics Methods", level: "MA", year: "2025-26", ects: 6 },
+  { id: "p3", name: "Plant Genetics (PhD seminar)", level: "PhD", year: "2024-25", ects: 10 },
 ]
 
 export const students: { id: string; name: string; level: ProgrammeLevel; thesis: string; status: StudentStatus }[] = [

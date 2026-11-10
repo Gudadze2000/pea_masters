@@ -33,13 +33,27 @@ export type RecordDef = {
 }
 
 export const records = [
-  { id: 'article', name: 'Article — Scopus / WoS indexed', georgian: 'სტატია (Scopus / WoS)', points: 10, icon: 'imgIconFile1', required: true },
+  { id: 'article', name: 'Article - Scopus / WoS indexed', georgian: 'სტატია (Scopus / WoS)', points: 10, icon: 'imgIconFile1', required: true },
   { id: 'monograph', name: 'Monograph', georgian: 'მონოგრაფია', points: 20, icon: 'imgIconBook1', required: false },
   { id: 'conference', name: 'Conference presentation', georgian: 'კონფერენციაზე მოხსენება', points: 3, icon: 'imgIconUsers', required: true },
-  { id: 'grant', name: 'Research grant — international', georgian: 'საერთაშორისო გრანტი', points: 15, icon: 'imgIconFlask', required: false },
+  { id: 'grant', name: 'Research grant - international', georgian: 'საერთაშორისო გრანტი', points: 15, icon: 'imgIconFlask', required: false },
   { id: 'supervision', name: 'Doctoral student supervision', georgian: 'დოქტორანტის ხელმძღვანელობა', points: 8, icon: 'imgIconGrad', required: false },
   { id: 'patent', name: 'Patent', georgian: 'პატენტი', points: 12, icon: 'imgIconAward', required: false },
 ] as const satisfies readonly RecordDef[]
+/** Router state for linking to one entry: navigate("/evaluation-form", { state: { edit: { recordId, entryId } } }) */
+export type EvaluationLinkState = { edit?: { recordId: string; entryId: string } }
+
+/** The first entry that needs action (rejected, or missing its evidence file), for links from other pages */
+export function findEntryNeedingAttention(entries: Record<string, EvaluationEntry[]>, kind: 'rejected' | 'missing-file', preferRecordId?: string) {
+  const needs = (entry: EvaluationEntry) => kind === 'rejected' ? entry.status === 'Rejected' : entry.files.length === 0 && entry.status !== 'Rejected'
+  const ids = preferRecordId ? [preferRecordId, ...Object.keys(entries).filter(id => id !== preferRecordId)] : Object.keys(entries)
+  for (const recordId of ids) {
+    const entry = entries[recordId]?.find(needs)
+    if (entry) return { recordId, entryId: entry.id }
+  }
+  return null
+}
+
 /** Any record id: one of the original records above or an ISU form item ("isu-2-1") */
 export type RecordId = string
 export type EvaluationEntries = Record<RecordId, EvaluationEntry[]>
@@ -62,15 +76,15 @@ export function partScore(part: Part, entries: EvaluationEntries) {
 export const initialEntries: EvaluationEntries = {
   article: [
     { id: 'article-1', description: 'Drought-responsive transcription factors in wheat', detail: 'DOI 10.1007/s00425-023-04102', files: ['article-2023.pdf'], status: 'Approved' },
-    { id: 'article-2', description: 'Allelic diversity of Caucasian landraces', detail: 'DOI 10.1111/tpj.16221', files: ['landraces.pdf'], status: 'Rejected', comment: '“DOI does not match the attached PDF. Please upload the correct file.” — G. Kapanadze' },
+    { id: 'article-2', description: 'Allelic diversity of Caucasian landraces', detail: 'DOI 10.1111/tpj.16221', files: ['landraces.pdf'], status: 'Rejected', comment: '“DOI does not match the attached PDF. Please upload the correct file.” - G. Kapanadze' },
     { id: 'article-3', description: 'Transcriptomics of heat stress response', detail: 'DOI pending', files: [], status: 'Draft' },
   ],
   monograph: [{ id: 'monograph-1', description: 'Plant Genomics of the Caucasus (Springer, 2024)', detail: 'ISBN 978-3-031-12345-6', files: ['monograph-title-page.pdf'], status: 'Draft' }],
   conference: [
-    { id: 'conference-1', description: 'EPSO Plant Science Conference 2025 — oral', detail: 'Vienna, 12 Sept 2025', files: ['programme.png'], status: 'Draft' },
-    { id: 'conference-2', description: 'FESPB Congress 2024 — poster', detail: 'Seville, 3 Jul 2024', files: [], status: 'Draft' },
+    { id: 'conference-1', description: 'EPSO Plant Science Conference 2025 - oral', detail: 'Vienna, 12 Sept 2025', files: ['programme.png'], status: 'Draft' },
+    { id: 'conference-2', description: 'FESPB Congress 2024 - poster', detail: 'Seville, 3 Jul 2024', files: [], status: 'Draft' },
   ],
-  grant: [{ id: 'grant-1', description: 'Horizon Europe GENDROUGHT (PI)', detail: '2022–2025', files: ['grant-agreement.pdf'], status: 'Submitted' }],
+  grant: [{ id: 'grant-1', description: 'Horizon Europe GENDROUGHT (PI)', detail: '2022-2025', files: ['grant-agreement.pdf'], status: 'Submitted' }],
   supervision: [], patent: [],
   // Every ISU form item starts empty
   ...Object.fromEntries(parts.flatMap(part => part.items).map(record => [record.id, []])),

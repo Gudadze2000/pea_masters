@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { flushSync } from "react-dom"
+import { useLocation, useNavigate } from "react-router"
 import { TriangleAlert, Check, Eye, EyeOff, Globe, Lock, Printer, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
@@ -129,6 +130,20 @@ export function CvBuilderPage() {
     flushSync(() => setPreviewMode("owner"))
     window.print()
   }
+
+  // "Download CV" elsewhere (e.g. the dashboard) opens this page with { download: true }: print once the
+  // web fonts are in, then drop the state so a reload or Back doesn't print again
+  const location = useLocation()
+  const navigate = useNavigate()
+  const downloadRequested = useRef(false)
+  useEffect(() => {
+    if (downloadRequested.current || !(location.state as { download?: boolean } | null)?.download) return
+    downloadRequested.current = true
+    document.fonts.ready.then(() => requestAnimationFrame(() => {
+      downloadPdf()
+      navigate(location.pathname, { replace: true, state: null })
+    }))
+  })
 
   const onTabKeyDown = (event: KeyboardEvent, index: number) => {
     const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0

@@ -1,4 +1,5 @@
 import type { Language } from "./language-context"
+import { applyTheme, isThemeId, type ThemeId } from "./themes"
 
 /** User preferences edited on /settings. Stored in the browser until the back end exists. */
 export type NotificationEvent = "deadlines" | "statusChanges" | "adminComments" | "evaluationResults" | "systemUpdates"
@@ -12,6 +13,8 @@ export type Settings = {
   dateFormat: "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD"
   timeZone: string
   reduceMotion: boolean
+  /** Colour theme (Settings > Customization) */
+  theme: ThemeId
   profileVisibility: "public" | "university" | "private"
   showEmail: boolean
   showPhoto: boolean
@@ -32,6 +35,7 @@ export const defaultSettings: Settings = {
   dateFormat: "DD/MM/YYYY",
   timeZone: "Asia/Tbilisi",
   reduceMotion: false,
+  theme: "light",
   profileVisibility: "public",
   showEmail: true,
   showPhoto: true,
@@ -49,7 +53,8 @@ export function loadSettings(): Settings {
     for (const key of Object.keys(notifications) as NotificationEvent[]) {
       notifications[key] = { ...notifications[key], ...stored.notifications?.[key] }
     }
-    return { ...defaultSettings, ...stored, notifications }
+    const theme = isThemeId(stored.theme) ? stored.theme : defaultSettings.theme
+    return { ...defaultSettings, ...stored, notifications, theme }
   } catch {
     return defaultSettings
   }
@@ -65,6 +70,7 @@ export function saveSettings(settings: Settings) {
 }
 
 /** Settings that change how the whole app looks are applied to <html>. */
-export function applyDisplaySettings(settings: Pick<Settings, "reduceMotion">) {
+export function applyDisplaySettings(settings: Pick<Settings, "reduceMotion" | "theme">) {
   document.documentElement.classList.toggle("reduce-motion", settings.reduceMotion)
+  applyTheme(settings.theme)
 }

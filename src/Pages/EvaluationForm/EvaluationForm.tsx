@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { WorkspaceLayout } from '@/components/layout/WorkspaceLayout'
 import { EntryModal } from './EntryModal'
 import { EvaluationIcon as Icon, EvaluationModal } from './EvaluationModal'
-import { allRecords, draftKey, partScore, readDraft, recordScore, records, type EvaluationEntries, type EvaluationEntry, type RecordDef, type RecordId } from './evaluation-model'
+import { allRecords, draftKey, partScore, readDraft, recordScore, records, type EvaluationEntries, type EvaluationEntry, type EvaluationLinkState, type RecordDef, type RecordId } from './evaluation-model'
 import { parts, TOTAL_MINIMUM, type PartId } from './self-assessment'
 import '@/components/forms/forms.css'
 import './EvaluationForm.css'
@@ -45,8 +46,24 @@ function selfAssessment(entries: EvaluationEntries) {
 
 export function EvaluationForm() {
   const [entries, setEntries] = useState(readDraft)
-  const [tab, setTab] = useState<Tab>('records')
-  const [editing, setEditing] = useState<{ recordId: RecordId; entry?: EvaluationEntry } | null>(null)
+  // Other pages can link straight to one entry (e.g. the dashboard's "Fix"): open its tab and its edit dialog
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [linked] = useState(() => {
+    const target = (location.state as EvaluationLinkState | null)?.edit
+    const entry = target && entries[target.recordId]?.find(item => item.id === target.entryId)
+    return target && entry ? { recordId: target.recordId, entry } : null
+  })
+  const [tab, setTab] = useState<Tab>(() => parts.find(part => part.items.some(item => item.id === linked?.recordId))?.id ?? 'records')
+  const [editing, setEditing] = useState<{ recordId: RecordId; entry?: EvaluationEntry } | null>(linked)
+  const linkHandled = useRef(false)
+  useEffect(() => {
+    if (linkHandled.current || !location.state) return
+    linkHandled.current = true
+    // Show the entry behind the dialog, then drop the link state so a reload doesn't reopen the dialog
+    if (linked) document.getElementById(`record-${linked.recordId}`)?.scrollIntoView({ block: 'center' })
+    navigate(location.pathname, { replace: true, state: null })
+  }, [linked, location.pathname, location.state, navigate])
   const [deleting, setDeleting] = useState<{ recordId: RecordId; entry: EvaluationEntry } | null>(null)
   const [preview, setPreview] = useState(false)
   const [review, setReview] = useState(false)
@@ -87,9 +104,9 @@ export function EvaluationForm() {
   const tabs: { id: Tab; label: string }[] = [{ id: 'records', label: 'Scored records' }, ...parts.map(part => ({ id: part.id, label: `${part.numeral} · ${part.name}` }))]
 
   return <WorkspaceLayout breadcrumb={[{ label: 'Evaluation form' }]}>{() => <div className="dashboard-content evaluation-page">
-    <div className="page-heading"><div><h1>Evaluation form</h1><p>Annual evaluation 2025–2026 · Faculty of Natural Sciences and Medicine</p></div><div className="evaluation-actions"><Badge status={submitted ? 'Submitted' : 'Draft'} />{!submitted && <Button variant="outline" className="dashboard-button" onClick={saveDraft}><Icon name="imgIconSave" />Save draft</Button>}<Button variant="outline" className="dashboard-button" onClick={() => setPreview(true)}><Icon name="imgIconEye" />Preview</Button></div></div>
+    <div className="page-heading"><div><h1>Evaluation form</h1><p>Annual evaluation 2025-2026 · Faculty of Natural Sciences and Medicine</p></div><div className="evaluation-actions"><Badge status={submitted ? 'Submitted' : 'Draft'} />{!submitted && <Button variant="outline" className="dashboard-button" onClick={saveDraft}><Icon name="imgIconSave" />Save draft</Button>}<Button variant="outline" className="dashboard-button" onClick={() => setPreview(true)}><Icon name="imgIconEye" />Preview</Button></div></div>
     {notice && <p className="evaluation-notice" role="status">{notice}</p>}
-    {submitted ? <div className="evaluation-banner evaluation-banner-info"><Icon name="imgIconLock" /><div><p>Form submitted — editing is locked</p><small>This is a local UI preview. No information has been sent to an admin.</small></div></div> : rejected > 0 && <div className="evaluation-banner"><Icon name="imgIconAlert" /><div><p>{rejected} {rejected === 1 ? 'entry was' : 'entries were'} rejected</p><small>Annual evaluation 2025–2026 · Article #2: fix the file and resubmit. You will also receive an email for every rejection.</small></div></div>}
+    {submitted ? <div className="evaluation-banner evaluation-banner-info"><Icon name="imgIconLock" /><div><p>Form submitted - editing is locked</p><small>This is a local UI preview. No information has been sent to an admin.</small></div></div> : rejected > 0 && <div className="evaluation-banner"><Icon name="imgIconAlert" /><div><p>{rejected} {rejected === 1 ? 'entry was' : 'entries were'} rejected</p><small>Annual evaluation 2025-2026 · Article #2: fix the file and resubmit. You will also receive an email for every rejection.</small></div></div>}
     <div className="evaluation-tabs" role="tablist" aria-label="Evaluation sections">
       {tabs.map(item => <button key={item.id} type="button" role="tab" id={`evaluation-tab-${item.id}`} aria-selected={tab === item.id} aria-controls="evaluation-tabpanel" onClick={() => setTab(item.id)}>{item.label}{item.id !== 'records' && <span className="evaluation-tab-score">{pts(isu.scores.find(score => score.part.id === item.id)?.raw ?? 0)}</span>}</button>)}
     </div>
@@ -120,9 +137,9 @@ export function EvaluationForm() {
     {editing && <EntryModal recordId={editing.recordId} entry={editing.entry} onClose={() => setEditing(null)} onSave={saveEntry} />}
     <EvaluationModal open={review} onClose={() => setReview(false)} title="Submit evaluation for review?" description="The form will be locked and sent to your faculty admin.">
       <div className="evaluation-modal-body"><dl className="evaluation-review-stats"><div><dt>Records with entries</dt><dd>{allRecords.filter(record => listOf(record.id).length).length} of {allRecords.length}</dd></div><div><dt>Total entries</dt><dd>{allEntries.length}</dd></div><div><dt>Provisional score</dt><dd>{score} pts</dd></div><div><dt>Self-assessment total</dt><dd>{pts(isu.total)} of {TOTAL_MINIMUM}</dd></div></dl>{missingFiles > 0 && <div className="evaluation-warning"><Icon name="imgIconAlert2" /><div><p>{missingFiles} entries have no attachment</p><small>They can still be submitted, but the admin may reject them.</small></div></div>}<label className="evaluation-confirm"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />I confirm that the information I provided is accurate.</label><small className="evaluation-demo-note">UI preview only. This will not send data to an admin.</small></div>
-      <div className="evaluation-modal-footer"><Button variant="outline" className="dashboard-button" onClick={() => setReview(false)}>Go back</Button><Button className="dashboard-button" disabled={!confirmed || !requiredComplete} onClick={() => { setSubmitted(true); setDirty(false); setReview(false); setNotice('Submission preview — no data was sent.'); }}><Icon name="imgIconSend" />Submit for review</Button></div>
+      <div className="evaluation-modal-footer"><Button variant="outline" className="dashboard-button" onClick={() => setReview(false)}>Go back</Button><Button className="dashboard-button" disabled={!confirmed || !requiredComplete} onClick={() => { setSubmitted(true); setDirty(false); setReview(false); setNotice('Submission preview - no data was sent.'); }}><Icon name="imgIconSend" />Submit for review</Button></div>
     </EvaluationModal>
-    <EvaluationModal open={preview} onClose={() => setPreview(false)} wide title="Evaluation preview" description="Annual evaluation 2025–2026 · Nino Beridze">
+    <EvaluationModal open={preview} onClose={() => setPreview(false)} wide title="Evaluation preview" description="Annual evaluation 2025-2026 · Nino Beridze">
       <div className="evaluation-modal-body evaluation-preview">
         {records.map(record => <section key={record.id}><h2>{record.name}</h2>{listOf(record.id).length ? listOf(record.id).map(entry => <div key={entry.id}><p>{entry.description}</p><small>{entry.detail} · {entry.files.length ? entry.files.join(', ') : 'No file attached'}</small><Badge status={entry.status} /></div>) : <small>No entries yet.</small>}</section>)}
         {isu.scores.map(({ part, raw }) => <section key={part.id}><h2>{part.numeral}. {part.name} · {pts(raw)}</h2>{part.items.some(record => listOf(record.id).length) ? part.items.flatMap(record => listOf(record.id).map(entry => <div key={entry.id}><p>{record.code} · {entry.description}</p><small>{[entry.detail, entry.files.length ? entry.files.join(', ') : 'No file attached'].filter(Boolean).join(' · ')}</small><Badge status={entry.status} /></div>)) : <small>No entries yet.</small>}</section>)}

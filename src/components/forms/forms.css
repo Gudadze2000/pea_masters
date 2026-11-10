@@ -1,7 +1,7 @@
 /* Shared form styles: fields, keyword chips, read-only tables and form side panels.
    Imported by FormField, KeywordInput and pages that use .data-table. */
 
-/* Fields — .form-grid is 4 columns; FormField adds span-1 / span-2 / span-4 */
+/* Fields - .form-grid is 4 columns; FormField adds span-1 / span-2 / span-4 */
 .form-error-summary { padding: 10px 14px; border-radius: var(--radius-lg); background: var(--danger-soft); color: var(--destructive); font-size: 13px; line-height: 20px; font-weight: 500; }
 .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px 16px; align-items: start; }
 .form-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }

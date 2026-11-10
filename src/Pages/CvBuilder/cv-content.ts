@@ -39,7 +39,7 @@ const yearRange = (start: string | undefined, end: string | undefined) => {
   if (!start) return year(end)
   const from = year(start)
   const to = end ? year(end) : "present"
-  return from === to ? from : `${from} – ${to}`
+  return from === to ? from : `${from} - ${to}`
 }
 const joined = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(", ")
 
@@ -101,7 +101,7 @@ export function buildCvSections(cv: CvData, qualifications: Record<string, Entry
       case "grants":
         return list(id, label, [...initialResearch.projects].sort(byDateDesc(p => p.startYear)).map(p => ({
           key: p.id, title: p.title, subtitle: joined(p.donor, `${p.role}`, p.type === "International" ? "international" : undefined),
-          when: p.endYear ? (p.startYear === p.endYear ? p.startYear : `${p.startYear} – ${p.endYear}`) : `${p.startYear} – present`,
+          when: p.endYear ? (p.startYear === p.endYear ? p.startYear : `${p.startYear} - ${p.endYear}`) : `${p.startYear} - present`,
         })))
       case "talks":
         return list(id, label, [...cv.talks].sort(byDateDesc(t => t.date)).map(t => ({

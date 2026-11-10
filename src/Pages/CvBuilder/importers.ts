@@ -58,7 +58,7 @@ export async function fetchDoi(input: string, signal?: AbortSignal): Promise<Pub
     year: String(work.issued?.["date-parts"]?.[0]?.[0] ?? ""),
     volume: work.volume ?? "",
     issue: work.issue ?? "",
-    pages: (work.page ?? "").replace(/-/g, "–"),
+    pages: (work.page ?? "").replace(/\s*[-\u2013]+\s*/g, "-"),
     doi: work.DOI ?? doi,
   }
 }
@@ -114,7 +114,7 @@ function cleanLatex(value: string) {
   return value
     .replace(/\\([`'^"~=.uvHc])\s*\{?\\?([A-Za-z])\}?/g, (_, accent: string, letter: string) => `${letter}${ACCENTS[accent]}`.normalize("NFC"))
     .replace(/\\&/g, "&")
-    .replace(/--/g, "–")
+    .replace(/--/g, "-")
     .replace(/[{}]/g, "")
     .replace(/\s+/g, " ")
     .trim()

@@ -38,7 +38,7 @@ export function EntryModal({ recordId, entry, onClose, onSave }: {
   const title = record.code ? `${record.code} ${record.name}` : record.name
   const scoring = record.variablePoints ? 'Points stated per entry' : `${record.points} points per approved entry`
   const descriptionHint = record.hint ?? (recordId === 'article' ? 'Full citation with journal, year and DOI.' : 'Describe the activity and include the relevant year and details.')
-  return <EvaluationModal open onClose={onClose} wide title={`${entry ? 'Edit' : 'Add'} entry — ${title}`} description={`${scoring} · ${record.georgian}`}>
+  return <EvaluationModal open onClose={onClose} wide title={`${entry ? 'Edit' : 'Add'} entry - ${title}`} description={`${scoring} · ${record.georgian}`}>
     <form onSubmit={save}>
       <div className="evaluation-modal-body evaluation-entry-fields">
         <FormField idPrefix="evaluation" field={{ name: 'description', label: record.code ? 'Performance indicator' : 'Description', type: 'textarea', required: true, hint: descriptionHint }} value={description} onChange={setDescription} />

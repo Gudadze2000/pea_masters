@@ -115,7 +115,7 @@
   --input: var(--color-neutral-300);
   --ring: var(--color-brand-500);
 
-  /* Status colours (badges, banners) – not part of stock shadcn */
+  /* Status colours (badges, banners) - not part of stock shadcn */
   --success: var(--color-success-600);  --success-soft: var(--color-success-50);
   --warning: var(--color-warning-600);  --warning-soft: var(--color-warning-50);
   --info:    var(--color-info-600);     --info-soft:    var(--color-info-50);
@@ -162,6 +162,59 @@
   --sidebar-accent: var(--color-neutral-600);
   --sidebar-accent-foreground: var(--color-neutral-50);
   --sidebar-border: rgb(255 255 255 / 10%);
+}
+
+/* ---------- Colour themes (Settings > Customization, src/lib/themes.ts) ----------
+   applyTheme() puts a theme's base colours on <html> as --t-*; the neutral and brand scales are rebuilt from
+   them, so everything that uses the scales or the semantic tokens follows. Workspace pages only: the login
+   page keeps its own colours. Dark themes just run the neutral scale from dark to light. */
+:root[data-theme]:has(.dashboard-main) {
+  --color-neutral-0:   var(--t-surface);
+  --color-neutral-25:  color-mix(in oklab, var(--t-text) 2%, var(--t-surface));
+  --color-neutral-50:  var(--t-canvas);
+  --color-neutral-100: color-mix(in oklab, var(--t-text) 7%, var(--t-surface));
+  --color-neutral-200: color-mix(in oklab, var(--t-text) 13%, var(--t-surface));
+  --color-neutral-300: color-mix(in oklab, var(--t-text) 22%, var(--t-surface));
+  --color-neutral-400: color-mix(in oklab, var(--t-text) 45%, var(--t-surface));
+  --color-neutral-500: color-mix(in oklab, var(--t-text) 72%, var(--t-surface)); /* muted text: >= 4.5:1 in every theme */
+  --color-neutral-600: color-mix(in oklab, var(--t-text) 80%, var(--t-surface));
+  --color-neutral-700: color-mix(in oklab, var(--t-text) 88%, var(--t-surface));
+  --color-neutral-900: var(--t-text);
+  --color-brand-50:  color-mix(in oklab, var(--t-accent) 10%, var(--t-surface));
+  --color-brand-100: color-mix(in oklab, var(--t-accent) 18%, var(--t-surface));
+  --color-brand-200: color-mix(in oklab, var(--t-accent) 35%, var(--t-surface));
+  --color-brand-500: var(--t-ring);
+  --color-brand-600: var(--t-accent);
+  --color-brand-700: var(--t-accent-text);
+  --primary-foreground: var(--t-on-accent);
+  --sidebar-primary-foreground: var(--t-on-accent);
+}
+/* Dark themes: native controls (selects, date pickers, checkboxes) go dark, and the status colours swap their
+   pale backgrounds for dark tints with lighter text, so badges and banners stay readable. */
+:root[data-theme-mode="dark"]:has(.dashboard-main) {
+  color-scheme: dark;
+  --color-success-50: color-mix(in oklab, #1E7A4C 30%, var(--t-surface));
+  --color-warning-50: color-mix(in oklab, #A8680B 30%, var(--t-surface));
+  --color-danger-50:  color-mix(in oklab, #B42B2B 30%, var(--t-surface));
+  --color-info-50:    color-mix(in oklab, #2A62A8 30%, var(--t-surface));
+  --color-success-600: #6FD19C;
+  --color-warning-600: #F2B95A;
+  --color-danger-600:  #F08080;
+  --color-info-600:    #8AB8F2;
+  --destructive: #C93A3A; /* filled delete buttons keep white text readable */
+}
+/* The page icons are SVG files with dark colours baked in: invert them on dark themes (hue-rotate keeps red red),
+   except on accent-filled buttons, where they already contrast */
+:root[data-theme-mode="dark"]:has(.dashboard-main) :is(.evaluation-icon, .dashboard-icon):not(.bg-primary *) { filter: invert(1) hue-rotate(180deg); }
+/* The CV is a printable document: keep its paper in the original colours whatever the theme */
+:root[data-theme] .cv-paper {
+  --color-brand-50: #FBF2F3; --color-brand-100: #F5E1E4; --color-brand-200: #E9BFC5;
+  --color-brand-500: #A63446; --color-brand-600: #8C2433; --color-brand-700: #6F1B28;
+  --color-neutral-0: #FFFFFF; --color-neutral-25: #FCFBFB; --color-neutral-50: #F7F5F5; --color-neutral-100: #EFECEC;
+  --color-neutral-200: #E3DFDF; --color-neutral-300: #CFC9CA; --color-neutral-400: #A79FA1; --color-neutral-500: #7C7476;
+  --color-neutral-600: #5E5658; --color-neutral-700: #443D3F; --color-neutral-900: #1E1A1B;
+  --primary: var(--color-brand-600);
+  color-scheme: light;
 }
 
 /* Aliases: they point at other variables, so they are defined as `inline` */

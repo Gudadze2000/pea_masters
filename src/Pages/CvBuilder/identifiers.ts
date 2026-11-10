@@ -85,7 +85,7 @@ export const PROFILE_DEFS: ProfileDef[] = [
     placeholder: "57190000000",
     hint: "The number in your Scopus author profile link (authorId=…).",
     normalise: value => value.trim().match(/authorId=(\d+)/i)?.[1] ?? value.trim(),
-    validate: value => /^\d{8,12}$/.test(value) ? null : "A Scopus Author ID is a number of 8–12 digits.",
+    validate: value => /^\d{8,12}$/.test(value) ? null : "A Scopus Author ID is a number of 8-12 digits.",
     toUrl: value => `https://www.scopus.com/authid/detail.uri?authorId=${value}`,
   },
   {

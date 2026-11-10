@@ -34,7 +34,7 @@ function initials(name: string) {
   return ((words[0][0] ?? "") + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase()
 }
 
-const period = (project: Project) => `${project.startYear} – ${project.endYear || "present"}`
+const period = (project: Project) => `${project.startYear} - ${project.endYear || "present"}`
 const sameData = (a: ResearchOverview, b: ResearchOverview) => JSON.stringify(a) === JSON.stringify(b)
 
 type Editor =

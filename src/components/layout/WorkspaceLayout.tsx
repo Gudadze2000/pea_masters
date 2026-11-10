@@ -1,5 +1,6 @@
-import { useState, type CSSProperties, type ReactNode } from "react"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { useState, type ReactNode } from "react"
+import { ContentScrollbar } from "./ContentScrollbar"
+import { WorkspaceSidebarProvider } from "./WorkspaceSidebarProvider"
 import { AppSidebar } from "@/components/ui/app-sidebar"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { AppTopbar, Breadcrumb } from "./AppTopbar"
@@ -13,11 +14,12 @@ type Crumb = { label: string; to?: string }
 export function WorkspaceLayout({ breadcrumb, children }: { breadcrumb: Crumb[]; children: (openPanel: (name: string) => void) => ReactNode }) {
   const [panel, setPanel] = useState<string | null>(null)
   return (
-    <SidebarProvider style={{ "--sidebar-width": "264px" } as CSSProperties}>
+    <WorkspaceSidebarProvider>
       <AppSidebar onNavigate={setPanel} />
       <main className="dashboard-main">
         <AppTopbar onNavigate={setPanel}><Breadcrumb items={breadcrumb} /></AppTopbar>
         {children(setPanel)}
+        <ContentScrollbar />
       </main>
       <Sheet open={panel !== null} onOpenChange={open => { if (!open) setPanel(null) }}>
         <SheetContent className="dashboard-panel">
@@ -27,6 +29,6 @@ export function WorkspaceLayout({ breadcrumb, children }: { breadcrumb: Crumb[];
           </SheetHeader>
         </SheetContent>
       </Sheet>
-    </SidebarProvider>
+    </WorkspaceSidebarProvider>
   )
 }

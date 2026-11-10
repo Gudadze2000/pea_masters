@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { ContentScrollbar } from "@/components/layout/ContentScrollbar"
 import { Check, Info, Lock, Save } from "lucide-react"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { WorkspaceSidebarProvider } from "@/components/layout/WorkspaceSidebarProvider"
 import { AppSidebar } from "@/components/ui/app-sidebar"
 import { AppTopbar, Breadcrumb } from "@/components/layout/AppTopbar"
 import { Button } from "@/components/ui/button"
@@ -121,7 +122,7 @@ export function GeneralInformationPage() {
   }
 
   return (
-    <SidebarProvider style={{ "--sidebar-width": "264px" } as CSSProperties}>
+    <WorkspaceSidebarProvider>
       <AppSidebar onNavigate={setPanel} />
       <main className="dashboard-main">
         <AppTopbar onNavigate={setPanel}>
@@ -180,6 +181,7 @@ export function GeneralInformationPage() {
             </InfoBanner>
           </section>
         </div>
+        <ContentScrollbar />
       </main>
 
       <Sheet open={panel !== null} onOpenChange={open => { if (!open) setPanel(null) }}>
@@ -190,6 +192,6 @@ export function GeneralInformationPage() {
           </SheetHeader>
         </SheetContent>
       </Sheet>
-    </SidebarProvider>
+    </WorkspaceSidebarProvider>
   )
 }

@@ -28,8 +28,9 @@ export function parseAuthors(authors: string): Author[] {
   })
 }
 
-const lastPage = /[-–]/
-const pages = (value: string) => value.replace(/\s*-+\s*/g, "–")
+// Page ranges are shown with a plain hyphen; - (en dash) is still accepted when pasted in
+const lastPage = /[-\u2013]/
+const pages = (value: string) => value.replace(/\s*[-\u2013]+\s*/g, "-")
 
 /** Puts ", " between names and `lastJoiner` before the last one */
 function joinAuthors(names: CitationPart[], lastJoiner: string) {

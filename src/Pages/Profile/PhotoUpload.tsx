@@ -23,7 +23,7 @@ function readImage(file: File) {
 const AVATAR_SIZE = 512
 
 /**
- * Centre-crops the photo to a square and scales it to 512×512 JPEG (~50–100 KB), so it fits in browser storage
+ * Centre-crops the photo to a square and scales it to 512×512 JPEG (~50-100 KB), so it fits in browser storage
  * (a 5 MB upload would not) and stays small enough to send to the server later.
  */
 function toAvatar(dataUrl: string) {

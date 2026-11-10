@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react"
 import { Navigate, useNavigate, useParams } from "react-router"
-import { Bell, Check, Database, Download, Globe, Info, KeyRound, Lock, LogOut, Save, ShieldCheck, UserRound } from "lucide-react"
+import { Bell, Check, Database, Download, Globe, Info, KeyRound, Lock, LogOut, Palette, Save, ShieldCheck, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { Switch } from "@/components/forms/Switch"
@@ -9,6 +9,7 @@ import { useLanguage } from "@/lib/language-context"
 import { signOut } from "@/lib/auth"
 import { useProfile } from "@/lib/profile"
 import { applyDisplaySettings, loadSettings, saveSettings, type NotificationChannel, type NotificationEvent, type Settings } from "@/lib/settings"
+import { themes, type ThemeId } from "@/lib/themes"
 import { institutionalInformation as account } from "../Profile/profileMock"
 import { initialSessions, passwordLastChanged, timeZones } from "./settingsMock"
 import "./SettingsPage.css"
@@ -18,6 +19,7 @@ const sections = [
   { id: "security", label: "Password & security", icon: ShieldCheck, description: "Password, two-step verification and signed-in devices." },
   { id: "notifications", label: "Notifications", icon: Bell, description: "Choose what you hear about and where." },
   { id: "language", label: "Language & accessibility", icon: Globe, description: "Interface language, date format, time zone and motion." },
+  { id: "customization", label: "Customization", icon: Palette, description: "Colour theme of the app." },
   { id: "privacy", label: "Privacy", icon: Lock, description: "Control who can see your public profile." },
   { id: "data", label: "Your data", icon: Database, description: "Download your data or sign out." },
 ] as const
@@ -25,7 +27,7 @@ const sections = [
 type SectionId = (typeof sections)[number]["id"]
 
 /** Sections whose fields are saved with the "Save changes" button in the page heading */
-const preferenceSections: SectionId[] = ["notifications", "language", "privacy"]
+const preferenceSections: SectionId[] = ["notifications", "language", "customization", "privacy"]
 
 const notificationEvents: { id: NotificationEvent; label: string; hint: string }[] = [
   { id: "deadlines", label: "Evaluation deadlines", hint: "Reminders before a submission period closes" },
@@ -107,6 +109,11 @@ export function SettingsPage() {
   const dirty = !sameSettings(draft, saved)
 
   useEffect(() => () => window.clearTimeout(timer.current), [])
+
+  // Preview the chosen colour theme across the app while it is still a draft...
+  useEffect(() => { applyDisplaySettings({ ...saved, theme: draft.theme }) }, [draft.theme, saved])
+  // ...and fall back to the saved one when leaving Settings without saving
+  useEffect(() => () => applyDisplaySettings(loadSettings()), [])
 
   // Warn before closing the tab with unsaved changes
   useEffect(() => {
@@ -193,6 +200,7 @@ export function SettingsPage() {
                 <NotificationsSection settings={draft} onToggle={toggleNotification} onChange={update} />
               )}
               {section.id === "language" && <LanguageSection settings={draft} onChange={update} />}
+              {section.id === "customization" && <CustomizationSection theme={draft.theme} onChange={theme => update("theme", theme)} />}
               {section.id === "privacy" && <PrivacySection settings={draft} onChange={update} />}
               {section.id === "data" && <DataSection settings={saved} onSignOut={() => { signOut(); navigate("/login", { replace: true }) }} />}
             </div>
@@ -466,6 +474,38 @@ function LanguageSection({ settings, onChange }: { settings: Settings; onChange:
         </SettingRow>
       </section>
     </>
+  )
+}
+
+/* ---------- Customization ---------- */
+
+function CustomizationSection({ theme, onChange }: { theme: ThemeId; onChange: (theme: ThemeId) => void }) {
+  return (
+    <section className="dashboard-card settings-card" aria-labelledby="theme-heading">
+      <div className="card-heading"><h2 id="theme-heading">Colour theme</h2></div>
+      <p className="settings-card-intro" id="theme-hint">Pick a theme to preview it across the app, then save changes to keep it.</p>
+      <div className="theme-grid" role="radiogroup" aria-labelledby="theme-heading" aria-describedby="theme-hint">
+        {themes.map(option => {
+          const selected = option.id === theme
+          return (
+            <label key={option.id} className="theme-option">
+              <input type="radio" name="theme" value={option.id} checked={selected} onChange={() => onChange(option.id)} className="sr-only" />
+              <span className="theme-swatches" aria-hidden="true">
+                {option.swatches.map(swatch => <span key={swatch.name} style={{ background: swatch.hex }} title={`${swatch.name} ${swatch.hex}`} />)}
+              </span>
+              <span className="theme-option-body">
+                <span className="theme-option-title">
+                  <span>{option.name}</span>
+                  <span className="theme-mode">{option.mode === "dark" ? "Dark" : "Light"}</span>
+                  {selected && <Check className="theme-selected" aria-hidden="true" />}
+                </span>
+                <small>{option.description}</small>
+              </span>
+            </label>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
