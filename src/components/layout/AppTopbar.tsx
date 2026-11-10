@@ -3,12 +3,13 @@ import { useNavigate } from "react-router"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardIcon as Icon } from "@/components/ui/app-sidebar"
 import { useLanguage, type Language } from "@/lib/language-context"
+import { NotificationsMenu } from "./NotificationsMenu"
 import "./app-shell.css"
 
 const languages: Language[] = ["KA", "EN"]
 
 /** Top bar shared by every workspace page. `children` is the page title or breadcrumb. */
-export function AppTopbar({ children, onNavigate }: { children: ReactNode; onNavigate: (name: string) => void }) {
+export function AppTopbar({ children }: { children: ReactNode }) {
   const { language, setLanguage } = useLanguage()
   return (
     <header className="dashboard-topbar">
@@ -18,7 +19,7 @@ export function AppTopbar({ children, onNavigate }: { children: ReactNode; onNav
         <div className="language-switch" aria-label="Language">
           {languages.map(lang => <button key={lang} aria-pressed={language === lang} onClick={() => setLanguage(lang)}>{lang}</button>)}
         </div>
-        <button className="notification-button" aria-label="Open notifications" onClick={() => onNavigate("Notifications")}><Icon name="imgNotifications" /></button>
+        <NotificationsMenu />
       </div>
     </header>
   )

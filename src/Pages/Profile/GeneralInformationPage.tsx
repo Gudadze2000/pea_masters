@@ -125,7 +125,7 @@ export function GeneralInformationPage() {
     <WorkspaceSidebarProvider>
       <AppSidebar onNavigate={setPanel} />
       <main className="dashboard-main">
-        <AppTopbar onNavigate={setPanel}>
+        <AppTopbar>
           <Breadcrumb items={[{ label: "My profile", to: "/profile/general" }, { label: "General information" }]} />
         </AppTopbar>
 

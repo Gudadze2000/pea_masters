@@ -17,7 +17,7 @@ export function WorkspaceLayout({ breadcrumb, children }: { breadcrumb: Crumb[];
     <WorkspaceSidebarProvider>
       <AppSidebar onNavigate={setPanel} />
       <main className="dashboard-main">
-        <AppTopbar onNavigate={setPanel}><Breadcrumb items={breadcrumb} /></AppTopbar>
+        <AppTopbar><Breadcrumb items={breadcrumb} /></AppTopbar>
         {children(setPanel)}
         <ContentScrollbar />
       </main>

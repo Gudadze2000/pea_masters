@@ -64,3 +64,4 @@
 }
 .attention-row button.bg-background { background: var(--card); border-color: var(--input); }
 .attention-row button.danger-button { border-color: var(--destructive); }
+.notification-unread { display: inline-block; width: 7px; height: 7px; margin-left: 8px; vertical-align: middle; border-radius: 50%; background: var(--primary); }
