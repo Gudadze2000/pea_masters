@@ -1,0 +1,127 @@
+/* My profile → Professional & qualifications.
+   Shell/card/button styles come from components/layout/app-shell.css */
+.qualifications-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; align-items: start; }
+
+/* Section navigation */
+.section-nav { padding: 12px; position: sticky; top: 24px; }
+.section-nav ul { display: flex; flex-direction: column; gap: 2px; }
+.section-nav button { display: flex; align-items: center; gap: 12px; width: 100%; height: 40px; padding: 0 12px; border-radius: var(--radius-md); font-size: 14px; line-height: 22px; color: var(--color-neutral-700); text-align: left; cursor: pointer; }
+.section-nav button:hover { background: var(--muted); }
+.section-nav button > svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--muted-foreground); }
+.section-nav button > span:first-of-type { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.section-nav [aria-current="page"], .section-nav [aria-current="page"]:hover { background: var(--accent); color: var(--primary); font-weight: 500; }
+.section-nav [aria-current="page"] > svg { color: var(--primary); }
+.count-badge { display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; background: var(--muted); font-size: 12px; line-height: 16px; font-weight: 500; color: var(--color-neutral-600); }
+[aria-current="page"] .count-badge { background: var(--color-brand-100); color: var(--primary); }
+
+/* Section content */
+.section-panel { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.section-heading h2 { font-size: 18px; line-height: 26px; font-weight: 600; }
+.section-heading p { margin-top: 2px; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.section-heading .dashboard-button { height: 40px; flex-shrink: 0; }
+.section-notice { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 20px; color: var(--success); }
+.section-notice:empty { display: none; }
+.section-notice svg { width: 16px; height: 16px; }
+
+/* Rejected entries banner */
+.rejected-banner { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--color-brand-200); border-radius: var(--radius-xl); background: var(--danger-soft); }
+.rejected-banner > svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; color: var(--destructive); }
+.rejected-banner > div { flex: 1; min-width: 0; }
+.rejected-banner p { font-weight: 500; }
+.rejected-banner small { display: block; margin-top: 2px; font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
+.rejected-banner .fix-button { flex-shrink: 0; height: 34px; padding: 6px 12px; font-size: 13px; background: var(--card); border-color: var(--destructive); color: var(--destructive); }
+.rejected-banner .fix-button:hover { background: var(--card); color: var(--destructive); }
+
+/* Entry cards */
+.entry-list { display: flex; flex-direction: column; gap: 12px; }
+.entry-card { display: flex; flex-direction: column; gap: 10px; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.entry-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.entry-card-heading h3 { font-size: 15px; line-height: 22px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.entry-card-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.entry-meta { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.entry-meta li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.entry-meta svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--muted-foreground); }
+.entry-meta a { color: inherit; overflow-wrap: anywhere; }
+.entry-meta a:hover { color: var(--primary); text-decoration: underline; }
+.entry-description { font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
+
+/* Empty state */
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 40px 24px; border: 1px dashed var(--input); border-radius: 14px; background: var(--card); text-align: center; }
+.empty-state > svg { width: 28px; height: 28px; margin-bottom: 8px; color: var(--muted-foreground); }
+.empty-state p { font-weight: 500; }
+.empty-state small { font-size: 13px; line-height: 20px; color: var(--muted-foreground); margin-bottom: 12px; }
+
+/* New / edit entry page */
+.entry-page { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.entry-page-main, .entry-page-side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.entry-page-side { position: sticky; top: 24px; }
+.form-card .card-heading { margin-bottom: 20px; }
+
+/* Form stays in the section above the existing entries. */
+.profile-entry-fields { display: flex; flex-direction: column; gap: 20px; }
+.profile-entry-editor .form-card { padding: 0; border: 0; background: transparent; border-radius: 0; }
+.profile-entry-documents { padding-top: 20px; border-top: 1px solid var(--border); }
+
+/* Entry status card */
+.status-card .card-heading { margin-bottom: 12px; }
+.status-rows { display: flex; flex-direction: column; gap: 10px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.status-rows > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; line-height: 20px; }
+.status-rows dt { color: var(--color-neutral-600); }
+.status-rows dd { font-weight: 500; text-align: right; }
+.status-actions { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; }
+.status-actions .dashboard-button { height: 40px; }
+.cancel-link { align-self: center; padding: 6px 12px; font-size: 14px; border-radius: var(--radius-sm); }
+.status-card > .field-hint { margin-top: 8px; text-align: center; }
+
+/* Supporting document */
+.document-upload { display: flex; flex-direction: column; gap: 12px; }
+.dropzone { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; padding: 24px 16px; border: 1.5px dashed var(--input); border-radius: var(--radius-xl); background: var(--color-neutral-25); text-align: center; cursor: pointer; transition: border-color .15s, background-color .15s; }
+.dropzone:hover, .dropzone.dragging { border-color: var(--primary); background: var(--accent); }
+.dropzone > svg { width: 20px; height: 20px; margin-bottom: 6px; color: var(--primary); }
+.dropzone-title { font-size: 14px; line-height: 22px; font-weight: 500; }
+.dropzone-hint { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.document-list { display: flex; flex-direction: column; gap: 8px; }
+.document-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.document-row > div { flex: 1; min-width: 0; }
+.document-row p { font-size: 13px; line-height: 20px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.document-row small { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.document-icon { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-md); background: var(--danger-soft); color: var(--destructive); }
+.document-icon svg { width: 16px; height: 16px; }
+.document-ok { width: 16px; height: 16px; flex-shrink: 0; color: var(--success); }
+.document-remove { display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; border-radius: var(--radius-sm); color: var(--muted-foreground); cursor: pointer; }
+.document-remove:hover { background: var(--muted); color: var(--foreground); }
+.document-remove svg { width: 14px; height: 14px; }
+
+/* Delete confirmation */
+.confirm-backdrop { position: fixed; inset: 0; z-index: 50; background: rgb(0 0 0 / .25); }
+.confirm-dialog { position: fixed; z-index: 50; top: 50%; left: 50%; transform: translate(-50%, -50%); width: calc(100% - 32px); max-width: 420px; padding: 24px; border-radius: var(--radius-3xl); background: var(--card); box-shadow: var(--shadow-modal); }
+.confirm-title { font-size: 18px; line-height: 26px; font-weight: 600; }
+.confirm-description { margin-top: 6px; font-size: 14px; line-height: 22px; color: var(--color-neutral-600); overflow-wrap: anywhere; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+.confirm-actions .dashboard-button { height: 40px; }
+.dashboard-button.danger-solid { background: var(--destructive); color: var(--destructive-foreground); }
+.dashboard-button.danger-solid:hover { background: color-mix(in srgb, var(--destructive) 85%, black); }
+
+/* Below desktop (1200px) the section menu and the entry status card no longer fit beside
+   the content (on laptops the 264px sidebar is still open), so both move on top / below. */
+@media (max-width: 1199.98px) {
+  .entry-page { grid-template-columns: minmax(0, 1fr); }
+  /* Status and supporting-document cards sit side by side under the form */
+  .entry-page-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .entry-page-side { position: static; }
+  .qualifications-layout { grid-template-columns: minmax(0, 1fr); }
+  .section-nav { position: static; padding: 8px; overflow-x: auto; }
+  .section-nav ul { flex-direction: row; }
+  .section-nav button { width: auto; white-space: nowrap; }
+  .section-nav button > span:first-of-type { overflow: visible; }
+}
+@media (max-width: 767.98px) {
+  .entry-page-side { display: flex; }
+  .section-heading { flex-direction: column; }
+  .entry-card { padding: 16px; }
+  .entry-card-heading { flex-wrap: wrap; }
+  .entry-card-actions { gap: 8px; }
+  .rejected-banner { flex-wrap: wrap; }
+  .rejected-banner .fix-button { margin-left: 30px; }
+}
