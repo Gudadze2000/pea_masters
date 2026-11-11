@@ -1,0 +1,23 @@
+/* My profile → Teaching. Shell, cards, banner and badges come from components/layout/app-shell.css */
+.teaching-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.teaching-card { display: flex; flex-direction: column; gap: 16px; }
+.teaching-card .card-heading { margin-bottom: 0; }
+.card-meta { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+
+
+/* Synced from Argus pill */
+.sync-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: var(--info-soft); color: var(--info); font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; }
+.sync-pill svg { width: 13px; height: 13px; }
+
+/* Column widths taken from the design */
+.programmes-table th:nth-child(2) { width: 13%; }
+.programmes-table th:nth-child(3) { width: 11%; }
+.programmes-table th:nth-child(4) { width: 8%; }
+.programmes-table td:nth-child(3) { white-space: nowrap; }
+.students-table th:nth-child(1) { width: 38%; }
+.students-table th:nth-child(2) { width: 13%; }
+.students-table th:nth-child(4) { width: 12%; }
+
+@media (max-width: 767.98px) {
+  .teaching-card .card-heading { flex-wrap: wrap; }
+}

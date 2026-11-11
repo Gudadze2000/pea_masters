@@ -1,0 +1,177 @@
+.login-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.login-brand,
+.login-content {
+  min-width: 0;
+  padding: 2rem 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.login-brand {
+  gap: 2rem;
+}
+
+.login-seal {
+  top: 45%;
+  left: 50%;
+  width: min(88%, 560px);
+  height: auto;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+}
+
+.login-title {
+  font-size: clamp(1.5rem, 2.3vw, 2rem);
+  line-height: 1.25;
+}
+
+.login-features {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.login-content {
+  /* Reserve space above future form content for the language switch. */
+  min-height: 18rem;
+  padding-top: 5rem;
+  /* minmax(0, 1fr) lets the 400px form card shrink on phones instead of overflowing */
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.login-language {
+  top: 1.25rem;
+  right: 1.25rem;
+}
+
+/* Large phones and tablets (576px+): keep the stacked layout with more room around content. */
+@media (min-width: 576px) {
+  .login-brand,
+  .login-content {
+    padding: 3rem;
+  }
+
+  .login-content {
+    padding-top: 6rem;
+  }
+
+  .login-language {
+    top: 1.75rem;
+    right: 2rem;
+  }
+}
+
+/* Laptops (992px+): brand panel and form side by side, both scaling with the viewport. */
+@media (min-width: 992px) {
+  .login-page {
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+  }
+
+  .login-brand {
+    gap: 3rem;
+    padding: clamp(2rem, 4vw, 4rem);
+  }
+
+  .login-content {
+    padding: 6rem clamp(2rem, 4vw, 4rem) 3rem;
+  }
+}
+
+/* Desktops (1200px+): brand panel grows up to its original 640px. */
+@media (min-width: 1200px) {
+  .login-page {
+    grid-template-columns: minmax(0, min(640px, 46%)) minmax(0, 1fr);
+  }
+
+  .login-brand {
+    padding: 4rem;
+  }
+}
+
+/* Short laptop windows and landscape screens can scroll without overlap. */
+@media (min-width: 992px) and (max-height: 760px) {
+  .login-brand {
+    gap: 2rem;
+    padding-block: 2rem;
+  }
+
+  .login-features {
+    gap: 0.75rem;
+  }
+}
+
+/* Form adapted from giorgiKekelidze server/plugins/auth.ts. */
+      .login-content .card { width: 100%; max-width: 400px; }
+      .login-content .card h2 { margin: 0; font-size: 24px; font-weight: 600; line-height: 32px; }
+      .login-content .card .lead { margin: 6px 0 0; color: #5e5658; }
+      .login-content .field { margin-top: 24px; }
+      .login-content .field label { display: block; font-size: 13px; font-weight: 500; line-height: 20px; color: #443d3f; }
+      .login-content .input-wrap { position: relative; margin-top: 6px; }
+      .login-content .input-wrap svg {
+        position: absolute; left: 13px; top: 12px;
+        width: 16px; height: 16px; color: #7c7476; pointer-events: none;
+      }
+      .login-content .input-wrap input {
+        width: 100%; height: 40px; padding: 0 12px 0 37px;
+        border: 1px solid #cfc9ca; border-radius: 8px;
+        background: #ffffff; color: #1e1a1b;
+        font: inherit; font-size: 14px;
+        outline: none;
+      }
+      .login-content .input-wrap input::placeholder { color: #a79fa1; }
+      .login-content .input-wrap input:focus { border-color: #8c2433; box-shadow: 0 0 0 3px #fbf2f3; }
+      .login-content .submit {
+        margin-top: 24px; width: 100%; height: 40px;
+        border: 0; border-radius: 8px;
+        background: #8c2433; color: #ffffff;
+        font: inherit; font-size: 14px; font-weight: 500;
+        cursor: pointer;
+      }
+      .login-content .submit:hover { background: #6f1b28; }
+      .login-content .submit:disabled { opacity: 0.6; cursor: default; }
+      .login-content .field .hint { margin: 6px 0 0; font-size: 12px; line-height: 16px; color: #5e5658; }
+      .login-content .switch-mode { margin: 16px 0 0; text-align: center; font-size: 13px; color: #5e5658; }
+      .login-content .switch-mode a { color: #8c2433; font-weight: 500; }
+      .login-content .switch-mode a:hover { text-decoration: underline; }
+      .login-content .divider { display: flex; align-items: center; gap: 12px; margin-top: 20px; font-size: 12px; color: #a79fa1; }
+      .login-content .divider::before, .login-content .divider::after { content: ""; flex: 1; height: 1px; background: #e7e2e3; }
+      .login-content .guest {
+        margin-top: 16px; width: 100%; height: 40px;
+        border: 1px solid #e7e2e3; border-radius: 8px;
+        background: #ffffff; color: #443d3f;
+        font: inherit; font-size: 14px; font-weight: 500;
+        cursor: pointer;
+      }
+      .login-content .guest:hover { background: #f7f5f5; }
+      .login-content .guest:disabled { opacity: 0.6; cursor: default; }
+      .login-content .note {
+        margin-top: 24px; display: flex; gap: 8px;
+        padding: 12px;
+        border-radius: 10px;
+        background: #f7f5f5;
+        color: #5e5658; font-size: 12px; font-weight: 500; line-height: 16px;
+      }
+      .login-content .note svg, .login-content .banner svg { flex: 0 0 16px; width: 16px; height: 16px; margin-top: 0; }
+      .login-content .banner {
+        display: flex; gap: 12px;
+        padding: 16px;
+        margin-top: 24px;
+        border-radius: 10px;
+        background: #fbe7e7;
+        color: #5e5658;
+      }
+      .login-content .banner svg { color: #b42b2b; width: 20px; height: 20px; flex-basis: 20px; }
+      .login-content .banner strong { display: block; font-size: 14px; font-weight: 500; color: #b42b2b; }
+      .login-content .banner p { margin: 4px 0 0; font-size: 13px; line-height: 20px; }
+
+/* Mobile (< 576px): smaller brand panel so the sign-in form is reached sooner */
+@media (max-width: 575.98px) {
+  .login-brand { gap: 1.5rem; padding: 1.5rem 1rem; }
+  .login-features { gap: 0.75rem; }
+  .login-content { padding: 4.5rem 1rem 2rem; }
+  .login-language { top: 1rem; right: 1rem; }
+}
