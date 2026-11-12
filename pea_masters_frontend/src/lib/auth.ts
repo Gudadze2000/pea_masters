@@ -1,153 +1,129 @@
 import { useSyncExternalStore } from "react"
 
 /*
- * Local, browser-only authentication for the prototype.
- * Accounts and the session live in localStorage until a backend exists, so this is NOT secure:
- * anyone with access to the browser can read or change them. Swap these functions for API calls later;
- * the rest of the app only uses register / signIn / signInAsGuest / signOut / useSession.
+ * Who is signed in, as reported by the backend (GET /api/v1/auth/me).
+ * Sign-in itself happens on the server with Google: the browser only holds an httpOnly session cookie,
+ * which JavaScript cannot read, so this module asks the API instead of storing anything locally.
  */
 
-export type Session = {
-  name: string
-  email: string | null
-  role: "user" | "guest"
+export type Role = "admin" | "coordinator" | "member"
+
+export type OrganizationAccess = {
+  id: string
+  slug: string
+  name: Record<string, string> // { ka, en }
+  roles: Role[]
 }
 
-type StoredUser = {
+export type Session = {
+  id: string
   name: string
   email: string
-  salt: string
-  passwordHash: string
-  createdAt: string
+  givenName: string | null
+  familyName: string | null
+  locale: string
+  isRoot: boolean
+  organizations: OrganizationAccess[]
 }
 
-const usersKey = "pea.auth.users.v1"
-const sessionKey = "pea.auth.session.v1"
-export const minPasswordLength = 8
+/** "offline": the API couldn't be reached (backend not running?) */
+export type AuthState =
+  | { status: "loading"; session: null }
+  | { status: "signed-in"; session: Session }
+  | { status: "signed-out" | "offline"; session: null }
+
+type MeResponse = {
+  id: string
+  email: string
+  display_name: string
+  given_name: string | null
+  family_name: string | null
+  preferred_locale: string
+  is_root: boolean
+  organizations: OrganizationAccess[]
+}
 
 const listeners = new Set<() => void>()
-let cachedRaw: string | null | undefined
-let cachedSession: Session | null = null
+let state: AuthState = { status: "loading", session: null }
+let pending: Promise<void> | null = null
+// Tells other open tabs to re-check after signing out here
+const channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel("pea.auth")
+channel?.addEventListener("message", () => { void refreshSession() })
 
-function readStorage(key: string): string | null {
-  try { return localStorage.getItem(key) } catch { return null }
-}
-
-function writeStorage(key: string, value: string | null) {
-  try {
-    if (value === null) localStorage.removeItem(key)
-    else localStorage.setItem(key, value)
-  } catch { /* Storage may be unavailable (private mode); the session then lasts until reload. */ }
-}
-
-function parseSession(raw: string | null): Session | null {
-  if (!raw) return null
-  try {
-    const value: unknown = JSON.parse(raw)
-    if (value && typeof value === "object") {
-      const { name, email, role } = value as Record<string, unknown>
-      if (typeof name === "string" && (email === null || typeof email === "string") && (role === "user" || role === "guest")) {
-        return { name, email, role }
-      }
-    }
-  } catch { /* fall through */ }
-  return null
-}
-
-let memorySession: string | null = null
-
-function getSnapshot(): Session | null {
-  const raw = readStorage(sessionKey) ?? memorySession
-  if (raw !== cachedRaw) {
-    cachedRaw = raw
-    cachedSession = parseSession(raw)
-  }
-  return cachedSession
-}
-
-function setSession(session: Session | null) {
-  const raw = session ? JSON.stringify(session) : null
-  memorySession = raw
-  writeStorage(sessionKey, raw)
+function setState(next: AuthState) {
+  state = next
   listeners.forEach(listener => listener())
+}
+
+/** Asks the backend who is signed in. Runs once on load; call again after anything that may change it. */
+export function refreshSession(): Promise<void> {
+  pending ??= (async () => {
+    try {
+      const response = await fetch("/api/v1/auth/me", { credentials: "same-origin", headers: { Accept: "application/json" } })
+      if (response.ok) {
+        const me = (await response.json()) as MeResponse
+        setState({
+          status: "signed-in",
+          session: {
+            id: me.id, name: me.display_name, email: me.email, givenName: me.given_name, familyName: me.family_name,
+            locale: me.preferred_locale, isRoot: me.is_root, organizations: me.organizations,
+          },
+        })
+      } else {
+        // 401 means not signed in; a 5xx or the dev proxy failing to reach the backend means it's down
+        setState({ status: response.status === 401 ? "signed-out" : "offline", session: null })
+      }
+    } catch {
+      setState({ status: "offline", session: null })
+    } finally {
+      pending = null
+    }
+  })()
+  return pending
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener)
-  // Keep tabs in sync: signing out in one tab signs out the others.
-  const onStorage = (event: StorageEvent) => { if (event.key === sessionKey) listener() }
-  window.addEventListener("storage", onStorage)
-  return () => {
-    listeners.delete(listener)
-    window.removeEventListener("storage", onStorage)
-  }
+  return () => { listeners.delete(listener) }
 }
 
-export function getSession() {
-  return getSnapshot()
+const getSnapshot = () => state
+
+void refreshSession()
+
+export function useAuth(): AuthState {
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
 
-export function useSession() {
-  return useSyncExternalStore(subscribe, getSnapshot, () => null)
+export function useSession(): Session | null {
+  return useAuth().session
 }
 
-function readUsers(): StoredUser[] {
-  try {
-    const value: unknown = JSON.parse(readStorage(usersKey) ?? "[]")
-    return Array.isArray(value) ? value.filter((u): u is StoredUser =>
-      u && typeof u.email === "string" && typeof u.name === "string" && typeof u.salt === "string" && typeof u.passwordHash === "string") : []
-  } catch { return [] }
+export function getSession(): Session | null {
+  return state.session
 }
 
-function toHex(bytes: ArrayBuffer | Uint8Array) {
-  return Array.from(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), b => b.toString(16).padStart(2, "0")).join("")
+/** Where the browser goes to sign in. A full page navigation, because Google's sign-in page has to open. */
+export function googleSignInUrl(email?: string) {
+  const query = email?.trim() ? `?${new URLSearchParams({ email: email.trim() })}` : ""
+  return `/api/v1/auth/google/login${query}`
 }
 
-async function hashPassword(password: string, salt: string) {
-  const data = new TextEncoder().encode(`${salt}:${password}`)
-  return toHex(await crypto.subtle.digest("SHA-256", data))
+export async function signOut() {
+  const request = fetch("/api/v1/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined)
+  setState({ status: "signed-out", session: null })
+  await request
+  channel?.postMessage("signed-out")
 }
 
-export function normalizeEmail(email: string) {
-  return email.trim().toLowerCase()
-}
+const roleLabels: Record<Role, string> = { admin: "Admin", coordinator: "Coordinator", member: "Member" }
 
-export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-export class AuthError extends Error {}
-
-export async function register(input: { name: string; email: string; password: string }) {
-  const name = input.name.trim()
-  const email = normalizeEmail(input.email)
-  if (!name) throw new AuthError("Enter your full name.")
-  if (!emailPattern.test(email)) throw new AuthError("Enter a valid email address.")
-  if (input.password.length < minPasswordLength) throw new AuthError(`Password must be at least ${minPasswordLength} characters.`)
-
-  const users = readUsers()
-  if (users.some(user => user.email === email)) throw new AuthError("An account with this email already exists. Sign in instead.")
-
-  const salt = toHex(crypto.getRandomValues(new Uint8Array(16)))
-  const user: StoredUser = { name, email, salt, passwordHash: await hashPassword(input.password, salt), createdAt: new Date().toISOString() }
-  writeStorage(usersKey, JSON.stringify([...users, user]))
-  setSession({ name, email, role: "user" })
-}
-
-export async function signIn(emailInput: string, password: string) {
-  const email = normalizeEmail(emailInput)
-  const user = readUsers().find(candidate => candidate.email === email)
-  // Same message for unknown email and wrong password, so the form does not reveal which accounts exist.
-  if (!user || (await hashPassword(password, user.salt)) !== user.passwordHash) {
-    throw new AuthError("Email or password is incorrect.")
-  }
-  setSession({ name: user.name, email: user.email, role: "user" })
-}
-
-export function signInAsGuest() {
-  setSession({ name: "Guest", email: null, role: "guest" })
-}
-
-export function signOut() {
-  setSession(null)
+/** The person's highest role, for display, e.g. "Admin" */
+export function roleLabel(session: Session) {
+  if (session.isRoot) return "Root"
+  const roles = new Set(session.organizations.flatMap(org => org.roles))
+  const top = (["admin", "coordinator", "member"] as const).find(role => roles.has(role))
+  return top ? roleLabels[top] : "Member"
 }
 
 export function initials(name: string) {

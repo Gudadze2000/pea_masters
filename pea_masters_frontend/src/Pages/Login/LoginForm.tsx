@@ -1,127 +1,64 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
-import { AuthError, minPasswordLength, register, signIn, signInAsGuest } from "@/lib/auth";
+import { useState } from "react";
+import { useSearchParams } from "react-router";
+import { googleSignInUrl, useAuth } from "@/lib/auth";
 
-export type AuthMode = "signin" | "register";
-
-const MailIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
-);
-const LockIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-);
-const UserIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+const GoogleIcon = () => (
+  <svg viewBox="0 0 48 48" aria-hidden="true" className="google-mark">
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+  </svg>
 );
 
-export function LoginForm({ mode }: { mode: AuthMode }) {
-  const navigate = useNavigate();
+// Codes the backend puts in /login?error=… when it refuses a sign-in
+const errorMessages: Record<string, { title: string; text: string }> = {
+  not_organization_account: {
+    title: "Not an organization account",
+    text: "Sign in with your university Google account, for example name.surname@iliauni.edu.ge. Personal Gmail accounts can't be used.",
+  },
+  not_registered: {
+    title: "Account not registered",
+    text: "Your email isn't registered in PEA yet. Ask your organization's PEA administrator to add you.",
+  },
+  account_disabled: { title: "Account deactivated", text: "This account has been deactivated. Contact your organization's PEA administrator." },
+  organization_inactive: { title: "Organization unavailable", text: "Your organization's access to PEA is currently turned off." },
+  email_not_verified: { title: "Email not verified", text: "Google hasn't verified this email address, so it can't be used to sign in." },
+  cancelled: { title: "Sign-in cancelled", text: "You closed Google's sign-in. Try again when you're ready." },
+  google_failed: { title: "Google sign-in didn't finish", text: "Something went wrong while talking to Google. Please try again." },
+};
+const unknownError = { title: "Cannot sign in", text: "Something went wrong. Please try again." };
+const offlineError = { title: "Server unavailable", text: "PEA's server can't be reached right now. Please try again in a moment." };
+
+export function LoginForm() {
+  const [params] = useSearchParams();
+  const { status } = useAuth();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
-  const isRegister = mode === "register";
+  const errorCode = params.get("error");
+  const error = status === "offline" ? offlineError : errorCode ? errorMessages[errorCode] ?? unknownError : null;
 
-  function enterApp() {
-    navigate("/home", { replace: true });
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function continueWithGoogle() {
     if (pending) return;
-    const fields = new FormData(event.currentTarget);
-    const email = String(fields.get("email") ?? "");
-    const password = String(fields.get("password") ?? "");
-    setError("");
-
-    if (isRegister && password !== String(fields.get("confirmPassword") ?? "")) {
-      setError("The passwords do not match.");
-      return;
-    }
-
     setPending(true);
-    try {
-      if (isRegister) await register({ name: String(fields.get("name") ?? ""), email, password });
-      else await signIn(email, password);
-      enterApp();
-    } catch (cause) {
-      setError(cause instanceof AuthError ? cause.message : "Something went wrong. Please try again.");
-      setPending(false);
-    }
-  }
-
-  function continueAsGuest() {
-    signInAsGuest();
-    enterApp();
+    // Leaves the app for Google's account chooser; the backend checks the chosen account when Google sends it back
+    window.location.assign(googleSignInUrl());
   }
 
   return (
     <div className="card">
-      <h2 id="form-heading">{isRegister ? "Create an account" : "Sign in"}</h2>
-      <p className="lead">{isRegister ? "Register with your university email." : "Use your email address."}</p>
+      <h2 id="form-heading">Sign in</h2>
+      <p className="lead">Use your university Google account, for example name.surname@iliauni.edu.ge.</p>
 
-      {error && <div className="banner" role="alert"><div><strong>{isRegister ? "Cannot create account" : "Cannot sign in"}</strong><p>{error}</p></div></div>}
+      {error && <div className="banner" role="alert"><div><strong>{error.title}</strong><p>{error.text}</p></div></div>}
 
-      {/* key resets the fields when switching between sign in and register */}
-      <form key={mode} id="auth-form" onSubmit={handleSubmit} aria-busy={pending} aria-labelledby="form-heading">
-        {isRegister && (
-          <div className="field">
-            <label htmlFor="name">Full name *</label>
-            <div className="input-wrap">
-              <UserIcon />
-              <input id="name" name="name" type="text" autoComplete="name" placeholder="Name Surname" required />
-            </div>
-          </div>
-        )}
-
-        <div className="field">
-          <label htmlFor="email">University email *</label>
-          <div className="input-wrap">
-            <MailIcon />
-            <input id="email" name="email" type="email" autoComplete={isRegister ? "email" : "username"} placeholder="name.surname@iliauni.edu.ge" required />
-          </div>
-        </div>
-
-        <div className="field">
-          <label htmlFor="password">Password *</label>
-          <div className="input-wrap">
-            <LockIcon />
-            <input
-              id="password" name="password" type="password"
-              autoComplete={isRegister ? "new-password" : "current-password"}
-              placeholder="••••••••••" required
-              minLength={isRegister ? minPasswordLength : undefined}
-              aria-describedby={isRegister ? "password-hint" : undefined}
-            />
-          </div>
-          {isRegister && <p id="password-hint" className="hint">At least {minPasswordLength} characters.</p>}
-        </div>
-
-        {isRegister && (
-          <div className="field">
-            <label htmlFor="confirmPassword">Confirm password *</label>
-            <div className="input-wrap">
-              <LockIcon />
-              <input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" placeholder="••••••••••" required />
-            </div>
-          </div>
-        )}
-
-        <button className="submit" id="submit" type="submit" disabled={pending}>
-          {isRegister ? (pending ? "Creating account…" : "Create account") : (pending ? "Signing in…" : "Sign in")}
-        </button>
-      </form>
-
-      <p className="switch-mode">
-        {isRegister
-          ? <>Already have an account? <Link to="/login">Sign in</Link></>
-          : <>New to PEA? <Link to="/register">Create an account</Link></>}
-      </p>
-
-      <div className="divider" role="separator"><span>or</span></div>
-      <button type="button" className="guest" onClick={continueAsGuest} disabled={pending}>Continue as guest</button>
+      <button className="submit google-submit" id="submit" type="button" onClick={continueWithGoogle} disabled={pending} aria-busy={pending}>
+        <GoogleIcon />
+        {pending ? "Redirecting to Google…" : "Continue with Google"}
+      </button>
 
       <div className="note">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
-        <span>Prototype: accounts are saved only in this browser until the server is connected.</span>
+        <span>Only members of a registered organization can sign in. Your administrator adds new accounts.</span>
       </div>
     </div>
   );
