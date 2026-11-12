@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router"
+import { RequireAuth } from "./components/RequireAuth"
 import { LoginPage } from "./Pages/Login/LoginPage"
 import { HomePage } from "./Pages/MainPage/HomePage"
 import { GeneralInformationPage } from "./Pages/Profile/GeneralInformationPage"
@@ -18,10 +19,13 @@ function App() {
     // Qualification entries live above the routes so they survive moving between pages
     <QualificationsProvider>
         <Routes>
-        {/* Landing page is the login screen; it forwards to /home when already signed in. No route is restricted yet. */}
+        {/* Landing page is the login screen; it forwards to /home when already signed in. */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<LoginPage mode="register" />} />
+        {/* Accounts are created by an organization's Admin, not by self-registration */}
+        <Route path="/register" element={<Navigate to="/login" replace />} />
+        {/* Everything below needs a signed-in user */}
+        <Route element={<RequireAuth />}>
         <Route path="/home" element={<HomePage />} />
         <Route path="/profile" element={<Navigate to="/profile/general" replace />} />
         <Route path="/profile/general" element={<GeneralInformationPage />} />
@@ -34,6 +38,7 @@ function App() {
         <Route path="/cv-builder" element={<CvBuilderPage />} />
         <Route path="/evaluation-form" element={<EvaluationForm />} />
         <Route path="/settings/:sectionId?" element={<SettingsPage />} />
+        </Route>
       </Routes>
     </QualificationsProvider>
   )

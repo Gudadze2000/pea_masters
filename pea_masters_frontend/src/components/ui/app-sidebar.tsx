@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router"
 import { ChevronDown } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { initials, signOut, useSession } from "@/lib/auth"
+import { initials, roleLabel, signOut, useSession } from "@/lib/auth"
 import { useProfile } from "@/lib/profile"
 import "@/components/layout/app-shell.css"
 
@@ -150,7 +150,7 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
   }
 
   function handleSignOut() {
-    signOut()
+    void signOut()
     if (isMobile) setOpenMobile(false)
     navigate("/login", { replace: true })
   }
@@ -177,7 +177,7 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
             aria-label="Open my profile"
             onClick={() => { rememberLook(); navigate("/profile/general"); if (isMobile) setOpenMobile(false) }}
           >
-            <div className="dashboard-avatar">{photo ? <img src={photo} alt="" /> : initials(displayName)}</div><div className="grow"><p>{displayName}</p><small>{session?.role === "guest" ? "Guest" : "Researcher"}</small></div>
+            <div className="dashboard-avatar">{photo ? <img src={photo} alt="" /> : initials(displayName)}</div><div className="grow"><p>{displayName}</p><small>{session ? roleLabel(session) : ""}</small></div>
           </button>
           <Button variant="ghost" size="icon-sm" aria-label="Sign out" onClick={handleSignOut}><DashboardIcon name="imgIconLogout" /></Button></div>
       </SidebarFooter>

@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Navigate } from "react-router";
-import { useSession } from "@/lib/auth";
-import { LoginForm, type AuthMode } from "./LoginForm";
+import { useAuth } from "@/lib/auth";
+import { LoginForm } from "./LoginForm";
 import "./LoginPage.css";
 
-function LoginPage({ mode = "signin" }: { mode?: AuthMode }) {
+function LoginPage() {
     const [lang, setLang] = useState<'ka' | "en">("ka");
-    const session = useSession();
+    const { status } = useAuth();
     // Already signed in: skip the login screen.
-    if (session) return <Navigate to="/home" replace />;
+    if (status === "signed-in") return <Navigate to="/home" replace />;
     return (
         <main className="login-page">
             {/* Left brand panel */}
@@ -70,7 +70,7 @@ function LoginPage({ mode = "signin" }: { mode?: AuthMode }) {
                    </button>
                ))}
                </div>
-                <LoginForm mode={mode} />
+                <LoginForm />
 
             </section>
 

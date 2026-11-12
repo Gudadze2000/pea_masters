@@ -202,7 +202,7 @@ export function SettingsPage() {
               {section.id === "language" && <LanguageSection settings={draft} onChange={update} />}
               {section.id === "customization" && <CustomizationSection theme={draft.theme} onChange={theme => update("theme", theme)} />}
               {section.id === "privacy" && <PrivacySection settings={draft} onChange={update} />}
-              {section.id === "data" && <DataSection settings={saved} onSignOut={() => { signOut(); navigate("/login", { replace: true }) }} />}
+              {section.id === "data" && <DataSection settings={saved} onSignOut={() => { void signOut(); navigate("/login", { replace: true }) }} />}
             </div>
           </div>
         </div>

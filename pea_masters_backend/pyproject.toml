@@ -1,0 +1,27 @@
+[project]
+name = "pea-backend"
+version = "0.1.0"
+description = "PEA portal API (FastAPI + PostgreSQL)"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]",
+    "authlib",
+    "itsdangerous",
+    "pydantic-settings",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "alembic",
+]
+
+[dependency-groups]
+dev = ["pytest", "ruff"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]  # FastAPI's Depends() in defaults is intended
