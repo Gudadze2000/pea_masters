@@ -14,7 +14,15 @@ from sqlalchemy.orm import Session
 from app import audit
 from app.config import settings
 from app.db import get_db
-from app.models import Organization, OrganizationMembership, RoleAssignment, User, UserSession
+from app.models import (
+    CoordinatorAssignment,
+    Organization,
+    OrganizationMembership,
+    OrganizationUnit,
+    RoleAssignment,
+    User,
+    UserSession,
+)
 
 COOKIE_NAME = "pea_session"
 
@@ -75,11 +83,17 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User:
     return user
 
 
+class CoordinatedUnit(BaseModel):
+    id: uuid.UUID
+    name: dict[str, str]
+
+
 class OrganizationAccess(BaseModel):
     id: uuid.UUID
     slug: str
     name: dict[str, str]
     roles: list[str]
+    coordinates: list[CoordinatedUnit]  # departments this person coordinates here
 
 
 class Me(BaseModel):
@@ -108,6 +122,12 @@ def me(user: User = Depends(current_user), db: Session = Depends(get_db)) -> Me:
                Organization.status == "active", Organization.deleted_at.is_(None))
         .order_by(Organization.slug)
     ).all()
+    coordinated = db.execute(
+        select(CoordinatorAssignment.organization_id, OrganizationUnit)
+        .join(OrganizationUnit, OrganizationUnit.id == CoordinatorAssignment.unit_id)
+        .where(CoordinatorAssignment.coordinator_user_id == user.id, CoordinatorAssignment.target == "unit",
+               CoordinatorAssignment.ends_on.is_(None))
+    ).all()
     return Me(
         id=user.id, email=user.email, display_name=user.display_name,
         given_name=user.given_name, family_name=user.family_name,
@@ -117,6 +137,8 @@ def me(user: User = Depends(current_user), db: Session = Depends(get_db)) -> Me:
             OrganizationAccess(
                 id=org.id, slug=org.slug, name=org.name,
                 roles=sorted({role for org_id, role in roles if org_id == org.id}, key=ROLE_ORDER.index),
+                coordinates=[CoordinatedUnit(id=unit.id, name=unit.name) for org_id, unit in coordinated
+                             if org_id == org.id],
             )
             for org in orgs
         ],

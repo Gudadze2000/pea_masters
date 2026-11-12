@@ -21,7 +21,8 @@ from app.db import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Organization, OrganizationDomain, OrganizationMembership, RoleAssignment, User  # noqa: E402
 
-TABLES = ("audit_log, role_assignments, organization_memberships, sessions, password_credentials, "
+TABLES = ("audit_log, coordinator_assignments, affiliations, positions, organization_units, unit_types, "
+          "role_assignments, organization_memberships, sessions, password_credentials, "
           "auth_identities, identity_providers, organization_domains, organizations, users")
 
 
@@ -30,7 +31,7 @@ def schema():
     """Fresh schema built by the real migrations, so tests also check them."""
     with engine.begin() as conn:
         conn.execute(text("drop schema public cascade; create schema public"))
-    command.upgrade(Config(str(Path(__file__).parents[1] / "alembic.ini")), "head")
+    command.upgrade(Config(str(Path(__file__).parents[2] / "alembic.ini")), "head")
 
 
 @pytest.fixture(autouse=True)
@@ -88,3 +89,23 @@ def google_returns(monkeypatch):
             return {"userinfo": claims}
         monkeypatch.setattr(google.oauth.google, "authorize_access_token", fake_exchange)
     return set_claims
+
+
+@pytest.fixture
+def signed_in():
+    """Returns a new client signed in as the given user (each client has its own cookies)."""
+    from app.auth.sessions import COOKIE_NAME, create_session
+
+    clients = []
+
+    def sign_in(user):
+        with SessionLocal() as session:
+            raw, _ = create_session(session, user.id, None, "pytest")
+            session.commit()
+        c = TestClient(app, base_url="http://localhost:5173")
+        c.cookies.set(COOKIE_NAME, raw)
+        clients.append(c)
+        return c
+    yield sign_in
+    for c in clients:
+        c.close()

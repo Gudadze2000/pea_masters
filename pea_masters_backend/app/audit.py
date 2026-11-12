@@ -22,6 +22,8 @@ def record(
     actor_user_id: uuid.UUID | None = None,
     actor_kind: str = "user",
     organization_id: uuid.UUID | None = None,
+    acting_role: str | None = None,
+    before: dict[str, Any] | None = None,
     after: dict[str, Any] | None = None,
     reason: str | None = None,
     ip: str | None = None,
@@ -35,10 +37,12 @@ def record(
         "occurred_at": occurred_at.isoformat(),
         "actor_kind": actor_kind,
         "actor_user_id": str(actor_user_id) if actor_user_id else None,
+        "acting_role": acting_role,
         "organization_id": str(organization_id) if organization_id else None,
         "action": action,
         "entity_type": entity_type,
         "entity_id": str(entity_id) if entity_id else None,
+        "before": before,
         "after": after,
         "reason": reason,
         "ip": ip,
@@ -47,8 +51,8 @@ def record(
         ((prev_hash or "") + json.dumps(row, sort_keys=True, default=str)).encode()
     ).hexdigest()
     db.add(AuditLog(
-        occurred_at=occurred_at, actor_kind=actor_kind, actor_user_id=actor_user_id,
+        occurred_at=occurred_at, actor_kind=actor_kind, actor_user_id=actor_user_id, acting_role=acting_role,
         organization_id=organization_id, action=action, entity_type=entity_type,
-        entity_id=row["entity_id"], after=after, reason=reason, ip=ip,
+        entity_id=row["entity_id"], before=before, after=after, reason=reason, ip=ip,
         prev_hash=prev_hash, row_hash=row_hash,
     ))

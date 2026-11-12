@@ -13,6 +13,8 @@ export type OrganizationAccess = {
   slug: string
   name: Record<string, string> // { ka, en }
   roles: Role[]
+  /** Departments this person coordinates in the organization */
+  coordinates: { id: string; name: Record<string, string> }[]
 }
 
 export type Session = {
@@ -114,6 +116,11 @@ export async function signOut() {
   setState({ status: "signed-out", session: null })
   await request
   channel?.postMessage("signed-out")
+}
+
+/** Organizations where this person may open the People page (Admins and Coordinators) */
+export function peopleOrganizations(session: Session) {
+  return session.organizations.filter(org => session.isRoot || org.roles.includes("admin") || org.roles.includes("coordinator"))
 }
 
 const roleLabels: Record<Role, string> = { admin: "Admin", coordinator: "Coordinator", member: "Member" }

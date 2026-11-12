@@ -1,0 +1,48 @@
+/* People page (PeoplePage.tsx, PersonSheet.tsx, DepartmentsPanel.tsx) */
+
+.people-tabs { align-self: flex-start; }
+.segmented { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--radius-md); background: var(--muted); }
+.segmented button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 6px; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-600); white-space: nowrap; cursor: pointer; }
+.segmented button:hover { color: var(--foreground); }
+.segmented [aria-checked="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgb(31 26 26 / .08); }
+
+.people-load-error { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.org-select { width: auto; min-width: 200px; }
+
+.people-filters { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.people-filters select.form-control { width: auto; min-width: 150px; }
+.people-search { position: relative; flex: 1 1 240px; min-width: 0; }
+.people-search svg { position: absolute; left: 12px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--muted-foreground); pointer-events: none; }
+.people-search .form-control { padding-left: 36px; }
+
+.people-table { min-width: 760px; }
+.people-table tr[data-inactive] td { color: var(--muted-foreground); }
+.people-table tr[data-inactive] .researcher-avatar { background: var(--muted); color: var(--muted-foreground); }
+.person-name { display: flex; flex-direction: column; min-width: 0; }
+.person-name small { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--muted-foreground); }
+.nowrap { white-space: nowrap; }
+.muted { color: var(--muted-foreground); }
+
+.role-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.role-chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; background: var(--muted); font-size: 12px; line-height: 18px; font-weight: 500; color: var(--color-neutral-700); white-space: nowrap; }
+.role-chip.role-admin { background: var(--color-brand-100); color: var(--color-brand-700); }
+.role-chip.role-coordinator { background: var(--info-soft); color: var(--info); }
+
+/* Shown in the person form while the organization has no departments */
+.empty-departments { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; border: 1px dashed var(--border); border-radius: var(--radius-lg); background: var(--color-neutral-25); }
+.empty-departments p { font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+
+/* Role checkboxes in the person form */
+.role-fieldset { border: 0; padding: 0; margin: 0; gap: 8px; }
+.role-fieldset legend { margin-bottom: 6px; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-700); }
+.role-option { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); cursor: pointer; }
+.role-option:has(input:checked) { border-color: var(--color-brand-200); background: var(--color-neutral-25); }
+.role-option .form-checkbox { margin-top: 2px; flex: none; }
+.role-option span { display: flex; flex-direction: column; gap: 2px; }
+.role-option strong { font-size: 14px; line-height: 20px; font-weight: 500; }
+.role-option small { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+
+@media (max-width: 767.98px) {
+  .people-filters select.form-control { flex: 1 1 140px; }
+  .org-select { width: 100%; }
+}

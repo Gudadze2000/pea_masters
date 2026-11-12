@@ -11,6 +11,7 @@ import { QualificationsProvider } from "./Pages/Profile/qualifications/Qualifica
 import { CvBuilderPage } from "./Pages/CvBuilder/CvBuilderPage"
 import { EvaluationForm } from "./Pages/EvaluationForm/EvaluationForm"
 import { SettingsPage } from "./Pages/Settings/SettingsPage"
+import { PeoplePage } from "./Pages/People/PeoplePage"
 
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
         <Route path="/cv-builder" element={<CvBuilderPage />} />
         <Route path="/evaluation-form" element={<EvaluationForm />} />
         <Route path="/settings/:sectionId?" element={<SettingsPage />} />
+        <Route path="/admin/people" element={<PeoplePage />} />
         </Route>
       </Routes>
     </QualificationsProvider>

@@ -29,6 +29,15 @@ uv run python -m scripts.seed --email classmate@iliauni.edu.ge --name "Name Surn
 `--role` is `admin` (default), `coordinator` or `member`. `--self-signup` lets anyone in the domain sign in as a
 Member (development only).
 
+## Managing people
+
+After the first Admin exists, everything else happens in the app: **Administration → People**
+(http://localhost:5173/admin/people). Admins add departments, register people, set roles and deactivate accounts.
+Each department has at most one Coordinator, who sees the Members of that department.
+
+Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
+written to the audit log.
+
 ## Every day
 
 ```powershell
@@ -45,9 +54,22 @@ API docs: http://localhost:5173/api/docs
 ## Tests and lint
 
 ```powershell
-uv run pytest      # uses the pea_test database; Google is replaced by fake verified claims
+uv run pytest      # API tests in tests/api, on the pea_test database; Google is replaced by fake verified claims
 uv run ruff check .
 ```
+
+Browser tests (end-to-end) drive the real app in Chromium against a throwaway `pea_e2e` database, on their own
+ports (API 8011, app 5180), so they never touch your data. First time: `uv run playwright install chromium`.
+
+```powershell
+uv run pytest tests/e2e                    # headless, about 25 seconds
+uv run pytest tests/e2e --headed --slowmo 400   # watch it click through the app
+```
+
+They cover: an Admin adds a department and registers someone → the person appears as Invited → their first
+Google sign-in makes them Active → they're made Coordinator and see only their department → deactivation signs them
+out. Screenshots of each step land in `tests/e2e/screenshots/`. Google's own sign-in page can't be automated, so the
+tests hand verified Google claims to the same code the real callback uses.
 
 ## Sign-in flow
 
