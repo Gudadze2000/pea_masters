@@ -14,10 +14,15 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest", "ruff"]
+dev = [
+    "pytest",
+    "pytest-playwright>=0.10.0",
+    "ruff",
+]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests/api"]  # browser tests run on their own: uv run pytest tests/e2e
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 120

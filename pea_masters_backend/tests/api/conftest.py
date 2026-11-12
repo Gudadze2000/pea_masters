@@ -31,7 +31,7 @@ def schema():
     """Fresh schema built by the real migrations, so tests also check them."""
     with engine.begin() as conn:
         conn.execute(text("drop schema public cascade; create schema public"))
-    command.upgrade(Config(str(Path(__file__).parents[1] / "alembic.ini")), "head")
+    command.upgrade(Config(str(Path(__file__).parents[2] / "alembic.ini")), "head")
 
 
 @pytest.fixture(autouse=True)

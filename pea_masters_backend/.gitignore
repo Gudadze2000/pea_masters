@@ -11,3 +11,8 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+
+# end-to-end test output
+tests/e2e/screenshots/
+tests/e2e/logs/
+test-results/

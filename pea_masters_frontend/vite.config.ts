@@ -19,6 +19,7 @@ export default defineConfig({
   server: {
     // The FastAPI backend (pea_masters_backend). Going through this dev server keeps the app and the API on one
     // origin, so the httpOnly login cookie just works and Google redirects back to http://localhost:5173.
-    proxy: { "/api": "http://127.0.0.1:8000" },
+    // PEA_API_URL lets the end-to-end tests point a second dev server at their own backend
+    proxy: { "/api": process.env.PEA_API_URL ?? "http://127.0.0.1:8000" },
   },
 })
