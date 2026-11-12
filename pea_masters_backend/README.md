@@ -29,6 +29,15 @@ uv run python -m scripts.seed --email classmate@iliauni.edu.ge --name "Name Surn
 `--role` is `admin` (default), `coordinator` or `member`. `--self-signup` lets anyone in the domain sign in as a
 Member (development only).
 
+## Managing people
+
+After the first Admin exists, everything else happens in the app: **Administration → People**
+(http://localhost:5173/admin/people). Admins add departments, register people, set roles and deactivate accounts.
+Each department has at most one Coordinator, who sees the Members of that department.
+
+Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
+written to the audit log.
+
 ## Every day
 
 ```powershell

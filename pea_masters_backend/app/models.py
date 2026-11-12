@@ -110,6 +110,60 @@ class RoleAssignment(Base):
     granted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     granted_at: Mapped[datetime] = mapped_column(server_default=func.now())
     revoked_at: Mapped[datetime | None]
+    revoked_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    revoke_reason: Mapped[str | None] = mapped_column(Text)
+
+
+class UnitType(Timestamps, Base):
+    __tablename__ = "unit_types"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"))
+    name: Mapped[dict[str, str]] = mapped_column(JSONB)
+    sort_order: Mapped[int] = mapped_column(server_default="0")
+
+
+class OrganizationUnit(Timestamps, Base):
+    """A department, faculty or other part of an organization."""
+    __tablename__ = "organization_units"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"))
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("organization_units.id"))
+    unit_type_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("unit_types.id"))
+    name: Mapped[dict[str, str]] = mapped_column(JSONB)  # {"ka": ..., "en": ...}
+    code: Mapped[str | None] = mapped_column(Text)
+    archived_at: Mapped[datetime | None]
+    deleted_at: Mapped[datetime | None]
+
+
+class Affiliation(Timestamps, Base):
+    """A person's place in a unit over time. Current while ends_on is null; a transfer ends one row and adds another."""
+    __tablename__ = "affiliations"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    membership_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organization_memberships.id"))
+    unit_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organization_units.id"))
+    is_primary: Mapped[bool] = mapped_column(server_default="false")
+    starts_on: Mapped[date]
+    ends_on: Mapped[date | None]
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+
+
+AssignmentTarget = pg_enum("assignment_target", "member", "unit")
+
+
+class CoordinatorAssignment(Base):
+    """Which Members a Coordinator handles: everyone in a unit, or one person. Current while ends_on is null."""
+    __tablename__ = "coordinator_assignments"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"))
+    coordinator_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    target: Mapped[str] = mapped_column(AssignmentTarget)
+    member_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    unit_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("organization_units.id"))
+    include_subunits: Mapped[bool] = mapped_column(server_default="true")
+    starts_on: Mapped[date] = mapped_column(server_default=func.current_date())
+    ends_on: Mapped[date | None]
+    assigned_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
 class AuditLog(Base):

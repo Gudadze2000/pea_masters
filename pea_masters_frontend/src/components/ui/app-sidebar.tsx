@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router"
 import { ChevronDown } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { initials, roleLabel, signOut, useSession } from "@/lib/auth"
+import { initials, peopleOrganizations, roleLabel, signOut, useSession } from "@/lib/auth"
 import { useProfile } from "@/lib/profile"
 import "@/components/layout/app-shell.css"
 
@@ -40,6 +40,11 @@ const navigation: NavItem[] = [
   { label: "Evaluation form", icon: "imgIconFile", to: "/evaluation-form" },
   { label: "CV builder", icon: "imgIconBook", to: "/cv-builder" },
   { label: "Settings", icon: "imgIconSettings", to: "/settings" },
+]
+
+/** Shown to Admins and Coordinators only. The backend enforces the same rule. */
+const administration: NavItem[] = [
+  { label: "People", icon: "imgIconUser1", to: "/admin/people" },
 ]
 
 // Every page mounts its own sidebar, so whether "My profile" is open is remembered here between pages
@@ -169,6 +174,14 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
             {navigation.map(item => item.children ? group({ ...item, children: item.children }) : link(item))}
           </SidebarMenu>
         </SidebarGroup>
+        {session && peopleOrganizations(session).length > 0 && (
+          <SidebarGroup className="dashboard-nav">
+            <p className="workspace-label">ADMINISTRATION</p>
+            <SidebarMenu className="gap-1" aria-label="Administration">
+              {administration.map(link)}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter className="dashboard-sidebar-footer">
         <div className="user-card">
