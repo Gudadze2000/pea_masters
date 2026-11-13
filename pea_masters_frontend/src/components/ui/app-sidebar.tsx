@@ -29,14 +29,8 @@ type NavItem = {
 
 const navigation: NavItem[] = [
   { label: "Dashboard", icon: "imgIconHome", to: "/home" },
-  {
-    label: "My profile", icon: "imgIconUser", section: "/profile", children: [
-      { label: "General information", to: "/profile/general" },
-      { label: "Professional & qualifications", to: "/profile/qualifications" },
-      { label: "Teaching", to: "/profile/teaching" },
-      { label: "Research overview", to: "/profile/research" },
-    ],
-  },
+  // One page with every part of the profile (Pages/Profile/ProfilePage.tsx)
+  { label: "My profile", icon: "imgIconUser", to: "/profile" },
   { label: "Evaluation form", icon: "imgIconFile", to: "/evaluation-form" },
   { label: "CV builder", icon: "imgIconBook", to: "/cv-builder" },
   { label: "Settings", icon: "imgIconSettings", to: "/settings" },
@@ -188,7 +182,7 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
           <button
             className="user-card-profile"
             aria-label="Open my profile"
-            onClick={() => { rememberLook(); navigate("/profile/general"); if (isMobile) setOpenMobile(false) }}
+            onClick={() => { rememberLook(); navigate("/profile"); if (isMobile) setOpenMobile(false) }}
           >
             <div className="dashboard-avatar">{photo ? <img src={photo} alt="" /> : initials(displayName)}</div><div className="grow"><p>{displayName}</p><small>{session ? roleLabel(session) : ""}</small></div>
           </button>

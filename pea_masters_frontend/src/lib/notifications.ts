@@ -28,12 +28,12 @@ const loadedAt = Date.now()
 const sample: (Omit<AppNotification, "at"> & { ago: number })[] = [
   { id: "n-rejected-article", ago: 10 * MINUTE, kind: "rejected", tone: "danger", title: "Journal article needs revision", detail: "Article (Scopus) entry #2 was rejected: the DOI does not match the attached PDF. Open the record to see the reviewer's comment.", to: "/evaluation-form" },
   { id: "n-deadline", ago: 1 * HOUR, kind: "deadline", tone: "warning", title: "Submission deadline approaching", detail: "Submit your evaluation form by 30 November 2026.", to: "/evaluation-form" },
-  { id: "n-education-approved", ago: 2 * HOUR, kind: "approved", tone: "success", title: "Education entries approved", detail: "3 education entries were approved by your faculty administrator.", to: "/profile/qualifications" },
+  { id: "n-education-approved", ago: 2 * HOUR, kind: "approved", tone: "success", title: "Education entries approved", detail: "3 education entries were approved by your faculty administrator.", to: "/profile#education" },
   { id: "n-admin-comment", ago: 5 * HOUR, kind: "comment", tone: "info", title: "New comment from Giorgi Kapanadze", detail: "\"Please add the ISBN for the 2025 monograph.\"", to: "/evaluation-form" },
   { id: "n-missing-file", ago: 1 * DAY + 3 * HOUR, kind: "missing-file", tone: "warning", title: "Conference presentation is missing a file", detail: "Attach a certificate or programme page (PDF or image).", to: "/evaluation-form" },
-  { id: "n-teaching-approved", ago: 2 * DAY, kind: "approved", tone: "success", title: "Teaching portfolio approved", detail: "Your teaching portfolio has been reviewed and approved.", to: "/profile/teaching" },
+  { id: "n-teaching-approved", ago: 2 * DAY, kind: "approved", tone: "success", title: "Teaching portfolio approved", detail: "Your teaching portfolio has been reviewed and approved.", to: "/profile#teaching" },
   { id: "n-period-open", ago: 3 * DAY, kind: "period", tone: "info", title: "Evaluation period is open", detail: "You can now add records for the 2025-2026 annual evaluation.", to: "/evaluation-form" },
-  { id: "n-profile", ago: 6 * DAY, kind: "profile", tone: "brand", title: "Complete your profile", detail: "Add a photo and a short biography so reviewers and students can find you.", to: "/profile/general" },
+  { id: "n-profile", ago: 6 * DAY, kind: "profile", tone: "brand", title: "Complete your profile", detail: "Add a photo and a short biography so reviewers and students can find you.", to: "/profile#general" },
   { id: "n-system", ago: 9 * DAY, kind: "system", tone: "info", title: "CV Builder is available", detail: "Build and download your academic CV from the records you have already entered.", to: "/cv-builder" },
 ]
 

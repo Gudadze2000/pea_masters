@@ -1,0 +1,67 @@
+/* My profile, on one page (ProfilePage.tsx). Shell/card/button styles come from components/layout/app-shell.css */
+
+.profile-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; align-items: start; }
+.profile-main { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
+
+/* Header: who you are */
+.profile-header { display: flex; align-items: center; gap: 20px; }
+.profile-header-avatar { display: grid; place-items: center; width: 88px; height: 88px; flex: none; overflow: hidden; border-radius: 50%; background: var(--color-brand-100); color: var(--color-brand-700); font-size: 28px; font-weight: 600; }
+.profile-header-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-header-text { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.profile-header-text h1 { font-size: 24px; line-height: 32px; font-weight: 600; }
+.profile-header-text p { color: var(--color-neutral-700); }
+.profile-header-text small { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.profile-header-text small svg { width: 14px; height: 14px; flex: none; }
+.profile-header-note { color: var(--muted-foreground) !important; }
+.profile-header .dashboard-button { flex: none; align-self: flex-start; }
+
+.profile-notice { margin: -16px 0; }
+
+/* One part of the profile: heading, then its cards */
+.profile-section { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 24px; }
+.profile-section .section-heading h2 { display: flex; align-items: center; gap: 8px; }
+.profile-section .card-heading h3 { font-size: 15px; line-height: 22px; font-weight: 600; }
+.section-title { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.section-icon { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 10px; background: var(--accent); color: var(--primary); }
+.section-icon svg { width: 18px; height: 18px; }
+.profile-section .page-actions { flex-wrap: wrap; justify-content: flex-end; }
+
+/* Group labels between parts */
+.profile-group-label { margin-bottom: -16px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 11px; line-height: 16px; letter-spacing: .06em; font-weight: 600; text-transform: uppercase; color: var(--muted-foreground); }
+
+/* Sections not filled in yet */
+.add-more { display: flex; flex-direction: column; gap: 6px; scroll-margin-top: 24px; border-style: dashed; }
+.add-more h2 { font-size: 15px; line-height: 22px; font-weight: 600; }
+.add-more > p { font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.add-more-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.add-chip { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid var(--input); border-radius: 99px; background: var(--card); font-size: 13px; font-weight: 500; color: var(--color-neutral-700); cursor: pointer; transition: border-color .15s, background-color .15s; }
+.add-chip:hover:not(:disabled) { border-color: var(--color-brand-200); background: var(--accent); color: var(--primary); }
+.add-chip:disabled { opacity: .5; cursor: not-allowed; }
+.add-chip svg { width: 15px; height: 15px; color: var(--muted-foreground); }
+.add-chip .add-chip-plus { color: var(--primary); }
+
+/* Contents list */
+.profile-contents { position: sticky; top: 24px; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+.profile-contents-title { padding: 0 8px 6px; font-size: 13px; font-weight: 600; }
+.profile-contents-group { padding: 10px 8px 4px; font-size: 11px; line-height: 16px; letter-spacing: .06em; font-weight: 600; text-transform: uppercase; color: var(--muted-foreground); }
+.profile-contents ul { display: flex; flex-direction: column; gap: 2px; }
+.profile-contents button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 6px 8px; border-radius: var(--radius-md); font-size: 13px; line-height: 20px; color: var(--color-neutral-700); text-align: left; cursor: pointer; }
+.profile-contents button:hover { background: var(--muted); }
+.profile-contents button > span:first-of-type { flex: 1; min-width: 0; }
+.profile-contents button svg { width: 15px; height: 15px; flex: none; color: var(--muted-foreground); }
+.profile-contents .contents-done { color: var(--success); }
+.profile-contents [aria-current="location"] { background: var(--accent); color: var(--primary); font-weight: 500; }
+.profile-contents .contents-add { color: var(--primary); }
+.profile-contents .contents-add svg { color: var(--primary); }
+
+@media (max-width: 1099.98px) {
+  .profile-layout { grid-template-columns: minmax(0, 1fr); }
+  /* On narrow screens the contents list sits above the profile, as a compact index */
+  .profile-contents { position: static; order: -1; }
+}
+
+@media (max-width: 767.98px) {
+  .profile-header { flex-direction: column; align-items: flex-start; }
+  .profile-header-avatar { width: 72px; height: 72px; font-size: 24px; }
+  .profile-section .section-heading { flex-direction: column; }
+}
