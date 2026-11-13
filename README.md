@@ -7,7 +7,19 @@ Portal for Ilia State University staff: researcher profiles, evaluation forms an
 | `pea_masters_frontend/` | The web app: React + Vite, run with Bun |
 | `pea_masters_backend/` | The API: Python (FastAPI) + PostgreSQL in Docker, run with uv |
 
-People sign in with their university Google account. Only people an Admin has registered can sign in.
+People sign in with their university Google account (no passwords). Only people who have been registered can
+sign in.
+
+| Role | Who | What they do |
+|---|---|---|
+| **Root** | The application's developers | Everything, in every organization |
+| **Admin** | The organization's responsible person | Manages people, roles, faculties and departments of the whole organization; Admins and Root grant the Admin role |
+| **Coordinator** | Head of a department | Registers the Researchers of their department, corrects their names, deactivates and reactivates them |
+| **Researcher** | Academic staff (`member` in the database) | Keeps their profile and submits evaluations |
+
+Structure: organization → **faculties** (schools, e.g. *School of Business, Technology and Education*) →
+**departments** (programs, e.g. *Computer Science*). Each Researcher belongs to a department; each department has one
+head (Coordinator).
 
 This page lists every command the project uses, what it does and when to run it. All commands are for
 **PowerShell on Windows**. Backend details are in [pea_masters_backend/README.md](pea_masters_backend/README.md).
@@ -167,15 +179,18 @@ Other frontend commands:
 
 After the first Admin exists, the normal way is the app: **Administration → People** (http://localhost:5173/admin/people).
 
-1. **Departments** tab → **Add department** for each department.
+1. **Structure** tab → **Add faculty** for each faculty or school, then **Add department** for each department in it.
 2. **People** tab → **Add person**: email, name, department and roles.
-3. To make someone a Coordinator, edit them, tick **Coordinator** and choose their department (one Coordinator per department).
+3. To make someone head of a department, edit them, tick **Coordinator** and choose the department under
+   **Head of department** (one head per department).
+4. Heads of department then open **People** themselves and use **Add researcher** to register their Researchers.
 
 From the terminal (in `pea_masters_backend`), mainly for the first Admin:
 
 ```powershell
 uv run python -m scripts.seed --email name.surname@iliauni.edu.ge --name "Name Surname"
 uv run python -m scripts.seed --email classmate@iliauni.edu.ge --name "Name Surname" --role member
+uv run python -m scripts.seed --email dev.name@iliauni.edu.ge --name "Dev Name" --root
 uv run python -m scripts.seed --self-signup
 uv run python -m scripts.seed --no-self-signup
 uv run python -m scripts.seed --help
@@ -184,8 +199,9 @@ uv run python -m scripts.seed --help
 | Option | What it does |
 |---|---|
 | `--email`, `--name` | The person's university Google email and display name. The email must be in `iliauni.edu.ge`. |
-| `--role admin\|coordinator\|member` | Their role (default `admin`). Everyone also gets `member`. |
-| `--self-signup` / `--no-self-signup` | Lets anyone in the domain sign in and become a Member without being registered. **Development only.** |
+| `--role admin\|coordinator\|member` | Their role (default `admin`; `member` = Researcher). Everyone also gets `member`. Heads of department are easier to set up in the app, where you choose their department. |
+| `--root` | Also makes them **Root** (a developer with access to every organization). |
+| `--self-signup` / `--no-self-signup` | Lets anyone in the domain sign in and become a Researcher without being registered. **Development only.** |
 | `--help` | Lists all options. |
 
 The command must be run **inside `pea_masters_backend`**, and running it twice does no harm. Each person registers
@@ -326,7 +342,8 @@ git pull
 | Vite started on **5174** instead of 5173 | Something already uses 5173 (often another `bun run dev`). Google sign-in only works on 5173; close the other one. |
 | Database connection hangs | Use `127.0.0.1`, not `localhost`, in `DATABASE_URL`: on Windows, `localhost` tries IPv6 first and stalls. |
 | `ports are not available` from Docker | Another program uses that port. This project uses 5434 for PostgreSQL to avoid the usual 5432/5433. |
-| No departments in the person form | Add them first in the **Departments** tab of the People page. |
+| No departments in the person form | Add a faculty and its departments first in the **Structure** tab of the People page. |
+| A department shows under "Departments not in a faculty" | It was made before faculties existed. Edit it in the **Structure** tab and choose its faculty. |
 
 Find what's using a port (PowerShell):
 

@@ -3,7 +3,7 @@
 Every protected endpoint calls `authorize(...)`, which runs the same steps:
   1. who is asking (the signed-in user, from the session cookie)
   2. their roles in the organization the request is about (Root counts everywhere)
-  3. scope: a Coordinator only reaches the Members of the departments they coordinate
+  3. scope: a Coordinator (head of department) only reaches the Researchers of the department they head
   4. the record's state is checked by the endpoint itself (e.g. "already deactivated")
   5. refusals are written to the audit log; endpoints audit the changes they make
 
@@ -34,15 +34,21 @@ from app.models import (
 
 class Action(StrEnum):
     VIEW_PEOPLE = "people.view"
-    MANAGE_PEOPLE = "people.manage"  # register, change roles, change department, deactivate
+    REGISTER_PEOPLE = "people.register"
+    EDIT_PEOPLE = "people.edit"  # change name, deactivate, reactivate
+    MANAGE_ROLES = "people.roles"  # change roles, move to another department
     VIEW_UNITS = "units.view"
-    MANAGE_UNITS = "units.manage"
+    MANAGE_UNITS = "units.manage"  # faculties and departments
 
 
-# Which organization roles may perform each action. Root may do everything, in every organization.
+# Which organization roles may perform each action. Root (the developers) may do everything, everywhere.
+# Roles: admin = the organization's responsible person; coordinator = head of a department;
+# member = Researcher. Coordinators act only on Researchers of their own department (see people.py).
 POLICY: dict[Action, frozenset[str]] = {
-    Action.VIEW_PEOPLE: frozenset({"admin", "coordinator"}),  # Coordinators: only their departments' Members
-    Action.MANAGE_PEOPLE: frozenset({"admin"}),
+    Action.VIEW_PEOPLE: frozenset({"admin", "coordinator"}),
+    Action.REGISTER_PEOPLE: frozenset({"admin", "coordinator"}),
+    Action.EDIT_PEOPLE: frozenset({"admin", "coordinator"}),
+    Action.MANAGE_ROLES: frozenset({"admin"}),
     Action.VIEW_UNITS: frozenset({"admin", "coordinator", "member"}),
     Action.MANAGE_UNITS: frozenset({"admin"}),
 }
@@ -100,7 +106,7 @@ def authorize(db: Session, actor: Actor, action: Action, org_id: uuid.UUID,
     role = next((r for r in ROLE_STRENGTH if r in allowed), None)
     if role == "coordinator" and target_user_id is not None:
         visible = db.scalar(select(literal(True)).where(
-            target_user_id_in_scope(actor.user.id, org_id, target_user_id)))
+            target_user_id_in_scope(actor.user.id, org_id, target_user_id)))  # deactivated ones too, to reactivate
         if not visible:
             role = None
     if role is None:
@@ -108,9 +114,9 @@ def authorize(db: Session, actor: Actor, action: Action, org_id: uuid.UUID,
     return role  # type: ignore[return-value]
 
 
-def coordinated_members(coordinator_id: uuid.UUID, org_id: uuid.UUID) -> Select:
-    """User ids of the Members a Coordinator handles: everyone currently in their departments (and sub-units),
-    plus anyone assigned to them individually."""
+def coordinated_members(coordinator_id: uuid.UUID, org_id: uuid.UUID, include_inactive: bool = False) -> Select:
+    """User ids of the people a Coordinator handles: everyone currently in the department they head (and its
+    sub-units), plus anyone assigned to them individually. Deactivated people only with include_inactive."""
     ca = CoordinatorAssignment
     scope = (
         select(ca.unit_id.label("unit_id"), ca.include_subunits.label("deep"))
@@ -128,8 +134,8 @@ def coordinated_members(coordinator_id: uuid.UUID, org_id: uuid.UUID) -> Select:
         select(OrganizationMembership.user_id)
         .join(Affiliation, Affiliation.membership_id == OrganizationMembership.id)
         .join(scope, scope.c.unit_id == Affiliation.unit_id)
-        .where(OrganizationMembership.organization_id == org_id, OrganizationMembership.status == "active",
-               Affiliation.ends_on.is_(None))
+        .where(OrganizationMembership.organization_id == org_id, Affiliation.ends_on.is_(None),
+               *(() if include_inactive else (OrganizationMembership.status == "active",)))
     )
     direct = select(ca.member_user_id).where(
         ca.coordinator_user_id == coordinator_id, ca.organization_id == org_id,
@@ -138,7 +144,7 @@ def coordinated_members(coordinator_id: uuid.UUID, org_id: uuid.UUID) -> Select:
 
 
 def target_user_id_in_scope(coordinator_id: uuid.UUID, org_id: uuid.UUID, target_user_id: uuid.UUID):
-    members = coordinated_members(coordinator_id, org_id).subquery()
+    members = coordinated_members(coordinator_id, org_id, include_inactive=True).subquery()
     return select(members.c.user_id).where(members.c.user_id == target_user_id).exists()
 
 

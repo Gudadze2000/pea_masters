@@ -3,7 +3,12 @@ Safe to run again: existing rows are reused.
 
     uv run python -m scripts.seed --email name.surname@iliauni.edu.ge --name "Name Surname"               # Admin
     uv run python -m scripts.seed --email classmate@iliauni.edu.ge --name "Name Surname" --role member
+    uv run python -m scripts.seed --email dev.name@iliauni.edu.ge --name "Dev Name" --root          # developer
     uv run python -m scripts.seed --self-signup      # anyone in the domain may sign in (development only)
+
+Roles: root = the application's developers (every organization); admin = the organization's responsible person;
+coordinator = head of a department; member = Researcher. Coordinators are best set up in the app, where you choose
+their department.
 """
 
 import argparse
@@ -24,7 +29,9 @@ def main() -> None:
     parser.add_argument("--email", "--admin-email", dest="email", help="Google Workspace email to register")
     parser.add_argument("--name", "--admin-name", dest="name", help="Display name (defaults to the part before @)")
     parser.add_argument("--role", choices=["admin", "coordinator", "member"], default="admin",
-                        help="Role in the organization (default: admin). Everyone also gets member.")
+                        help="Role in the organization (default: admin). Everyone also gets member (Researcher).")
+    parser.add_argument("--root", action="store_true",
+                        help="Also make this person Root: a developer with access to every organization")
     parser.add_argument("--self-signup", action=argparse.BooleanOptionalAction, default=None,
                         help="Let anyone in the domain sign in and become a Member")
     args = parser.parse_args()
@@ -74,6 +81,15 @@ def main() -> None:
                     audit.record(db, "role.granted", entity_type="user", entity_id=user.id, actor_kind="system",
                                  organization_id=org.id, after={"role": role})
                     print(f"granted {role} to {email}")
+            if args.root and db.scalar(select(RoleAssignment).where(
+                    RoleAssignment.user_id == user.id, RoleAssignment.organization_id.is_(None),
+                    RoleAssignment.role == "root", RoleAssignment.revoked_at.is_(None))) is None:
+                db.add(RoleAssignment(user_id=user.id, organization_id=None, role="root"))
+                audit.record(db, "role.granted", entity_type="user", entity_id=user.id, actor_kind="system",
+                             after={"role": "root"})
+                print(f"granted root to {email}")
+        elif args.root:
+            raise SystemExit("--root needs --email")
 
         db.commit()
     print("done")

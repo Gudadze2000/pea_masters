@@ -1,5 +1,9 @@
-"""People in an organization: Admins register them, set roles and departments, and deactivate them.
-Coordinators can see the Members of the department they coordinate."""
+"""People in an organization.
+
+Admins register anyone, set roles and departments, and deactivate people. Coordinators (heads of department)
+register Researchers into their own department, correct their names, and deactivate or reactivate them; they
+can't grant roles, move people between departments, or act on other Coordinators and Admins.
+"Member" in the database is shown as "Researcher" in the app."""
 
 import uuid
 from datetime import date, datetime
@@ -25,7 +29,7 @@ from app.models import (
     User,
     UserSession,
 )
-from app.units import UnitRef, find_unit
+from app.units import UnitRef, find_department
 
 router = APIRouter(prefix="/api/v1/orgs/{org_id}/people", tags=["people"])
 
@@ -41,13 +45,15 @@ class PersonOut(BaseModel):
     status: Status
     roles: list[Role]
     department: UnitRef | None
-    coordinates: UnitRef | None  # the department this person coordinates
+    faculty: UnitRef | None  # the department's faculty
+    coordinates: UnitRef | None  # the department this person heads
     last_login_at: datetime | None
 
 
 class PeopleList(BaseModel):
     people: list[PersonOut]
-    can_manage: bool  # whether the caller may register and edit people here
+    can_register: bool  # Admins, and Coordinators for their own department
+    can_manage_roles: bool  # Admins: roles, moving people between departments, structure
 
 
 class PersonCreate(BaseModel):
@@ -92,7 +98,7 @@ def load_people(db: Session, org_id: uuid.UUID, user_ids: list[uuid.UUID] | None
         pattern = f"%{search.strip()}%"
         query = query.where(or_(User.email.ilike(pattern), User.display_name.ilike(pattern)))
     if visible_to_coordinator:
-        query = query.where(User.id.in_(coordinated_members(visible_to_coordinator, org_id)))
+        query = query.where(User.id.in_(coordinated_members(visible_to_coordinator, org_id, include_inactive=True)))
     rows = db.execute(query).all()
     ids = [user.id for user, _ in rows]
     if not ids:
@@ -109,6 +115,17 @@ def load_people(db: Session, org_id: uuid.UUID, user_ids: list[uuid.UUID] | None
         .join(OrganizationUnit, OrganizationUnit.id == Affiliation.unit_id)
         .where(OrganizationMembership.organization_id == org_id, OrganizationMembership.user_id.in_(ids),
                Affiliation.is_primary, Affiliation.ends_on.is_(None)))}
+    department_parents = dict(db.execute(select(OrganizationUnit.id, OrganizationUnit.parent_id).where(
+        OrganizationUnit.id.in_([d.id for d in departments.values()]))).all())
+    faculty_ids = {p for p in department_parents.values() if p}
+    faculties = {u.id: UnitRef(id=u.id, name=u.name) for u in db.scalars(
+        select(OrganizationUnit).where(OrganizationUnit.id.in_(faculty_ids)))} if faculty_ids else {}
+
+    def faculty_of(user_id: uuid.UUID) -> UnitRef | None:
+        department = departments.get(user_id)
+        parent = department_parents.get(department.id) if department else None
+        return faculties.get(parent) if parent else None
+
     coordinates = {user_id: UnitRef(id=unit.id, name=unit.name) for user_id, unit in db.execute(
         select(CoordinatorAssignment.coordinator_user_id, OrganizationUnit)
         .join(OrganizationUnit, OrganizationUnit.id == CoordinatorAssignment.unit_id)
@@ -120,7 +137,8 @@ def load_people(db: Session, org_id: uuid.UUID, user_ids: list[uuid.UUID] | None
         PersonOut(id=user.id, email=user.email, display_name=user.display_name,
                   status=person_status(user, membership),
                   roles=sorted(roles.get(user.id, set()), key=ROLE_ORDER.index),  # type: ignore[arg-type]
-                  department=departments.get(user.id), coordinates=coordinates.get(user.id),
+                  department=departments.get(user.id), faculty=faculty_of(user.id),
+                  coordinates=coordinates.get(user.id),
                   last_login_at=user.last_login_at)
         for user, membership in rows
     ]
@@ -150,9 +168,7 @@ def list_people(org_id: uuid.UUID, q: str | None = None,
     role = authorize(db, actor, Action.VIEW_PEOPLE, org_id)
     coordinator_only = role == "coordinator"
     people = load_people(db, org_id, search=q, visible_to_coordinator=actor.user.id if coordinator_only else None)
-    if coordinator_only:  # Coordinators see active Members only
-        people = [p for p in people if p.status != "deactivated"]
-    return PeopleList(people=people, can_manage=role in ("admin", "root"))
+    return PeopleList(people=people, can_register=True, can_manage_roles=role in ("admin", "root"))
 
 
 @router.get("/{user_id}", response_model=PersonOut)
@@ -163,6 +179,22 @@ def get_person(org_id: uuid.UUID, user_id: uuid.UUID, actor: Actor = Depends(get
 
 
 # --- rules shared by the changes below ----------------------------------------------------------
+
+def headed_departments(db: Session, org_id: uuid.UUID, coordinator_id: uuid.UUID) -> list[uuid.UUID]:
+    return list(db.scalars(select(CoordinatorAssignment.unit_id).where(
+        CoordinatorAssignment.organization_id == org_id, CoordinatorAssignment.coordinator_user_id == coordinator_id,
+        CoordinatorAssignment.target == "unit", CoordinatorAssignment.ends_on.is_(None))))
+
+
+def coordinator_may_act_on(db: Session, org_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    """Coordinators act on Researchers only, never on other Coordinators or Admins."""
+    roles = set(db.scalars(select(RoleAssignment.role).where(
+        RoleAssignment.organization_id == org_id, RoleAssignment.user_id == user_id,
+        RoleAssignment.revoked_at.is_(None))))
+    if roles - {"member"}:
+        raise problem(status.HTTP_403_FORBIDDEN, "researchers_only",
+                      "Heads of department can only manage Researchers. Ask an Admin.")
+
 
 def other_active_admins(db: Session, org_id: uuid.UUID, user_id: uuid.UUID) -> int:
     return db.scalar(
@@ -189,7 +221,7 @@ def set_department(db: Session, membership: OrganizationMembership, unit_id: uui
     if current and current.unit_id == unit_id:
         return
     if unit_id is not None:
-        find_unit(db, membership.organization_id, unit_id)
+        find_department(db, membership.organization_id, unit_id)
     if current:
         current.ends_on = date.today()
         db.flush()
@@ -236,7 +268,7 @@ def apply_roles(db: Session, org_id: uuid.UUID, user_id: uuid.UUID, roles: list[
         assignment.ends_on = date.today()
         db.flush()
     if target_unit is not None:
-        unit = find_unit(db, org_id, target_unit)
+        unit = find_department(db, org_id, target_unit)
         holder = db.scalar(select(User).join(
             CoordinatorAssignment, CoordinatorAssignment.coordinator_user_id == User.id).where(
             CoordinatorAssignment.unit_id == unit.id, CoordinatorAssignment.target == "unit",
@@ -274,7 +306,18 @@ def commit_or_conflict(db: Session) -> None:
 def register_person(org_id: uuid.UUID, body: PersonCreate,
                     actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
     get_organization(db, org_id)
-    role = authorize(db, actor, Action.MANAGE_PEOPLE, org_id)
+    role = authorize(db, actor, Action.REGISTER_PEOPLE, org_id)
+    department_id = body.department_id
+    if role == "coordinator":
+        if set(body.roles) != {"member"} or body.coordinates_unit_id is not None:
+            raise problem(status.HTTP_403_FORBIDDEN, "researchers_only",
+                          "Heads of department can register Researchers only. Ask an Admin for other roles.")
+        headed = headed_departments(db, org_id, actor.user.id)
+        if department_id is None and len(headed) == 1:
+            department_id = headed[0]
+        if department_id not in headed:
+            raise problem(status.HTTP_403_FORBIDDEN, "own_department_only",
+                          "You can register Researchers in your own department only.")
     email = str(body.email).strip().lower()
     domain = email.rpartition("@")[2]
     allowed = db.scalars(select(OrganizationDomain.domain).where(
@@ -296,7 +339,7 @@ def register_person(org_id: uuid.UUID, body: PersonCreate,
     db.flush()
 
     apply_roles(db, org_id, user.id, body.roles, body.coordinates_unit_id, actor, None)
-    set_department(db, membership, body.department_id, actor)
+    set_department(db, membership, department_id, actor)
     audit.record(db, "person.registered", entity_type="user", entity_id=user.id, actor_user_id=actor.user.id,
                  acting_role=role, organization_id=org_id, after=snapshot(db, org_id, user.id), ip=actor.ip)
     commit_or_conflict(db)
@@ -307,8 +350,13 @@ def register_person(org_id: uuid.UUID, body: PersonCreate,
 def update_person(org_id: uuid.UUID, user_id: uuid.UUID, body: PersonUpdate,
                   actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
     get_organization(db, org_id)
-    role = authorize(db, actor, Action.MANAGE_PEOPLE, org_id, target_user_id=user_id)
+    role = authorize(db, actor, Action.EDIT_PEOPLE, org_id, target_user_id=user_id)
     membership = membership_of(db, org_id, user_id)
+    if role == "coordinator":
+        coordinator_may_act_on(db, org_id, user_id)
+        if "department_id" in body.model_fields_set:
+            raise problem(status.HTTP_403_FORBIDDEN, "admins_move_people",
+                          "Only Admins can move people to another department.")
     before = snapshot(db, org_id, user_id)
     if body.display_name is not None:
         db.get(User, user_id).display_name = body.display_name.strip()  # type: ignore[union-attr]
@@ -325,7 +373,7 @@ def update_person(org_id: uuid.UUID, user_id: uuid.UUID, body: PersonUpdate,
 def set_roles(org_id: uuid.UUID, user_id: uuid.UUID, body: RolesUpdate,
               actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
     get_organization(db, org_id)
-    role = authorize(db, actor, Action.MANAGE_PEOPLE, org_id, target_user_id=user_id)
+    role = authorize(db, actor, Action.MANAGE_ROLES, org_id, target_user_id=user_id)
     membership_of(db, org_id, user_id)
     before = snapshot(db, org_id, user_id)
     apply_roles(db, org_id, user_id, body.roles, body.coordinates_unit_id, actor, body.reason)
@@ -340,10 +388,12 @@ def set_roles(org_id: uuid.UUID, user_id: uuid.UUID, body: RolesUpdate,
 def deactivate_person(org_id: uuid.UUID, user_id: uuid.UUID, body: Reason | None = None,
                       actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
     get_organization(db, org_id)
-    role = authorize(db, actor, Action.MANAGE_PEOPLE, org_id, target_user_id=user_id)
+    role = authorize(db, actor, Action.EDIT_PEOPLE, org_id, target_user_id=user_id)
     if user_id == actor.user.id:
         raise problem(status.HTTP_409_CONFLICT, "cannot_deactivate_self", "You can't deactivate your own account.")
     membership = membership_of(db, org_id, user_id)
+    if role == "coordinator":
+        coordinator_may_act_on(db, org_id, user_id)
     if membership.status != "active":
         raise problem(status.HTTP_409_CONFLICT, "already_deactivated", "This person is already deactivated.")
     if db.scalar(select(RoleAssignment.id).where(
@@ -376,8 +426,10 @@ def deactivate_person(org_id: uuid.UUID, user_id: uuid.UUID, body: Reason | None
 def reactivate_person(org_id: uuid.UUID, user_id: uuid.UUID, body: Reason | None = None,
                       actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
     get_organization(db, org_id)
-    role = authorize(db, actor, Action.MANAGE_PEOPLE, org_id, target_user_id=user_id)
+    role = authorize(db, actor, Action.EDIT_PEOPLE, org_id, target_user_id=user_id)
     membership = membership_of(db, org_id, user_id)
+    if role == "coordinator":
+        coordinator_may_act_on(db, org_id, user_id)
     if membership.status == "active":
         raise problem(status.HTTP_409_CONFLICT, "already_active", "This person is already active.")
     before = snapshot(db, org_id, user_id)
