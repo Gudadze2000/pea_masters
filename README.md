@@ -180,7 +180,8 @@ Other frontend commands:
 After the first Admin exists, the normal way is the app: **Administration → People** (http://localhost:5173/admin/people).
 
 1. **Structure** tab → **Add faculty** for each faculty or school, then **Add department** for each department in it.
-2. **People** tab → **Add person**: email, name, department and roles.
+   Below that, **Add position** for each academic position (Professor, Associate Professor, …).
+2. **People** tab → **Add person**: email, name, department, academic position and roles.
 3. To make someone head of a department, edit them, tick **Coordinator** and choose the department under
    **Head of department** (one head per department).
 4. Heads of department then open **People** themselves and use **Add researcher** to register their Researchers.

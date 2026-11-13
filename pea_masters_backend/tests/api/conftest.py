@@ -1,4 +1,5 @@
 import os
+import tempfile
 from pathlib import Path
 
 # Configure before the app is imported: tests use their own database and never the real Google client
@@ -9,6 +10,7 @@ os.environ["GOOGLE_CLIENT_SECRET"] = "test-secret"
 os.environ["SESSION_SECRET"] = "test-session-secret"
 os.environ["PUBLIC_URL"] = "http://localhost:5173"
 os.environ["SECURE_COOKIES"] = "false"
+os.environ["STORAGE_DIR"] = tempfile.mkdtemp(prefix="pea-test-storage-")  # uploads go to a throwaway folder
 
 import pytest  # noqa: E402
 from alembic import command  # noqa: E402
@@ -21,7 +23,8 @@ from app.db import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Organization, OrganizationDomain, OrganizationMembership, RoleAssignment, User  # noqa: E402
 
-TABLES = ("audit_log, coordinator_assignments, affiliations, positions, organization_units, unit_types, "
+TABLES = ("audit_log, profiles, files, coordinator_assignments, affiliations, positions, organization_units, "
+          "unit_types, "
           "role_assignments, organization_memberships, sessions, password_credentials, "
           "auth_identities, identity_providers, organization_domains, organizations, users")
 
@@ -109,3 +112,18 @@ def signed_in():
     yield sign_in
     for c in clients:
         c.close()
+
+
+@pytest.fixture
+def admin(make_user):
+    return make_user(email="admin@iliauni.edu.ge", roles=("admin", "member"), status="active")
+
+
+@pytest.fixture
+def as_admin(signed_in, admin):
+    return signed_in(admin)
+
+
+@pytest.fixture
+def base(org):
+    return f"/api/v1/orgs/{org.id}"

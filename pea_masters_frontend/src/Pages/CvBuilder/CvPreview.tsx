@@ -5,7 +5,7 @@ import type { CvSection } from "./cv-content"
 import type { CvData } from "./cv-model"
 import { validProfiles } from "./identifiers"
 
-type Person = { fullName: string; email: string; position: string; faculty: string; direction: string }
+type Person = { fullName: string; email: string; position: string; faculty: string; department: string; organization: string }
 
 type Props = {
   cv: CvData
@@ -82,7 +82,7 @@ export function CvPreview({ cv, sections, person, asVisitor }: Props) {
       <header className="cv-header">
         <h1 className="cv-name">{person.fullName}</h1>
         <p className="cv-headline">{cv.personal.headline || person.position}</p>
-        <p className="cv-affiliation">{[person.direction, `Faculty of ${person.faculty}`, "Ilia State University"].join(" · ")}</p>
+        <p className="cv-affiliation">{[person.department, person.faculty, person.organization].filter(Boolean).join(" · ")}</p>
         <ul className="cv-contact">
           {showEmail && <li><Mail aria-hidden="true" /><a href={`mailto:${person.email}`}>{person.email}</a></li>}
           {showPhone && <li><Phone aria-hidden="true" />{cv.personal.phone}</li>}

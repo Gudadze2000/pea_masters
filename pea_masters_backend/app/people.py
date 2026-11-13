@@ -25,11 +25,13 @@ from app.models import (
     OrganizationDomain,
     OrganizationMembership,
     OrganizationUnit,
+    Position,
     RoleAssignment,
     User,
     UserSession,
 )
 from app.names import name_from_email
+from app.positions import find_position
 from app.units import UnitRef, find_department
 
 router = APIRouter(prefix="/api/v1/orgs/{org_id}/people", tags=["people"])
@@ -49,6 +51,7 @@ class PersonOut(BaseModel):
     roles: list[Role]
     department: UnitRef | None
     faculty: UnitRef | None  # the department's faculty
+    position: UnitRef | None  # academic position, e.g. Associate Professor
     coordinates: UnitRef | None  # the department this person heads
     last_login_at: datetime | None
 
@@ -66,11 +69,13 @@ class PersonCreate(BaseModel):
     roles: list[Role] = Field(min_length=1)
     department_id: uuid.UUID | None = None
     coordinates_unit_id: uuid.UUID | None = None
+    position_id: uuid.UUID | None = None  # Admins only; needs a department
 
 
 class PersonUpdate(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=200)
     department_id: uuid.UUID | None = None  # send null to clear
+    position_id: uuid.UUID | None = None  # Admins only; send null to clear
 
 
 class RolesUpdate(BaseModel):
@@ -119,6 +124,12 @@ def load_people(db: Session, org_id: uuid.UUID, user_ids: list[uuid.UUID] | None
         .join(OrganizationUnit, OrganizationUnit.id == Affiliation.unit_id)
         .where(OrganizationMembership.organization_id == org_id, OrganizationMembership.user_id.in_(ids),
                Affiliation.is_primary, Affiliation.ends_on.is_(None)))}
+    positions = {user_id: UnitRef(id=p.id, name=p.name) for user_id, p in db.execute(
+        select(OrganizationMembership.user_id, Position)
+        .join(Affiliation, Affiliation.membership_id == OrganizationMembership.id)
+        .join(Position, Position.id == Affiliation.position_id)
+        .where(OrganizationMembership.organization_id == org_id, OrganizationMembership.user_id.in_(ids),
+               Affiliation.is_primary, Affiliation.ends_on.is_(None)))}
     department_parents = dict(db.execute(select(OrganizationUnit.id, OrganizationUnit.parent_id).where(
         OrganizationUnit.id.in_([d.id for d in departments.values()]))).all())
     faculty_ids = {p for p in department_parents.values() if p}
@@ -142,7 +153,7 @@ def load_people(db: Session, org_id: uuid.UUID, user_ids: list[uuid.UUID] | None
                   name_source=user.name_source,  # type: ignore[arg-type]
                   status=person_status(user, membership),
                   roles=sorted(roles.get(user.id, set()), key=ROLE_ORDER.index),  # type: ignore[arg-type]
-                  department=departments.get(user.id), faculty=faculty_of(user.id),
+                  department=departments.get(user.id), faculty=faculty_of(user.id), position=positions.get(user.id),
                   coordinates=coordinates.get(user.id),
                   last_login_at=user.last_login_at)
         for user, membership in rows
@@ -230,9 +241,30 @@ def set_department(db: Session, membership: OrganizationMembership, unit_id: uui
     if current:
         current.ends_on = date.today()
         db.flush()
-    if unit_id is not None:
-        db.add(Affiliation(membership_id=membership.id, unit_id=unit_id, is_primary=True,
-                           starts_on=date.today(), created_by=actor.user.id))
+    if unit_id is not None:  # the academic position moves with them
+        db.add(Affiliation(membership_id=membership.id, unit_id=unit_id, is_primary=True, starts_on=date.today(),
+                           position_id=current.position_id if current else None, created_by=actor.user.id))
+
+
+def set_position(db: Session, membership: OrganizationMembership, position_id: uuid.UUID | None,
+                 actor: Actor) -> None:
+    """Gives the person an academic position in their department. Like a move, the old row is ended, not changed."""
+    db.flush()
+    current = db.scalar(select(Affiliation).where(
+        Affiliation.membership_id == membership.id, Affiliation.is_primary, Affiliation.ends_on.is_(None)))
+    if current is None:
+        if position_id is None:
+            return
+        raise problem(status.HTTP_422_UNPROCESSABLE_CONTENT, "position_needs_department",
+                      "Choose their department first: the academic position is held in a department.")
+    if current.position_id == position_id:
+        return
+    if position_id is not None:
+        find_position(db, membership.organization_id, position_id)
+    current.ends_on = date.today()
+    db.flush()
+    db.add(Affiliation(membership_id=membership.id, unit_id=current.unit_id, is_primary=True, starts_on=date.today(),
+                       position_id=position_id, created_by=actor.user.id))
 
 
 def end_coordination(db: Session, org_id: uuid.UUID, user_id: uuid.UUID) -> None:
@@ -291,6 +323,7 @@ def snapshot(db: Session, org_id: uuid.UUID, user_id: uuid.UUID) -> dict:
     p = one_person(db, org_id, user_id)
     return {"display_name": p.display_name, "status": p.status, "roles": p.roles,
             "department": str(p.department.id) if p.department else None,
+            "position": str(p.position.id) if p.position else None,
             "coordinates": str(p.coordinates.id) if p.coordinates else None}
 
 
@@ -323,6 +356,8 @@ def register_person(org_id: uuid.UUID, body: PersonCreate,
         if department_id not in headed:
             raise problem(status.HTTP_403_FORBIDDEN, "own_department_only",
                           "You can register Researchers in your own department only.")
+        if body.position_id is not None:
+            raise problem(status.HTTP_403_FORBIDDEN, "admins_set_positions", "Only Admins set academic positions.")
     email = str(body.email).strip().lower()
     domain = email.rpartition("@")[2]
     allowed = db.scalars(select(OrganizationDomain.domain).where(
@@ -349,6 +384,8 @@ def register_person(org_id: uuid.UUID, body: PersonCreate,
 
     apply_roles(db, org_id, user.id, body.roles, body.coordinates_unit_id, actor, None)
     set_department(db, membership, department_id, actor)
+    if body.position_id is not None:
+        set_position(db, membership, body.position_id, actor)
     audit.record(db, "person.registered", entity_type="user", entity_id=user.id, actor_user_id=actor.user.id,
                  acting_role=role, organization_id=org_id, after=snapshot(db, org_id, user.id), ip=actor.ip)
     commit_or_conflict(db)
@@ -366,6 +403,8 @@ def update_person(org_id: uuid.UUID, user_id: uuid.UUID, body: PersonUpdate,
         if "department_id" in body.model_fields_set:
             raise problem(status.HTTP_403_FORBIDDEN, "admins_move_people",
                           "Only Admins can move people to another department.")
+        if "position_id" in body.model_fields_set:
+            raise problem(status.HTTP_403_FORBIDDEN, "admins_set_positions", "Only Admins set academic positions.")
     before = snapshot(db, org_id, user_id)
     user = db.get(User, user_id)
     if body.display_name is not None and body.display_name.strip() and body.display_name.strip() != user.display_name:
@@ -373,6 +412,8 @@ def update_person(org_id: uuid.UUID, user_id: uuid.UUID, body: PersonUpdate,
         user.name_source = "manual"  # a deliberate correction: Google's name won't replace it
     if "department_id" in body.model_fields_set:
         set_department(db, membership, body.department_id, actor)
+    if "position_id" in body.model_fields_set:
+        set_position(db, membership, body.position_id, actor)
     audit.record(db, "person.updated", entity_type="user", entity_id=user_id, actor_user_id=actor.user.id,
                  acting_role=role, organization_id=org_id, before=before, after=snapshot(db, org_id, user_id),
                  ip=actor.ip)

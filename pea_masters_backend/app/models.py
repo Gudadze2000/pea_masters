@@ -142,10 +142,52 @@ class Affiliation(Timestamps, Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
     membership_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organization_memberships.id"))
     unit_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organization_units.id"))
+    position_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("positions.id"))  # academic position held there
     is_primary: Mapped[bool] = mapped_column(server_default="false")
     starts_on: Mapped[date]
     ends_on: Mapped[date | None]
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+
+
+class Position(Timestamps, Base):
+    """An academic position, e.g. Professor or Associate Professor. Managed by Admins."""
+    __tablename__ = "positions"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"))
+    name: Mapped[dict[str, str]] = mapped_column(JSONB)  # {"ka": ..., "en": ...}
+    category: Mapped[str | None] = mapped_column(Text)
+    archived_at: Mapped[datetime | None]
+
+
+ScanStatus = pg_enum("scan_status", "pending", "clean", "infected", "failed")
+
+
+class File(Base):
+    """An uploaded file's metadata; the bytes live in storage under storage_key (app/storage.py)."""
+    __tablename__ = "files"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("organizations.id"))
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    storage_key: Mapped[str] = mapped_column(Text, unique=True)
+    original_name: Mapped[str] = mapped_column(Text)
+    mime_type: Mapped[str] = mapped_column(Text)  # detected from the content, not trusted from the browser
+    size_bytes: Mapped[int] = mapped_column(BigInteger)
+    sha256: Mapped[str] = mapped_column(Text)
+    scan_status: Mapped[str] = mapped_column(ScanStatus, server_default="pending")
+    uploaded_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    deleted_at: Mapped[datetime | None]
+    deleted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+
+
+class Profile(Base):
+    """General information: biography per language and photo. One per person, shared across organizations."""
+    __tablename__ = "profiles"
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    biography: Mapped[dict[str, str]] = mapped_column(JSONB, server_default="{}")  # {"en": html, "ka": html}
+    photo_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("files.id"))
+    is_public: Mapped[bool] = mapped_column(server_default="false")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
 
 AssignmentTarget = pg_enum("assignment_target", "member", "unit")

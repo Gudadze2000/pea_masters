@@ -6,6 +6,7 @@ import { AppTopbar } from "@/components/layout/AppTopbar"
 import { AppSidebar, DashboardIcon as Icon } from "@/components/ui/app-sidebar"
 import { Button } from "@/components/ui/button"
 import { useSession } from "@/lib/auth"
+import { useIdentity } from "@/lib/profile"
 import { notifications, openNotifications, timeAgo, useReadNotifications } from "@/lib/notifications"
 import { findEntryNeedingAttention, readDraft, type EvaluationLinkState } from "@/Pages/EvaluationForm/evaluation-model"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -39,7 +40,8 @@ export function HomePage() {
   const navigate = useNavigate()
   const [panel, setPanel] = useState<string | null>(null)
   const session = useSession()
-  const firstName = session?.name.split(/\s+/)[0] || "Nino"
+  const identity = useIdentity()
+  const firstName = session?.name.split(/\s+/)[0] ?? ""
   // Entries the attention rows point at, read from the saved evaluation draft (so a fixed entry isn't linked again)
   const [attention] = useState(() => {
     const draft = readDraft()
@@ -62,7 +64,7 @@ export function HomePage() {
       <main className="dashboard-main">
         <AppTopbar><span>Dashboard</span></AppTopbar>
         <div className="dashboard-content">
-          <div className="page-heading"><div><h1>Good evening, {firstName}</h1><p>Biology · Associate Professor · Faculty of Natural Sciences and Medicine</p></div><Button variant="outline" className="dashboard-button" onClick={() => open("Download CV")}><Icon name="imgIconDownload" />Download CV</Button></div>
+          <div className="page-heading"><div><h1>Good evening, {firstName}</h1><p>{[identity.department, identity.position, identity.faculty].filter(Boolean).join(" · ") || identity.organization}</p></div><Button variant="outline" className="dashboard-button" onClick={() => open("Download CV")}><Icon name="imgIconDownload" />Download CV</Button></div>
           <section className="evaluation-banner"><Icon name="imgIconAlert" /><div><p>Evaluation 2025-2026 is open - your form is still a draft</p><small>Submit before 30 November 2026. You will get an email reminder as the deadline approaches.</small></div><Button onClick={() => open("Evaluation form")}>Continue</Button></section>
           <div className="dashboard-stats">{stats.map(stat => <section className="stat-card" key={stat.label}><div className="stat-heading"><h2>{stat.label}</h2><span className={`icon-tile ${stat.tone}`}><Icon name={stat.icon} /></span></div><p className="stat-value">{stat.value}</p><small>{stat.detail}</small></section>)}</div>
           <div className="dashboard-columns">

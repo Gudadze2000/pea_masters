@@ -3,6 +3,7 @@ import { useNavigate } from "react-router"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardIcon as Icon } from "@/components/ui/app-sidebar"
 import { useLanguage, type Language } from "@/lib/language-context"
+import { useIdentity } from "@/lib/profile"
 import { NotificationsMenu } from "./NotificationsMenu"
 import "./app-shell.css"
 
@@ -11,11 +12,13 @@ const languages: Language[] = ["KA", "EN"]
 /** Top bar shared by every workspace page. `children` is the page title or breadcrumb. */
 export function AppTopbar({ children }: { children: ReactNode }) {
   const { language, setLanguage } = useLanguage()
+  const { faculty, organization } = useIdentity()
+  const place = faculty || organization
   return (
     <header className="dashboard-topbar">
       <div className="topbar-title"><SidebarTrigger />{children}</div>
       <div className="topbar-actions">
-        <span className="faculty-pill"><Icon name="imgIconBuilding" />Natural Sciences &amp; Medicine</span>
+        {place && <span className="faculty-pill"><Icon name="imgIconBuilding" />{place}</span>}
         <div className="language-switch" aria-label="Language">
           {languages.map(lang => <button key={lang} aria-pressed={language === lang} onClick={() => setLanguage(lang)}>{lang}</button>)}
         </div>

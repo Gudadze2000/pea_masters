@@ -36,6 +36,8 @@ export type Person = {
   roles: Role[]
   department: UnitRef | null
   faculty: UnitRef | null
+  /** Academic position, e.g. Associate Professor */
+  position: UnitRef | null
   /** The department this person heads */
   coordinates: UnitRef | null
   last_login_at: string | null
@@ -55,6 +57,8 @@ export type PersonInput = {
   roles: Role[]
   department_id: string | null
   coordinates_unit_id: string | null
+  /** Admins only */
+  position_id: string | null
 }
 
 /** Picks the name in the interface language, falling back to the other one */
@@ -88,7 +92,7 @@ const base = (orgId: string) => `/orgs/${orgId}`
 export const peopleApi = {
   list: (orgId: string) => api<PeopleList>(`${base(orgId)}/people`),
   register: (orgId: string, input: PersonInput) => api<Person>(`${base(orgId)}/people`, { method: "POST", body: input }),
-  update: (orgId: string, userId: string, changes: { display_name?: string; department_id?: string | null }) =>
+  update: (orgId: string, userId: string, changes: { display_name?: string; department_id?: string | null; position_id?: string | null }) =>
     api<Person>(`${base(orgId)}/people/${userId}`, { method: "PATCH", body: changes }),
   setRoles: (orgId: string, userId: string, body: { roles: Role[]; coordinates_unit_id: string | null; reason: string | null }) =>
     api<Person>(`${base(orgId)}/people/${userId}/roles`, { method: "PUT", body }),
@@ -96,6 +100,17 @@ export const peopleApi = {
     api<Person>(`${base(orgId)}/people/${userId}/deactivate`, { method: "POST", body: { reason } }),
   reactivate: (orgId: string, userId: string) =>
     api<Person>(`${base(orgId)}/people/${userId}/reactivate`, { method: "POST", body: { reason: null } }),
+}
+
+/** Academic position (Professor, Associate Professor, ...), managed by Admins in the Structure tab */
+export type Position = UnitRef & { holder_count: number }
+
+export const positionsApi = {
+  list: (orgId: string) => api<Position[]>(`${base(orgId)}/positions`),
+  create: (orgId: string, name: { name_en: string; name_ka: string | null }) =>
+    api<Position>(`${base(orgId)}/positions`, { method: "POST", body: name }),
+  rename: (orgId: string, positionId: string, name: { name_en: string; name_ka: string | null }) =>
+    api<Position>(`${base(orgId)}/positions/${positionId}`, { method: "PATCH", body: name }),
 }
 
 export type UnitInput = { name_en: string; name_ka: string | null; parent_id: string | null }

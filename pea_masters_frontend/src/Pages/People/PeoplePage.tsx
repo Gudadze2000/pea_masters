@@ -6,9 +6,10 @@ import "@/components/forms/forms.css"
 import { initials, peopleOrganizations, useSession, type Role } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
 import { useLanguage } from "@/lib/language-context"
-import { groupByFaculty, localName, peopleApi, roleLabels, statusLabels, structureApi, type Person, type PersonStatus, type Unit } from "@/lib/people"
+import { groupByFaculty, localName, peopleApi, positionsApi, roleLabels, statusLabels, structureApi, type Person, type PersonStatus, type Position, type Unit } from "@/lib/people"
 import { ConfirmSheet } from "./ConfirmSheet"
 import { PersonSheet } from "./PersonSheet"
+import { PositionsPanel } from "./PositionsPanel"
 import { StructurePanel } from "./StructurePanel"
 import "./PeoplePage.css"
 
@@ -38,6 +39,7 @@ export function PeoplePage() {
   const [canRegister, setCanRegister] = useState(false)
   const [canManageRoles, setCanManageRoles] = useState(false)
   const [units, setUnits] = useState<Unit[]>([])
+  const [positions, setPositions] = useState<Position[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState("")
   const [notice, setNotice] = useState("")
@@ -52,11 +54,12 @@ export function PeoplePage() {
   const load = useCallback(async () => {
     if (!org) return
     try {
-      const [list, structure] = await Promise.all([peopleApi.list(org.id), structureApi.list(org.id)])
+      const [list, structure, positionList] = await Promise.all([peopleApi.list(org.id), structureApi.list(org.id), positionsApi.list(org.id)])
       setPeople(list.people)
       setCanRegister(list.can_register)
       setCanManageRoles(list.can_manage_roles)
       setUnits(structure)
+      setPositions(positionList)
       setLoadError("")
     } catch (cause) {
       setLoadError(cause instanceof ApiError ? cause.message : "Couldn't load people. Please try again.")
@@ -150,7 +153,10 @@ export function PeoplePage() {
           )}
 
           {tab === "structure" && canManageRoles ? (
-            <StructurePanel orgId={org.id} units={units} onChanged={finish} />
+            <>
+              <StructurePanel orgId={org.id} units={units} onChanged={finish} />
+              <PositionsPanel orgId={org.id} positions={positions} onChanged={finish} />
+            </>
           ) : (
             <section className="dashboard-card" aria-labelledby="people-heading">
               <div className="card-heading">
@@ -205,7 +211,11 @@ export function PeoplePage() {
                         <td>
                           <span className="researcher">
                             <span className="researcher-avatar" aria-hidden="true">{initials(person.display_name)}</span>
-                            <span className="person-name">{person.display_name}<small>{person.email}</small></span>
+                            <span className="person-name">
+                              {person.display_name}
+                              <small>{person.email}</small>
+                              {person.position && <small>{localName(person.position.name, language)}</small>}
+                            </span>
                           </span>
                         </td>
                         <td>
@@ -255,6 +265,7 @@ export function PeoplePage() {
               orgId={org.id}
               person={dialog.kind === "edit" ? dialog.person : null}
               units={units}
+              positions={positions}
               domainHint={domainHint}
               canManageRoles={canManageRoles}
               headedDepartments={headedDepartments}

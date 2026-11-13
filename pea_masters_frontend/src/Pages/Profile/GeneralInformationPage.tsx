@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { ContentScrollbar } from "@/components/layout/ContentScrollbar"
 import { Check, Info, Lock, Save } from "lucide-react"
 import { WorkspaceSidebarProvider } from "@/components/layout/WorkspaceSidebarProvider"
@@ -6,36 +6,29 @@ import { AppSidebar } from "@/components/ui/app-sidebar"
 import { AppTopbar, Breadcrumb } from "@/components/layout/AppTopbar"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { useLanguage } from "@/lib/language-context"
+import { ApiError } from "@/lib/api"
+import { useLanguage, type Language } from "@/lib/language-context"
+import { BIOGRAPHY_MAX_LENGTH, removePhoto, saveBiography, uploadPhoto, useIdentity, useMyProfile, type MyProfile } from "@/lib/profile"
 import { RichTextEditor } from "./RichTextEditor"
 import { htmlTextLength } from "./html-text"
 import { PhotoUpload } from "./PhotoUpload"
-import { BIOGRAPHY_MAX_LENGTH, institutionalInformation as institution, type GeneralInformation } from "./profileMock"
-import { saveProfile, useProfile } from "@/lib/profile"
 import "./GeneralInformationPage.css"
 
-const AUTOSAVE_DELAY = 1200
-
 const languageCopy = {
-  EN: { name: "English", other: "ქართული", otherPurpose: "Georgian", htmlLang: "en" },
-  KA: { name: "Georgian", other: "English", otherPurpose: "English", htmlLang: "ka" },
+  EN: { name: "English", other: "ქართული", otherPurpose: "Georgian", htmlLang: "en", key: "en" },
+  KA: { name: "Georgian", other: "English", otherPurpose: "English", htmlLang: "ka", key: "ka" },
 } as const
 
-function useNow(intervalMs: number) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), intervalMs)
-    return () => window.clearInterval(id)
-  }, [intervalMs])
-  return now
+/** What the page edits: biography per interface language, and the photo (URL of the saved one, a new image as a
+ *  data URL until it's uploaded, or null for none) */
+type Draft = { biography: Record<Language, string>; photo: string | null }
+
+function draftOf(profile: MyProfile): Draft {
+  return { biography: { EN: profile.biography.en ?? "", KA: profile.biography.ka ?? "" }, photo: profile.photo_url }
 }
 
-function timeAgo(timestamp: number, now: number) {
-  const minutes = Math.floor((now - timestamp) / 60000)
-  if (minutes < 1) return "just now"
-  if (minutes < 60) return `${minutes} min ago`
-  const hours = Math.floor(minutes / 60)
-  return `${hours} h ago`
+function formatSaved(value: string | null) {
+  return value ? new Date(value).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : null
 }
 
 function InfoBanner({ title, children }: { title: string; children: ReactNode }) {
@@ -51,75 +44,14 @@ function ReadOnlyField({ label, value, className }: { label: string; value: stri
   return (
     <div className={`readonly-field ${className ?? ""}`}>
       <dt>{label}<Lock aria-label="Locked" /></dt>
-      <dd>{value}</dd>
+      <dd>{value || <span className="readonly-empty">Not set</span>}</dd>
     </div>
   )
 }
 
 export function GeneralInformationPage() {
-  const { language } = useLanguage()
-  const copy = languageCopy[language]
-
-  // Saved values live in the shared profile store, so the photo shows in the sidebar and survives leaving the page
-  const saved = useProfile()
-  const [draft, setDraft] = useState<GeneralInformation>(saved)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [editorVersion, setEditorVersion] = useState(0)
-  const [saving, setSaving] = useState(false)
-  const [savedNotice, setSavedNotice] = useState(false)
+  const { status, profile } = useMyProfile()
   const [panel, setPanel] = useState<string | null>(null)
-
-  // Simulated draft autosave (no back end yet)
-  const [lastAutoSaved, setLastAutoSaved] = useState(() => Date.now() - 2 * 60000)
-  const [autoSaving, setAutoSaving] = useState(false)
-  const autosaveTimer = useRef<number | undefined>(undefined)
-  const now = useNow(30000)
-
-  const characterCount = useMemo(() => htmlTextLength(draft.biography[language]), [draft.biography, language])
-  const overLimit = characterCount > BIOGRAPHY_MAX_LENGTH
-  const dirty = draft.photo !== saved.photo || (Object.keys(draft.biography) as (keyof GeneralInformation["biography"])[]).some(lang => draft.biography[lang] !== saved.biography[lang])
-
-  // Warn before closing the tab with unsaved changes
-  useEffect(() => {
-    if (!dirty) return
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault()
-    window.addEventListener("beforeunload", warn)
-    return () => window.removeEventListener("beforeunload", warn)
-  }, [dirty])
-
-  useEffect(() => () => window.clearTimeout(autosaveTimer.current), [])
-
-  const updateBiography = (html: string) => {
-    setDraft(current => ({ ...current, biography: { ...current.biography, [language]: html } }))
-    setSavedNotice(false)
-    setAutoSaving(true)
-    window.clearTimeout(autosaveTimer.current)
-    autosaveTimer.current = window.setTimeout(() => {
-      // TODO: persist the draft through the API once the back end exists
-      setAutoSaving(false)
-      setLastAutoSaved(Date.now())
-    }, AUTOSAVE_DELAY)
-  }
-
-  const cancel = () => {
-    window.clearTimeout(autosaveTimer.current)
-    setAutoSaving(false)
-    setDraft(saved)
-    setEditorVersion(version => version + 1) // reload the editor with the saved content
-    setSavedNotice(false)
-  }
-
-  const save = () => {
-    setSaving(true)
-    // TODO: replace with the real API call
-    window.setTimeout(() => {
-      const persisted = saveProfile(draft)
-      setSaveError(persisted ? null : "Saved for this visit only: the browser has no room left to keep it after a reload.")
-      setSaving(false)
-      setSavedNotice(true)
-      setLastAutoSaved(Date.now())
-    }, 600)
-  }
 
   return (
     <WorkspaceSidebarProvider>
@@ -129,58 +61,16 @@ export function GeneralInformationPage() {
           <Breadcrumb items={[{ label: "My profile", to: "/profile/general" }, { label: "General information" }]} />
         </AppTopbar>
 
-        <div className="dashboard-content profile-content">
-          <div className="page-heading">
-            <div>
-              <h1>General information</h1>
-              <p>Your biography and photo appear on your public profile.</p>
+        {profile
+          ? <GeneralInformationForm profile={profile} />
+          : (
+            <div className="dashboard-content profile-content">
+              <div className="page-heading"><div><h1>General information</h1></div></div>
+              <div className="dashboard-card" role={status === "error" ? "alert" : "status"}>
+                {status === "error" ? "Your profile couldn't be loaded. Check your connection and reload the page." : "Loading your profile…"}
+              </div>
             </div>
-            <div className="page-actions">
-              <span className="save-status" role="status">{savedNotice && !dirty && (saveError ?? <><Check aria-hidden="true" />Changes saved</>)}</span>
-              <Button variant="outline" className="dashboard-button" disabled={!dirty || saving} onClick={cancel}>Cancel</Button>
-              <Button className="dashboard-button" disabled={!dirty || saving || overLimit} onClick={save}><Save />{saving ? "Saving…" : "Save changes"}</Button>
-            </div>
-          </div>
-
-          <section className="dashboard-card profile-card" aria-labelledby="biography-heading">
-            <div className="card-heading"><h2 id="biography-heading">Biography</h2></div>
-            <InfoBanner title={`You are entering information in ${copy.name}`}>
-              Content you enter is saved in the interface language you selected ({language}). Switch to <span lang={language === "EN" ? "ka" : "en"}>{copy.other}</span> in the top bar to enter {copy.otherPurpose} text.
-            </InfoBanner>
-            <RichTextEditor
-              key={`${language}-${editorVersion}`}
-              initialHtml={draft.biography[language]}
-              onChange={updateBiography}
-              maxLength={BIOGRAPHY_MAX_LENGTH}
-              label={`Biography (${copy.name})`}
-              placeholder={`Write a short biography in ${copy.name}…`}
-              lang={copy.htmlLang}
-            />
-            <div className="editor-footer">
-              <span>{autoSaving ? "Saving draft…" : `Saved automatically · last saved ${timeAgo(lastAutoSaved, now)}`}</span>
-              <span className={overLimit ? "over-limit" : undefined}>{characterCount} / {BIOGRAPHY_MAX_LENGTH} characters</span>
-            </div>
-          </section>
-
-          <section className="dashboard-card profile-card" aria-labelledby="photo-heading">
-            <div className="card-heading"><h2 id="photo-heading">Photograph</h2></div>
-            <PhotoUpload photo={draft.photo} initials={institution.initials} onChange={photo => { setDraft(current => ({ ...current, photo })); setSavedNotice(false) }} />
-          </section>
-
-          <section className="dashboard-card profile-card" aria-labelledby="institution-heading">
-            <div className="card-heading"><h2 id="institution-heading">Institutional information</h2></div>
-            <dl className="readonly-grid">
-              <ReadOnlyField className="half" label="Full name" value={institution.fullName} />
-              <ReadOnlyField className="half" label="Email" value={institution.email} />
-              <ReadOnlyField label="Faculty / School" value={institution.faculty} />
-              <ReadOnlyField label="Direction" value={institution.direction} />
-              <ReadOnlyField label="Academic position" value={institution.position} />
-            </dl>
-            <InfoBanner title="Managed by your faculty admin">
-              To change your faculty, direction or position, contact your admin.
-            </InfoBanner>
-          </section>
-        </div>
+          )}
         <ContentScrollbar />
       </main>
 
@@ -193,5 +83,123 @@ export function GeneralInformationPage() {
         </SheetContent>
       </Sheet>
     </WorkspaceSidebarProvider>
+  )
+}
+
+function GeneralInformationForm({ profile }: { profile: MyProfile }) {
+  const { language } = useLanguage()
+  const copy = languageCopy[language]
+  const identity = useIdentity()
+  const saved = useMemo(() => draftOf(profile), [profile])
+  const [draft, setDraft] = useState<Draft>(saved)
+  const [editorVersion, setEditorVersion] = useState(0)
+  const [saving, setSaving] = useState(false)
+  const [savedNotice, setSavedNotice] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const characterCount = useMemo(() => htmlTextLength(draft.biography[language]), [draft.biography, language])
+  const overLimit = characterCount > BIOGRAPHY_MAX_LENGTH
+  const biographyChanged = (["EN", "KA"] as const).some(lang => draft.biography[lang] !== saved.biography[lang])
+  const dirty = draft.photo !== saved.photo || biographyChanged
+
+  // Warn before closing the tab with unsaved changes
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault()
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [dirty])
+
+  const updateBiography = (html: string) => {
+    setDraft(current => ({ ...current, biography: { ...current.biography, [language]: html } }))
+    setSavedNotice(false)
+  }
+
+  const cancel = () => {
+    setDraft(saved)
+    setEditorVersion(version => version + 1) // reload the editor with the saved content
+    setSavedNotice(false)
+    setSaveError(null)
+  }
+
+  const save = async () => {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      let latest = profile
+      if (draft.photo !== saved.photo) {
+        if (draft.photo === null) latest = await removePhoto()
+        else if (draft.photo.startsWith("data:")) latest = await uploadPhoto(await (await fetch(draft.photo)).blob())
+      }
+      if (biographyChanged) latest = await saveBiography({ en: draft.biography.EN, ka: draft.biography.KA })
+      // The server cleans the HTML, so show exactly what it kept
+      setDraft(draftOf(latest))
+      setEditorVersion(version => version + 1)
+      setSavedNotice(true)
+    } catch (cause) {
+      setSaveError(cause instanceof ApiError ? cause.message : "Something went wrong. Your changes weren't saved.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const lastSaved = formatSaved(profile.updated_at)
+
+  return (
+    <div className="dashboard-content profile-content">
+      <div className="page-heading">
+        <div>
+          <h1>General information</h1>
+          <p>Your biography and photo appear on your profile and CV.</p>
+        </div>
+        <div className="page-actions">
+          <span className="save-status" role="status">{savedNotice && !dirty && <><Check aria-hidden="true" />Changes saved</>}</span>
+          <Button variant="outline" className="dashboard-button" disabled={!dirty || saving} onClick={cancel}>Cancel</Button>
+          <Button className="dashboard-button" disabled={!dirty || saving || overLimit} onClick={() => void save()}><Save />{saving ? "Saving…" : "Save changes"}</Button>
+        </div>
+      </div>
+
+      {saveError && <div className="form-error-summary" role="alert">{saveError}</div>}
+
+      <section className="dashboard-card profile-card" aria-labelledby="biography-heading">
+        <div className="card-heading"><h2 id="biography-heading">Biography</h2></div>
+        <InfoBanner title={`You are entering information in ${copy.name}`}>
+          Content you enter is saved in the interface language you selected ({language}). Switch to <span lang={language === "EN" ? "ka" : "en"}>{copy.other}</span> in the top bar to enter {copy.otherPurpose} text.
+        </InfoBanner>
+        <RichTextEditor
+          key={`${language}-${editorVersion}`}
+          initialHtml={draft.biography[language]}
+          onChange={updateBiography}
+          maxLength={BIOGRAPHY_MAX_LENGTH}
+          label={`Biography (${copy.name})`}
+          placeholder={`Write a short biography in ${copy.name}…`}
+          lang={copy.htmlLang}
+        />
+        <div className="editor-footer">
+          <span>{dirty ? "Unsaved changes" : lastSaved ? `Saved · ${lastSaved}` : "Not saved yet"}</span>
+          <span className={overLimit ? "over-limit" : undefined}>{characterCount} / {BIOGRAPHY_MAX_LENGTH} characters</span>
+        </div>
+      </section>
+
+      <section className="dashboard-card profile-card" aria-labelledby="photo-heading">
+        <div className="card-heading"><h2 id="photo-heading">Photograph</h2></div>
+        <PhotoUpload photo={draft.photo} initials={identity.initials} onChange={photo => { setDraft(current => ({ ...current, photo })); setSavedNotice(false) }} />
+      </section>
+
+      <section className="dashboard-card profile-card" aria-labelledby="institution-heading">
+        <div className="card-heading"><h2 id="institution-heading">Institutional information</h2></div>
+        <dl className="readonly-grid">
+          <ReadOnlyField className="half" label="Full name" value={identity.fullName} />
+          <ReadOnlyField className="half" label="Email" value={identity.email} />
+          <ReadOnlyField label="Faculty / School" value={identity.faculty} />
+          <ReadOnlyField label="Department" value={identity.department} />
+          <ReadOnlyField label="Academic position" value={identity.position} />
+        </dl>
+        <InfoBanner title="Managed by your organization">
+          Your name comes from your university Google account. Your faculty, department and position are set by your
+          organization's PEA Admin; contact them to change these.
+        </InfoBanner>
+      </section>
+    </div>
   )
 }

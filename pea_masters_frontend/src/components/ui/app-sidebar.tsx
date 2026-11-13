@@ -77,7 +77,7 @@ export function AppSidebar({ onNavigate }: { onNavigate: (name: string) => void 
   const navigate = useNavigate()
   const currentPath = pathname === "/" ? "/home" : pathname
   const session = useSession()
-  const displayName = session?.name ?? "Nino Beridze"
+  const displayName = session?.name ?? ""
   const { photo } = useProfile()
   const [profileTarget] = useState(() => readProfileOpen(currentPath.startsWith("/profile")))
   const [profileOpen, setProfileOpen] = useState(() => takeHandoff()?.profileOpen ?? profileTarget)

@@ -32,11 +32,13 @@ function toError(status: number, detail: Detail): ApiError {
 export async function api<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   let response: Response
   try {
+    // FormData (file uploads) is sent as multipart and sets its own Content-Type; anything else as JSON
+    const isForm = options.body instanceof FormData
     response = await fetch(`/api/v1${path}`, {
       method: options.method ?? "GET",
       credentials: "same-origin",
-      headers: options.body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      headers: options.body === undefined || isForm ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" },
+      body: options.body === undefined ? undefined : isForm ? (options.body as FormData) : JSON.stringify(options.body),
     })
   } catch {
     throw new ApiError(0, "offline", "Can't reach the PEA server. Check your connection and try again.")
