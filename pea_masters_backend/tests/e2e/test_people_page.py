@@ -49,7 +49,7 @@ def test_admin_sets_up_a_department_whose_head_registers_researchers(admin_page:
     page.get_by_role("button", name="Add person").click()
     dialog = page.get_by_role("dialog")
     dialog.get_by_label("University email *").fill(HEAD_EMAIL)
-    dialog.get_by_label("Full name *").fill(HEAD_NAME)
+    expect(dialog.get_by_label("Full name *")).to_have_value(HEAD_NAME)  # filled in from name.surname@
     dialog.get_by_label("Department", exact=True).select_option(label=DEPARTMENT)
     expect(dialog.get_by_role("checkbox", name=re.compile("^Researcher"))).to_be_checked()
     shot(page, "2-add-person-form")
@@ -91,7 +91,7 @@ def test_admin_sets_up_a_department_whose_head_registers_researchers(admin_page:
     expect(dialog).to_contain_text(DEPARTMENT)  # fixed to their department
     expect(dialog.get_by_role("checkbox")).to_have_count(0)  # no role choice
     dialog.get_by_label("University email *").fill(RESEARCHER_EMAIL)
-    dialog.get_by_label("Full name *").fill(RESEARCHER_NAME)
+    expect(dialog.get_by_label("Full name *")).to_have_value(RESEARCHER_NAME)
     dialog.get_by_role("button", name="Add researcher").click()
     expect(row(nika, RESEARCHER_NAME)).to_contain_text("Invited")
     expect(row(nika, RESEARCHER_NAME)).to_contain_text(DEPARTMENT)
@@ -131,6 +131,7 @@ def test_admin_cannot_deactivate_themselves_or_register_outside_domain(admin_pag
     page.get_by_role("button", name="Add person").click()
     dialog = page.get_by_role("dialog")
     dialog.get_by_label("University email *").fill("someone@gmail.com")
+    expect(dialog.get_by_label("Full name *")).to_have_value("")  # nothing to guess from "someone"
     dialog.get_by_label("Full name *").fill("Someone")
     dialog.get_by_role("button", name="Add person").click()
     expect(dialog.get_by_role("alert")).to_contain_text("Use an address from the organization's domain")

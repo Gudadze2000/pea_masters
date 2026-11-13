@@ -18,6 +18,7 @@ from sqlalchemy import func, select
 from app import audit
 from app.db import SessionLocal
 from app.models import Organization, OrganizationDomain, OrganizationMembership, RoleAssignment, User
+from app.names import name_from_email
 
 
 def main() -> None:
@@ -27,7 +28,9 @@ def main() -> None:
     parser.add_argument("--org-name-en", default="Ilia State University")
     parser.add_argument("--domain", default="iliauni.edu.ge")
     parser.add_argument("--email", "--admin-email", dest="email", help="Google Workspace email to register")
-    parser.add_argument("--name", "--admin-name", dest="name", help="Display name (defaults to the part before @)")
+    parser.add_argument("--name", "--admin-name", dest="name",
+                        help="Display name (default: guessed from name.surname.N@; "
+                             "replaced by the Google name at sign-in)")
     parser.add_argument("--role", choices=["admin", "coordinator", "member"], default="admin",
                         help="Role in the organization (default: admin). Everyone also gets member (Researcher).")
     parser.add_argument("--root", action="store_true",
@@ -65,7 +68,8 @@ def main() -> None:
                 raise SystemExit(f"{email} is not in the {domain.domain} domain")
             user = db.scalar(select(User).where(func.lower(User.email) == email, User.deleted_at.is_(None)))
             if user is None:
-                user = User(email=email, display_name=args.name or email.split("@")[0], status="invited")
+                name = args.name or name_from_email(email) or email.split("@")[0]
+                user = User(email=email, display_name=name, status="invited")
                 db.add(user)
                 db.flush()
                 print(f"registered {email}")

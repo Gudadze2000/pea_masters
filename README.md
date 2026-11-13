@@ -185,6 +185,10 @@ After the first Admin exists, the normal way is the app: **Administration → Pe
    **Head of department** (one head per department).
 4. Heads of department then open **People** themselves and use **Add researcher** to register their Researchers.
 
+**Names:** typing an ISU email (`name.surname.N@iliauni.edu.ge`) fills in the name. At the person's first sign-in,
+it's replaced by their official name from ISU's Google directory, which keeps it correct from then on. If an Admin or
+head corrects a name by hand, that correction is kept and Google never overwrites it.
+
 From the terminal (in `pea_masters_backend`), mainly for the first Admin:
 
 ```powershell
