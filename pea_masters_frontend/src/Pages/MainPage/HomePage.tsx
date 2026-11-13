@@ -80,7 +80,7 @@ export function HomePage() {
             <div className="dashboard-stack">
               <Card title="Evaluation period"><div className="period-content"><div className="period-title"><span className="open-badge"><Icon name="imgDot" />Open</span><span>Annual evaluation 2025-2026</span></div><small>Opened 1 Oct 2026 · Closes 30 Nov 2026</small><Progress warning value={38.4} label="Evaluation period elapsed" /><Button className="dashboard-button w-full" onClick={() => open("Evaluation form")}><Icon name="imgIconFile2" />Continue evaluation</Button></div></Card>
               <Card title="Notifications" action={<button className="text-action" onClick={() => openNotifications(true)}>View all</button>}><NotificationList /></Card>
-              <Card title="Quick actions" className="quick-actions">{[["Update my profile", "imgIconUser1"], ["Build a CV", "imgIconBook1"], ["Request edit access", "imgIconUnlock"]].map(([label, icon]) => <Button key={label} variant="outline" className="dashboard-button w-full" onClick={() => label === "Update my profile" ? navigate("/profile/general") : open(label)}><Icon name={icon} />{label}</Button>)}</Card>
+              <Card title="Quick actions" className="quick-actions">{[["Update my profile", "imgIconUser1"], ["Build a CV", "imgIconBook1"], ["Request edit access", "imgIconUnlock"]].map(([label, icon]) => <Button key={label} variant="outline" className="dashboard-button w-full" onClick={() => label === "Update my profile" ? navigate("/profile") : open(label)}><Icon name={icon} />{label}</Button>)}</Card>
             </div>
           </div>
         </div>

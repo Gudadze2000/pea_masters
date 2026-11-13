@@ -41,7 +41,7 @@ Names (`app/names.py`): registering guesses the name from `name.surname.N@` addr
 official name from Google, unless someone corrected it by hand (`users.name_source` = `manual`).
 
 Profiles (`app/profiles.py`): each person edits their biography (English and Georgian, cleaned of anything unsafe by
-`app/richtext.py`) and photo on **My profile → General information**. Photos are checked, cropped to 512×512 and
+`app/richtext.py`) and photo in the General information part of **My profile**. Photos are checked, cropped to 512×512 and
 saved as JPEG in the `storage/` folder (`STORAGE_DIR`, ignored by git); the database keeps only their details.
 
 Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is

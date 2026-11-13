@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import { Check, Pencil, Plus, Save, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { KeywordInput } from "@/components/forms/KeywordInput"
 import { InlineRecordForm } from "@/components/forms/InlineRecordForm"
 import type { FieldDef } from "@/components/forms/field-types"
 import "@/components/forms/forms.css"
-import { initialResearch, PROJECT_ROLES, PROJECT_TYPES, type Collaboration, type Project, type ResearchOverview } from "./researchMock"
-import "./ResearchPage.css"
+import { initialResearch, PROJECT_ROLES, PROJECT_TYPES, type Collaboration, type Project, type ResearchOverview } from "../research/researchMock"
+import "../research/ResearchPage.css"
 
 const currentYear = new Date().getFullYear()
 const YEARS = Array.from({ length: currentYear + 6 - 1990 }, (_, i) => String(currentYear + 5 - i))
@@ -41,8 +40,8 @@ type Editor =
   | { kind: "project"; id: string | null; session: number }
   | { kind: "collaboration"; id: string | null; session: number }
 
-/** /profile/research */
-export function ResearchPage() {
+/** Research: interests, projects, collaborators and collaborating organisations. */
+export function ResearchSection() {
   const [saved, setSaved] = useState<ResearchOverview>(initialResearch)
   const [data, setData] = useState<ResearchOverview>(initialResearch)
   const [editor, setEditor] = useState<Editor | null>(null)
@@ -88,12 +87,10 @@ export function ResearchPage() {
   const editingProject = editor?.kind === "project" && editor.id ? data.projects.find(project => project.id === editor.id) : undefined
 
   return (
-    <WorkspaceLayout breadcrumb={[{ label: "My profile", to: "/profile/general" }, { label: "Research overview" }]}>
-      {() => (
-        <div className="dashboard-content">
-          <div className="page-heading">
+    <section id="research" className="profile-section" aria-labelledby="research-heading">
+          <div className="section-heading">
             <div>
-              <h1>Research overview</h1>
+              <h2 id="research-heading">Research</h2>
               <p>Research interests, projects and collaborations.</p>
             </div>
             <div className="page-actions">
@@ -103,8 +100,8 @@ export function ResearchPage() {
             </div>
           </div>
 
-          <section className="dashboard-card research-card" aria-labelledby="interests-heading">
-            <div className="card-heading"><h2 id="interests-heading">Research interests</h2></div>
+          <section className="dashboard-card research-card" aria-labelledby="research-interests-heading">
+            <div className="card-heading"><h3 id="research-interests-heading">Research interests</h3></div>
             <KeywordInput
               id="research-interests"
               keywords={data.interests}
@@ -116,9 +113,9 @@ export function ResearchPage() {
             />
           </section>
 
-          <section className="dashboard-card research-card" aria-labelledby="projects-heading">
+          <section className="dashboard-card research-card" aria-labelledby="research-projects-heading">
             <div className="card-heading">
-              <h2 id="projects-heading">Projects</h2>
+              <h3 id="research-projects-heading">Projects</h3>
               <Button className="dashboard-button compact" disabled={editor !== null} onClick={() => openEditor({ kind: "project", id: null })}><Plus />Add project</Button>
             </div>
           {editor?.kind === "project" && (
@@ -177,9 +174,9 @@ export function ResearchPage() {
             </div>
           </section>
 
-          <section className="dashboard-card research-card" aria-labelledby="collaboration-heading">
+          <section className="dashboard-card research-card" aria-labelledby="research-collaboration-heading">
             <div className="card-heading">
-              <h2 id="collaboration-heading">Research collaboration with other researchers</h2>
+              <h3 id="research-collaboration-heading">Research collaboration with other researchers</h3>
               <Button variant="outline" className="dashboard-button compact" disabled={editor !== null} onClick={() => openEditor({ kind: "collaboration", id: null })}><Plus />Add collaboration</Button>
             </div>
           {editor?.kind === "collaboration" && (
@@ -228,8 +225,8 @@ export function ResearchPage() {
             </div>
           </section>
 
-          <section className="dashboard-card research-card" aria-labelledby="organisations-heading">
-            <div className="card-heading"><h2 id="organisations-heading">Collaborating universities &amp; organisations</h2></div>
+          <section className="dashboard-card research-card" aria-labelledby="research-organisations-heading">
+            <div className="card-heading"><h3 id="research-organisations-heading">Collaborating universities &amp; organisations</h3></div>
             <KeywordInput
               id="research-organisations"
               keywords={data.organisations}
@@ -242,9 +239,6 @@ export function ResearchPage() {
               maxLength={120}
             />
           </section>
-
-        </div>
-      )}
-    </WorkspaceLayout>
+    </section>
   )
 }

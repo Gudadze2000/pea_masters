@@ -44,11 +44,12 @@ def test_profile_is_saved_on_the_server_and_shown_everywhere(admin_page: Page, o
     dialog.get_by_role("button", name="Save changes").click()
     expect(page.locator("tbody tr", has_text="Test Admin")).to_contain_text(POSITION)
 
-    # 2. General information shows the real institutional details, not sample data
+    # 2. The profile header shows the real details, not sample data (the old address leads to the one page)
     page.goto("/profile/general")
-    details = page.locator("dl.readonly-grid")
+    expect(page).to_have_url(re.compile(r"/profile#general$"))
+    header = page.get_by_role("region", name="Your details")
     for text in ("Test Admin", "e2e.admin@iliauni.edu.ge", FACULTY, DEPARTMENT, POSITION):
-        expect(details).to_contain_text(text)
+        expect(header).to_contain_text(text)
     expect(page.get_by_text("Nino Beridze")).to_have_count(0)
 
     # 3. Writes a biography and uploads a photo, then saves
@@ -76,3 +77,40 @@ def test_profile_is_saved_on_the_server_and_shown_everywhere(admin_page: Page, o
     for text in ("Test Admin", DEPARTMENT, POSITION):
         expect(account).to_contain_text(text)
     shot(page, "8-settings-account")
+
+
+def test_profile_is_one_page_with_contents(admin_page: Page, shot):
+    page = admin_page
+    page.goto("/home")
+    sidebar = page.locator(".dashboard-sidebar")
+    sidebar.get_by_role("button", name="My profile", exact=True).click()
+    expect(page).to_have_url(re.compile(r"/profile$"))
+    expect(sidebar.get_by_text("Professional & qualifications")).to_have_count(0)  # no sub-menu any more
+
+    # Every part is on one page, listed in the contents
+    contents = page.get_by_role("navigation", name="On this page")
+    for label in ("General information", "Education", "Employment", "Languages", "Awards", "Teaching", "Research"):
+        expect(contents.get_by_role("button", name=re.compile(label))).to_be_visible()
+    shot(page, "9-profile-one-page")
+
+    # The contents jump to a part of the page
+    contents.get_by_role("button", name=re.compile("^Awards")).click()
+    expect(page).to_have_url(re.compile(r"#awards$"))
+    expect(page.get_by_role("heading", name=re.compile("^Awards"), level=2)).to_be_in_viewport()
+
+    # Empty sections wait in "Add to your profile" until chosen
+    add_more = page.get_by_role("region", name="Add to your profile")
+    expect(page.get_by_role("heading", name=re.compile("^Creative activities"), level=2)).to_have_count(0)
+    add_more.get_by_role("button", name="Creative activities").click()
+    creative = page.get_by_role("region", name=re.compile("^Creative activities"))
+    expect(creative.get_by_role("button", name="Save entry")).to_be_visible()  # opens straight into a new entry
+    creative.get_by_role("button", name="Cancel", exact=True).click()
+    expect(page.get_by_role("heading", name=re.compile("^Creative activities"), level=2)).to_have_count(0)
+    expect(add_more.get_by_role("button", name="Creative activities")).to_be_visible()
+
+    # Old addresses still work: they lead to the matching part, with the editor open for "new"
+    page.goto("/profile/qualifications/patents")
+    expect(page).to_have_url(re.compile(r"/profile#patents$"))
+    page.goto("/profile/qualifications/awards/new")
+    awards = page.get_by_role("region", name=re.compile("^Awards"))
+    expect(awards.get_by_role("button", name="Save entry")).to_be_visible()
