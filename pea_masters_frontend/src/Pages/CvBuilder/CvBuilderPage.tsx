@@ -5,7 +5,7 @@ import { TriangleAlert, Check, Eye, EyeOff, Globe, Lock, Printer, UserRound } fr
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { useQualifications } from "@/Pages/Profile/qualifications/qualifications-store"
-import { institutionalInformation as person } from "@/Pages/Profile/profileMock"
+import { useIdentity } from "@/lib/profile"
 import { buildCvSections, sectionCounts } from "./cv-content"
 import { loadCv, saveCv, type CvData, type Visibility } from "./cv-model"
 import { ConfirmDialog, Segmented } from "./cv-ui"
@@ -50,10 +50,10 @@ function timeAgo(timestamp: number, now: number) {
   return new Date(timestamp).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 }
 
-const familyName = person.fullName.split(/\s+/).pop() ?? ""
 
 /** /cv-builder */
 export function CvBuilderPage() {
+  const person = useIdentity()
   const { entries } = useQualifications()
   const [initial] = useState(loadCv)
   const [cv, setCv] = useState<CvData>(initial.data)
@@ -122,7 +122,7 @@ export function CvBuilderPage() {
   /* ---------- preview ---------- */
 
   const asVisitor = previewMode === "visitor"
-  const sections = useMemo(() => buildCvSections(cv, entries, { asVisitor, ownFamilyName: familyName }), [cv, entries, asVisitor])
+  const sections = useMemo(() => buildCvSections(cv, entries, { asVisitor, ownFamilyName: person.familyName }), [cv, entries, asVisitor, person.familyName])
   const counts = useMemo(() => sectionCounts(cv, entries), [cv, entries])
 
   // The PDF is always the full CV, whatever preview mode is selected

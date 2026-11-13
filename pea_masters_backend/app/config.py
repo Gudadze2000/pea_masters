@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://pea:pea@127.0.0.1:5434/pea"
     secure_cookies: bool = False
     session_hours: int = 12
+    # Uploaded files (photos, documents). A folder for now; object storage (S3-compatible) on a server later.
+    storage_dir: str = "storage"
 
     @property
     def google_redirect_uri(self) -> str:

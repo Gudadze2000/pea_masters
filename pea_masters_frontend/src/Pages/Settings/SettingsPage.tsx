@@ -7,10 +7,9 @@ import { Switch } from "@/components/forms/Switch"
 import "@/components/forms/forms.css"
 import { useLanguage } from "@/lib/language-context"
 import { signOut, useSession } from "@/lib/auth"
-import { useProfile } from "@/lib/profile"
+import { useIdentity, useProfile } from "@/lib/profile"
 import { applyDisplaySettings, loadSettings, saveSettings, type NotificationChannel, type NotificationEvent, type Settings } from "@/lib/settings"
 import { themes, type ThemeId } from "@/lib/themes"
-import { institutionalInformation as account } from "../Profile/profileMock"
 import { timeZones } from "./settingsMock"
 import "./SettingsPage.css"
 
@@ -215,6 +214,7 @@ export function SettingsPage() {
 
 function AccountSection({ onEditProfile }: { onEditProfile: () => void }) {
   const { photo } = useProfile()
+  const account = useIdentity()
   return (
     <>
       <section className="dashboard-card settings-card" aria-labelledby="account-heading">
@@ -226,17 +226,19 @@ function AccountSection({ onEditProfile }: { onEditProfile: () => void }) {
           <div className="settings-account-avatar" aria-hidden="true">{photo ? <img src={photo} alt="" /> : account.initials}</div>
           <div>
             <p className="settings-account-name">{account.fullName}</p>
-            <small>{account.position} · {account.faculty}</small>
+            <small>{[account.position, account.department, account.faculty].filter(Boolean).join(" · ") || account.email}</small>
           </div>
         </div>
         <dl className="settings-readonly-grid">
           <ReadOnlyField label="Full name" value={account.fullName} />
           <ReadOnlyField label="University email" value={account.email} />
-          <ReadOnlyField label="Faculty / School" value={account.faculty} />
-          <ReadOnlyField label="Academic position" value={account.position} />
+          <ReadOnlyField label="Faculty / School" value={account.faculty || "Not set"} />
+          <ReadOnlyField label="Department" value={account.department || "Not set"} />
+          <ReadOnlyField label="Academic position" value={account.position || "Not set"} />
         </dl>
-        <InfoBanner title="Managed by Ilia State University">
-          Your name, email and position come from the university directory. To change them, contact your faculty admin.
+        <InfoBanner title="Managed by your organization">
+          Your name and email come from your university Google account. Your faculty, department and position are set
+          by your organization's PEA Admin; contact them to change these.
         </InfoBanner>
       </section>
     </>
@@ -275,6 +277,7 @@ function NotificationsSection({ settings, onToggle, onChange }: {
   onToggle: (event: NotificationEvent, channel: NotificationChannel, value: boolean) => void
   onChange: <K extends keyof Settings>(key: K, value: Settings[K]) => void
 }) {
+  const account = useIdentity()
   return (
     <>
       <section className="dashboard-card settings-card" aria-labelledby="notify-heading">
@@ -456,6 +459,7 @@ function PrivacySection({ settings, onChange }: { settings: Settings; onChange: 
 /* ---------- Your data ---------- */
 
 function DataSection({ settings, onSignOut }: { settings: Settings; onSignOut: () => void }) {
+  const account = useIdentity()
   const download = () => {
     const data = { exportedAt: new Date().toISOString(), account, settings }
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }))

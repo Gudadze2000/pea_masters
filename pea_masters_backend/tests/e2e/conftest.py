@@ -14,6 +14,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
@@ -29,6 +30,7 @@ os.environ["PUBLIC_URL"] = APP_URL
 os.environ.setdefault("GOOGLE_CLIENT_ID", "e2e-client.apps.googleusercontent.com")
 os.environ.setdefault("GOOGLE_CLIENT_SECRET", "e2e-secret")
 os.environ.setdefault("SESSION_SECRET", "e2e-session-secret")
+os.environ["STORAGE_DIR"] = tempfile.mkdtemp(prefix="pea-e2e-storage-")  # uploads go to a throwaway folder
 
 import psycopg  # noqa: E402
 import pytest  # noqa: E402

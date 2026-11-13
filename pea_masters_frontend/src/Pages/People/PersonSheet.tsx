@@ -7,7 +7,7 @@ import type { Role } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
 import { nameFromEmail } from "@/lib/names"
 import { useLanguage } from "@/lib/language-context"
-import { groupByFaculty, localName, peopleApi, roleHints, roleLabels, type Person, type Unit } from "@/lib/people"
+import { groupByFaculty, localName, peopleApi, roleHints, roleLabels, type Person, type Position, type Unit } from "@/lib/people"
 
 const allRoles: Role[] = ["admin", "coordinator", "member"]
 
@@ -16,6 +16,7 @@ type Props = {
   /** null: add a new person */
   person: Person | null
   units: Unit[]
+  positions: Position[]
   domainHint: string
   /** Admins: full form. Heads of department: Researchers in their own department only. */
   canManageRoles: boolean
@@ -28,7 +29,7 @@ type Props = {
 }
 
 /** Side panel to register someone or change their name, department and roles. */
-export function PersonSheet({ orgId, person, units, domainHint, canManageRoles, headedDepartments, onClose, onSaved, onAddDepartment }: Props) {
+export function PersonSheet({ orgId, person, units, positions, domainHint, canManageRoles, headedDepartments, onClose, onSaved, onAddDepartment }: Props) {
   const { language } = useLanguage()
   const editing = person !== null
   const ownDepartments = units.filter(unit => headedDepartments.includes(unit.id))
@@ -37,6 +38,7 @@ export function PersonSheet({ orgId, person, units, domainHint, canManageRoles, 
   /** While false, the name follows the email ("giorgi.kekelidze.3@…" → "Giorgi Kekelidze") */
   const [nameEdited, setNameEdited] = useState(false)
   const [departmentId, setDepartmentId] = useState(person?.department?.id ?? (canManageRoles ? "" : ownDepartments[0]?.id ?? ""))
+  const [positionId, setPositionId] = useState(person?.position?.id ?? "")
   const [roles, setRoles] = useState<Set<Role>>(new Set(person?.roles ?? ["member"]))
   const [coordinatesId, setCoordinatesId] = useState(person?.coordinates?.id ?? "")
   const [reason, setReason] = useState("")
@@ -78,15 +80,18 @@ export function PersonSheet({ orgId, person, units, domainHint, canManageRoles, 
       if (!editing) {
         const created = await peopleApi.register(orgId, {
           email: email.trim(), display_name: name.trim(), roles: roleList, department_id: departmentId || null,
+          position_id: canManageRoles && departmentId ? positionId || null : null,
           coordinates_unit_id: canManageRoles && roles.has("coordinator") ? coordinatesId : null,
         })
         onSaved(created, `${created.display_name} was registered. They can now sign in with Google.`)
         return
       }
       let saved = person
-      const changes: { display_name?: string; department_id?: string | null } = {}
+      const changes: { display_name?: string; department_id?: string | null; position_id?: string | null } = {}
       if (name.trim() !== person.display_name) changes.display_name = name.trim()
       if (canManageRoles && (departmentId || null) !== (person.department?.id ?? null)) changes.department_id = departmentId || null
+      const wantedPosition = departmentId ? positionId || null : null
+      if (canManageRoles && wantedPosition !== (person.position?.id ?? null)) changes.position_id = wantedPosition
       if (Object.keys(changes).length) saved = await peopleApi.update(orgId, person.id, changes)
 
       if (canManageRoles) {
@@ -195,6 +200,23 @@ export function PersonSheet({ orgId, person, units, domainHint, canManageRoles, 
                   </select>
                 )}
               </div>
+
+              {canManageRoles && (
+                <div className="form-field span-4">
+                  <label htmlFor="person-position">Academic position</label>
+                  <select id="person-position" className="form-control" value={departmentId ? positionId : ""} disabled={!departmentId}
+                    data-empty={positionId && departmentId ? undefined : true} aria-describedby="person-position-hint"
+                    onChange={event => setPositionId(event.target.value)}>
+                    <option value="">No position</option>
+                    {[...positions].sort((a, b) => localName(a.name, language).localeCompare(localName(b.name, language)))
+                      .map(position => <option key={position.id} value={position.id}>{localName(position.name, language)}</option>)}
+                  </select>
+                  <p id="person-position-hint" className="field-hint">
+                    {!departmentId ? "Choose a department first: the position is held in a department."
+                      : positions.length === 0 ? "Add academic positions in the Structure tab." : "For example Professor or Associate Professor."}
+                  </p>
+                </div>
+              )}
 
               {canManageRoles ? (
                 <fieldset className="form-field span-4 role-fieldset" aria-describedby={errors.roles ? "person-roles-error" : undefined}>
