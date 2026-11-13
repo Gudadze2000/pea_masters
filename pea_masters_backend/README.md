@@ -17,7 +17,8 @@ uv run alembic upgrade head     # create the tables
 uv run python -m scripts.seed --email name.surname@iliauni.edu.ge --name "Name Surname"
 ```
 
-The seed adds Ilia State University, its verified domain `iliauni.edu.ge`, and you as Admin + Member.
+The seed adds Ilia State University, its verified domain `iliauni.edu.ge`, and you as Admin + Researcher
+(`member`). Developers add `--root`.
 
 To let someone else sign in, register them (and, while the Google app is in *Testing*, also add their email under
 Google Auth Platform → Audience → Test users):
@@ -26,14 +27,15 @@ Google Auth Platform → Audience → Test users):
 uv run python -m scripts.seed --email classmate@iliauni.edu.ge --name "Name Surname" --role member
 ```
 
-`--role` is `admin` (default), `coordinator` or `member`. `--self-signup` lets anyone in the domain sign in as a
-Member (development only).
+`--role` is `admin` (default), `coordinator` or `member` (Researcher); `--root` also makes them Root.
+`--self-signup` lets anyone in the domain sign in as a Researcher (development only).
 
 ## Managing people
 
 After the first Admin exists, everything else happens in the app: **Administration → People**
 (http://localhost:5173/admin/people). Admins add departments, register people, set roles and deactivate accounts.
-Each department has at most one Coordinator, who sees the Members of that department.
+The structure is organization → faculties → departments (Structure tab). Each department has at most one head
+(Coordinator), who registers, renames, deactivates and reactivates the Researchers of that department.
 
 Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
 written to the audit log.
@@ -66,9 +68,10 @@ uv run pytest tests/e2e                    # headless, about 25 seconds
 uv run pytest tests/e2e --headed --slowmo 400   # watch it click through the app
 ```
 
-They cover: an Admin adds a department and registers someone → the person appears as Invited → their first
-Google sign-in makes them Active → they're made Coordinator and see only their department → deactivation signs them
-out. Screenshots of each step land in `tests/e2e/screenshots/`. Google's own sign-in page can't be automated, so the
+They cover: an Admin adds a faculty and a department and registers someone → the person appears as Invited →
+their first Google sign-in makes them Active → they're made head of the department, see only its people, and
+register, deactivate and reactivate a Researcher → deactivation signs the head out. Also: Settings shows Google
+sign-in instead of a password. Screenshots of each step land in `tests/e2e/screenshots/`. Google's own sign-in page can't be automated, so the
 tests hand verified Google claims to the same code the real callback uses.
 
 ## Sign-in flow

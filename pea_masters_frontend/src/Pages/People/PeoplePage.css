@@ -46,3 +46,18 @@
   .people-filters select.form-control { flex: 1 1 140px; }
   .org-select { width: 100%; }
 }
+
+/* Structure tab: faculties with their departments */
+.structure-heading { align-items: flex-start; flex-wrap: wrap; }
+.card-subtitle { margin-top: 4px; font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
+.structure-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.structure-empty { padding: 24px 0; }
+.structure-list { display: flex; flex-direction: column; gap: 24px; }
+.faculty-block { display: flex; flex-direction: column; gap: 12px; }
+.faculty-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.faculty-heading h3 { font-size: 15px; line-height: 22px; font-weight: 600; }
+.faculty-heading small { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.small-button.dashboard-button { height: 32px; padding: 4px 10px; font-size: 13px; }
+
+/* A value shown instead of an input (e.g. a head of department's fixed department) */
+.read-only-value { min-height: 40px; display: flex; align-items: center; padding: 8px 12px; border-radius: var(--radius-md); background: var(--muted); font-size: 14px; line-height: 22px; }

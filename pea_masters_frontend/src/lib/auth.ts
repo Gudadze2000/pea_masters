@@ -123,14 +123,14 @@ export function peopleOrganizations(session: Session) {
   return session.organizations.filter(org => session.isRoot || org.roles.includes("admin") || org.roles.includes("coordinator"))
 }
 
-const roleLabels: Record<Role, string> = { admin: "Admin", coordinator: "Coordinator", member: "Member" }
+const roleLabels: Record<Role, string> = { admin: "Admin", coordinator: "Coordinator", member: "Researcher" }
 
 /** The person's highest role, for display, e.g. "Admin" */
 export function roleLabel(session: Session) {
   if (session.isRoot) return "Root"
   const roles = new Set(session.organizations.flatMap(org => org.roles))
   const top = (["admin", "coordinator", "member"] as const).find(role => roles.has(role))
-  return top ? roleLabels[top] : "Member"
+  return top ? roleLabels[top] : "Researcher"
 }
 
 export function initials(name: string) {

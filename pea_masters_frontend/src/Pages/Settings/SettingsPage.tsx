@@ -1,22 +1,22 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Navigate, useNavigate, useParams } from "react-router"
-import { Bell, Check, Database, Download, Globe, Info, KeyRound, Lock, LogOut, Palette, Save, ShieldCheck, UserRound } from "lucide-react"
+import { Bell, Check, Database, Download, Globe, Info, Lock, LogOut, Palette, Save, ShieldCheck, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { Switch } from "@/components/forms/Switch"
 import "@/components/forms/forms.css"
 import { useLanguage } from "@/lib/language-context"
-import { signOut } from "@/lib/auth"
+import { signOut, useSession } from "@/lib/auth"
 import { useProfile } from "@/lib/profile"
 import { applyDisplaySettings, loadSettings, saveSettings, type NotificationChannel, type NotificationEvent, type Settings } from "@/lib/settings"
 import { themes, type ThemeId } from "@/lib/themes"
 import { institutionalInformation as account } from "../Profile/profileMock"
-import { initialSessions, passwordLastChanged, timeZones } from "./settingsMock"
+import { timeZones } from "./settingsMock"
 import "./SettingsPage.css"
 
 const sections = [
   { id: "account", label: "Account", icon: UserRound, description: "Your university account details." },
-  { id: "security", label: "Password & security", icon: ShieldCheck, description: "Password, two-step verification and signed-in devices." },
+  { id: "security", label: "Sign-in & security", icon: ShieldCheck, description: "How you sign in to PEA." },
   { id: "notifications", label: "Notifications", icon: Bell, description: "Choose what you hear about and where." },
   { id: "language", label: "Language & accessibility", icon: Globe, description: "Interface language, date format, time zone and motion." },
   { id: "customization", label: "Customization", icon: Palette, description: "Colour theme of the app." },
@@ -243,132 +243,28 @@ function AccountSection({ onEditProfile }: { onEditProfile: () => void }) {
   )
 }
 
-/* ---------- Password & security ---------- */
+/* ---------- Sign-in & security ---------- */
 
-const PASSWORD_MIN_LENGTH = 10
-
-function passwordProblems(current: string, next: string, confirm: string) {
-  const errors: Partial<Record<"current" | "next" | "confirm", string>> = {}
-  if (!current) errors.current = "Enter your current password."
-  if (next.length < PASSWORD_MIN_LENGTH) errors.next = `Use at least ${PASSWORD_MIN_LENGTH} characters.`
-  else if (!/[A-Za-z]/.test(next) || !/\d/.test(next)) errors.next = "Use at least one letter and one number."
-  else if (next === current) errors.next = "Choose a password you haven't used here."
-  if (confirm !== next) errors.confirm = "Passwords don't match."
-  return errors
-}
-
+/** PEA has no passwords: people sign in with their university Google account, whose security Google manages. */
 function SecuritySection() {
-  const [fields, setFields] = useState({ current: "", next: "", confirm: "" })
-  const [errors, setErrors] = useState<ReturnType<typeof passwordProblems>>({})
-  const [submitting, setSubmitting] = useState(false)
-  const [passwordNotice, setPasswordNotice] = useState(false)
-  const [lastChanged, setLastChanged] = useState(passwordLastChanged)
-
-  const [twoFactor, setTwoFactor] = useState(false)
-  const [sessions, setSessions] = useState(initialSessions)
-
-  const setField = (key: keyof typeof fields, value: string) => {
-    setFields(current => ({ ...current, [key]: value }))
-    setErrors(current => ({ ...current, [key]: undefined }))
-    setPasswordNotice(false)
-  }
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    const problems = passwordProblems(fields.current, fields.next, fields.confirm)
-    setErrors(problems)
-    if (Object.keys(problems).length > 0) return
-    setSubmitting(true)
-    // TODO: replace with the API call once the back end exists
-    window.setTimeout(() => {
-      setSubmitting(false)
-      setFields({ current: "", next: "", confirm: "" })
-      setPasswordNotice(true)
-      setLastChanged(new Date().toISOString().slice(0, 10))
-    }, 600)
-  }
-
-  const lastChangedLabel = new Date(lastChanged).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-  const otherSessions = sessions.filter(session => !session.current)
-
-  const passwordField = (key: keyof typeof fields, label: string, autoComplete: string, hint?: string) => {
-    const id = `password-${key}`
-    const error = errors[key]
-    const describedBy = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ") || undefined
-    return (
-      <div className="form-field span-4">
-        <label htmlFor={id}>{label}</label>
-        <input id={id} type="password" className="form-control" autoComplete={autoComplete} value={fields[key]} aria-invalid={error ? true : undefined} aria-describedby={describedBy} onChange={e => setField(key, e.target.value)} />
-        {hint && <p id={`${id}-hint`} className="field-hint">{hint}</p>}
-        {error && <p id={`${id}-error`} className="field-error">{error}</p>}
-      </div>
-    )
-  }
-
+  const session = useSession()
   return (
-    <>
-      <section className="dashboard-card settings-card" aria-labelledby="password-heading">
-        <div className="card-heading">
-          <h2 id="password-heading">Change password</h2>
-          <span className="card-meta">Last changed {lastChangedLabel}</span>
-        </div>
-        <form className="settings-password-form" onSubmit={submit} noValidate>
-          <div className="form-grid">
-            {passwordField("current", "Current password", "current-password")}
-            {passwordField("next", "New password", "new-password", `At least ${PASSWORD_MIN_LENGTH} characters, with a letter and a number.`)}
-            {passwordField("confirm", "Confirm new password", "new-password")}
-          </div>
-          <div className="settings-form-actions">
-            <span className="save-status" role="status">{passwordNotice && <><Check aria-hidden="true" />Password updated</>}</span>
-            <Button type="submit" className="dashboard-button" disabled={submitting}><KeyRound />{submitting ? "Updating…" : "Update password"}</Button>
-          </div>
-        </form>
-      </section>
-
-      <section className="dashboard-card settings-card" aria-labelledby="twofactor-heading">
-        <div className="card-heading"><h2 id="twofactor-heading">Two-step verification</h2></div>
-        <SettingRow id="two-factor" label="Require a code when signing in" hint="After your password, enter a 6-digit code from an authenticator app.">
-          <Switch checked={twoFactor} onChange={setTwoFactor} labelledBy="two-factor-label" describedBy="two-factor-hint" />
-        </SettingRow>
-        {twoFactor && (
-          <InfoBanner title="Two-step verification is on">
-            Next time you sign in you'll be asked to scan a QR code with your authenticator app.
-          </InfoBanner>
-        )}
-      </section>
-
-      <section className="dashboard-card settings-card" aria-labelledby="sessions-heading">
-        <div className="card-heading">
-          <h2 id="sessions-heading">Where you're signed in</h2>
-          <Button variant="outline" className="dashboard-button settings-small-button" disabled={otherSessions.length === 0} onClick={() => setSessions(current => current.filter(session => session.current))}>
-            <LogOut />Sign out of other devices
-          </Button>
-        </div>
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr><th scope="col">Device</th><th scope="col">Location</th><th scope="col">Last active</th><th scope="col"><span className="sr-only">Actions</span></th></tr>
-            </thead>
-            <tbody>
-              {sessions.map(session => (
-                <tr key={session.id}>
-                  <td>{session.device}</td>
-                  <td>{session.location}</td>
-                  <td>{session.current ? <span className="status-badge status-active">This device</span> : session.lastActive}</td>
-                  <td className="settings-table-action">
-                    {!session.current && (
-                      <Button variant="ghost" className="text-action" onClick={() => setSessions(current => current.filter(item => item.id !== session.id))} aria-label={`Sign out ${session.device}`}>
-                        Sign out
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </>
+    <section className="dashboard-card settings-card" aria-labelledby="signin-heading">
+      <div className="card-heading"><h2 id="signin-heading">How you sign in</h2></div>
+      <div className="form-grid">
+        <ReadOnlyField label="Sign-in method" value="Google (university account)" />
+        <ReadOnlyField label="Account" value={session?.email ?? ""} />
+      </div>
+      <InfoBanner title="No PEA password">
+        You sign in with your university Google account, so there's no separate password to change here. Your password,
+        two-step verification and signed-in devices are managed in your Google account.
+      </InfoBanner>
+      <div className="settings-form-actions">
+        <a className="dashboard-button settings-link-button" href="https://myaccount.google.com/security" target="_blank" rel="noreferrer">
+          <ShieldCheck aria-hidden="true" />Open Google account security
+        </a>
+      </div>
+    </section>
   )
 }
 

@@ -6,34 +6,34 @@ import "@/components/forms/forms.css"
 import type { Role } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
 import { useLanguage } from "@/lib/language-context"
-import { localName, peopleApi, roleLabels, type Department, type Person } from "@/lib/people"
+import { groupByFaculty, localName, peopleApi, roleHints, roleLabels, type Person, type Unit } from "@/lib/people"
 
 const allRoles: Role[] = ["admin", "coordinator", "member"]
-const roleHints: Record<Role, string> = {
-  admin: "Manages people, roles and departments of the organization.",
-  coordinator: "Reviews the Members of one department.",
-  member: "Keeps a researcher profile and submits evaluations.",
-}
 
 type Props = {
   orgId: string
   /** null: add a new person */
   person: Person | null
-  departments: Department[]
+  units: Unit[]
   domainHint: string
+  /** Admins: full form. Heads of department: Researchers in their own department only. */
+  canManageRoles: boolean
+  /** Departments the signed-in head of department heads */
+  headedDepartments: string[]
   onClose: () => void
   onSaved: (person: Person, message: string) => void
-  /** Closes the panel and opens the Departments tab */
+  /** Closes the panel and opens the Structure tab */
   onAddDepartment: () => void
 }
 
 /** Side panel to register someone or change their name, department and roles. */
-export function PersonSheet({ orgId, person, departments, domainHint, onClose, onSaved, onAddDepartment }: Props) {
+export function PersonSheet({ orgId, person, units, domainHint, canManageRoles, headedDepartments, onClose, onSaved, onAddDepartment }: Props) {
   const { language } = useLanguage()
   const editing = person !== null
+  const ownDepartments = units.filter(unit => headedDepartments.includes(unit.id))
   const [email, setEmail] = useState("")
   const [name, setName] = useState(person?.display_name ?? "")
-  const [departmentId, setDepartmentId] = useState(person?.department?.id ?? "")
+  const [departmentId, setDepartmentId] = useState(person?.department?.id ?? (canManageRoles ? "" : ownDepartments[0]?.id ?? ""))
   const [roles, setRoles] = useState<Set<Role>>(new Set(person?.roles ?? ["member"]))
   const [coordinatesId, setCoordinatesId] = useState(person?.coordinates?.id ?? "")
   const [reason, setReason] = useState("")
@@ -41,8 +41,10 @@ export function PersonSheet({ orgId, person, departments, domainHint, onClose, o
   const [failure, setFailure] = useState("")
   const [saving, setSaving] = useState(false)
 
+  const groups = groupByFaculty(units, language)
+  const hasDepartments = groups.some(group => group.departments.length > 0)
   const removesRole = editing && person.roles.some(role => !roles.has(role))
-  const sortedDepartments = [...departments].sort((a, b) => localName(a.name, language).localeCompare(localName(b.name, language)))
+  const facultyLabel = (group: (typeof groups)[number]) => (group.faculty ? localName(group.faculty.name, language) : "Not in a faculty")
 
   function toggleRole(role: Role) {
     setRoles(current => {
@@ -60,19 +62,20 @@ export function PersonSheet({ orgId, person, departments, domainHint, onClose, o
     const found: Record<string, string> = {}
     if (!editing && !email.trim()) found.email = "Email is required."
     if (!name.trim()) found.name = "Name is required."
-    if (roles.size === 0) found.roles = "Choose at least one role."
-    if (roles.has("coordinator") && !coordinatesId) found.coordinates = "Choose the department they coordinate."
+    if (canManageRoles && roles.size === 0) found.roles = "Choose at least one role."
+    if (canManageRoles && roles.has("coordinator") && !coordinatesId) found.coordinates = "Choose the department they head."
+    if (!canManageRoles && !editing && !departmentId) found.department = "You don't head a department yet. Ask an Admin."
     setErrors(found)
     setFailure("")
     if (Object.keys(found).length) return
 
-    const roleList = allRoles.filter(role => roles.has(role))
+    const roleList = canManageRoles ? allRoles.filter(role => roles.has(role)) : (["member"] as Role[])
     setSaving(true)
     try {
       if (!editing) {
         const created = await peopleApi.register(orgId, {
-          email: email.trim(), display_name: name.trim(), roles: roleList,
-          department_id: departmentId || null, coordinates_unit_id: roles.has("coordinator") ? coordinatesId : null,
+          email: email.trim(), display_name: name.trim(), roles: roleList, department_id: departmentId || null,
+          coordinates_unit_id: canManageRoles && roles.has("coordinator") ? coordinatesId : null,
         })
         onSaved(created, `${created.display_name} was registered. They can now sign in with Google.`)
         return
@@ -80,13 +83,15 @@ export function PersonSheet({ orgId, person, departments, domainHint, onClose, o
       let saved = person
       const changes: { display_name?: string; department_id?: string | null } = {}
       if (name.trim() !== person.display_name) changes.display_name = name.trim()
-      if ((departmentId || null) !== (person.department?.id ?? null)) changes.department_id = departmentId || null
+      if (canManageRoles && (departmentId || null) !== (person.department?.id ?? null)) changes.department_id = departmentId || null
       if (Object.keys(changes).length) saved = await peopleApi.update(orgId, person.id, changes)
 
-      const wantedCoordinates = roles.has("coordinator") ? coordinatesId : null
-      const rolesChanged = roleList.join() !== person.roles.join() || wantedCoordinates !== (person.coordinates?.id ?? null)
-      if (rolesChanged) {
-        saved = await peopleApi.setRoles(orgId, person.id, { roles: roleList, coordinates_unit_id: wantedCoordinates, reason: reason.trim() || null })
+      if (canManageRoles) {
+        const wantedCoordinates = roles.has("coordinator") ? coordinatesId : null
+        const rolesChanged = roleList.join() !== person.roles.join() || wantedCoordinates !== (person.coordinates?.id ?? null)
+        if (rolesChanged) {
+          saved = await peopleApi.setRoles(orgId, person.id, { roles: roleList, coordinates_unit_id: wantedCoordinates, reason: reason.trim() || null })
+        }
       }
       onSaved(saved, `Changes to ${saved.display_name} were saved.`)
     } catch (cause) {
@@ -95,12 +100,24 @@ export function PersonSheet({ orgId, person, departments, domainHint, onClose, o
     }
   }
 
+  /** Departments grouped by faculty, for a <select> */
+  const departmentOptions = (disable?: (unit: Unit) => string | null) => groups.filter(group => group.departments.length > 0).map(group => (
+    <optgroup key={group.faculty?.id ?? "none"} label={facultyLabel(group)}>
+      {group.departments.map(unit => {
+        const note = disable?.(unit) ?? null
+        return <option key={unit.id} value={unit.id} disabled={note !== null}>{localName(unit.name, language)}{note ? ` (${note})` : ""}</option>
+      })}
+    </optgroup>
+  ))
+
+  const fixedDepartment = units.find(unit => unit.id === departmentId)
+
   return (
     <Sheet open onOpenChange={open => { if (!open) onClose() }}>
       <SheetContent className="form-sheet" showCloseButton={false}>
         <div className="form-sheet-header">
           <div>
-            <SheetTitle>{editing ? `Edit ${person.display_name}` : "Add person"}</SheetTitle>
+            <SheetTitle>{editing ? `Edit ${person.display_name}` : canManageRoles ? "Add person" : "Add researcher"}</SheetTitle>
             <SheetDescription>
               {editing ? person.email : "They'll be able to sign in with this Google account once you save."}
             </SheetDescription>
@@ -135,55 +152,64 @@ export function PersonSheet({ orgId, person, departments, domainHint, onClose, o
 
               <div className="form-field span-4">
                 <label htmlFor="person-department">Department</label>
-                {departments.length === 0 ? (
+                {!canManageRoles && (editing || ownDepartments.length <= 1) ? (
+                  <>
+                    <p id="person-department" className="read-only-value">
+                      {fixedDepartment ? localName(fixedDepartment.name, language) : person?.department ? localName(person.department.name, language) : "None"}
+                    </p>
+                    <p className="field-hint">{editing ? "Only Admins can move people to another department." : "Researchers you add join your department."}</p>
+                    {errors.department && <p className="field-error">{errors.department}</p>}
+                  </>
+                ) : !canManageRoles ? (
+                  <select id="person-department" className="form-control" value={departmentId} onChange={event => setDepartmentId(event.target.value)}>
+                    {ownDepartments.map(unit => <option key={unit.id} value={unit.id}>{localName(unit.name, language)}</option>)}
+                  </select>
+                ) : !hasDepartments ? (
                   <div className="empty-departments">
-                    <p>There are no departments yet. Add them first, then come back to choose one.</p>
-                    <Button type="button" variant="outline" className="dashboard-button" onClick={onAddDepartment}>Go to Departments</Button>
+                    <p>There are no departments yet. Add faculties and departments first, then come back to choose one.</p>
+                    <Button type="button" variant="outline" className="dashboard-button" onClick={onAddDepartment}>Go to Structure</Button>
                   </div>
                 ) : (
                   <select id="person-department" className="form-control" value={departmentId} data-empty={departmentId ? undefined : true}
                     onChange={event => setDepartmentId(event.target.value)}>
                     <option value="">No department</option>
-                    {sortedDepartments.map(unit => <option key={unit.id} value={unit.id}>{localName(unit.name, language)}</option>)}
+                    {departmentOptions()}
                   </select>
                 )}
               </div>
 
-              <fieldset className="form-field span-4 role-fieldset" aria-describedby={errors.roles ? "person-roles-error" : undefined}>
-                <legend>Roles *</legend>
-                {allRoles.map(role => (
-                  <label key={role} className="role-option">
-                    <input type="checkbox" className="form-checkbox" checked={roles.has(role)} onChange={() => toggleRole(role)} />
-                    <span><strong>{roleLabels[role]}</strong><small>{roleHints[role]}</small></span>
-                  </label>
-                ))}
-                {errors.roles && <p id="person-roles-error" className="field-error">{errors.roles}</p>}
-              </fieldset>
+              {canManageRoles ? (
+                <fieldset className="form-field span-4 role-fieldset" aria-describedby={errors.roles ? "person-roles-error" : undefined}>
+                  <legend>Roles *</legend>
+                  {allRoles.map(role => (
+                    <label key={role} className="role-option">
+                      <input type="checkbox" className="form-checkbox" checked={roles.has(role)} onChange={() => toggleRole(role)} />
+                      <span><strong>{roleLabels[role]}</strong><small>{roleHints[role]}</small></span>
+                    </label>
+                  ))}
+                  {errors.roles && <p id="person-roles-error" className="field-error">{errors.roles}</p>}
+                </fieldset>
+              ) : !editing && (
+                <p className="form-field span-4 field-hint">They'll be registered as a <strong>Researcher</strong>. Admins assign other roles.</p>
+              )}
 
-              {roles.has("coordinator") && departments.length > 0 && (
+              {canManageRoles && roles.has("coordinator") && hasDepartments && (
                 <div className="form-field span-4">
-                  <label htmlFor="person-coordinates">Coordinates department *</label>
+                  <label htmlFor="person-coordinates">Head of department *</label>
                   <select id="person-coordinates" className="form-control" value={coordinatesId} data-empty={coordinatesId ? undefined : true}
                     aria-invalid={errors.coordinates ? true : undefined}
                     aria-describedby={errors.coordinates ? "person-coordinates-error" : "person-coordinates-hint"}
                     onChange={event => { setCoordinatesId(event.target.value); setErrors(current => ({ ...current, coordinates: "" })) }}>
                     <option value="">Choose a department</option>
-                    {sortedDepartments.map(unit => {
-                      const takenBy = unit.coordinator && unit.coordinator.id !== person?.id ? unit.coordinator.display_name : null
-                      return (
-                        <option key={unit.id} value={unit.id} disabled={takenBy !== null}>
-                          {localName(unit.name, language)}{takenBy ? ` (coordinated by ${takenBy})` : ""}
-                        </option>
-                      )
-                    })}
+                    {departmentOptions(unit => unit.coordinator && unit.coordinator.id !== person?.id ? `head: ${unit.coordinator.display_name}` : null)}
                   </select>
                   {errors.coordinates
                     ? <p id="person-coordinates-error" className="field-error">{errors.coordinates}</p>
-                    : <p id="person-coordinates-hint" className="field-hint">Each department has one Coordinator, who sees its Members.</p>}
+                    : <p id="person-coordinates-hint" className="field-hint">Each department has one head, who registers and manages its Researchers.</p>}
                 </div>
               )}
 
-              {removesRole && (
+              {canManageRoles && removesRole && (
                 <div className="form-field span-4">
                   <label htmlFor="person-reason">Reason for removing a role</label>
                   <input id="person-reason" className="form-control" type="text" value={reason} maxLength={500}
@@ -195,7 +221,7 @@ export function PersonSheet({ orgId, person, departments, domainHint, onClose, o
           <div className="form-sheet-footer">
             <Button type="button" variant="outline" className="dashboard-button" onClick={onClose}>Cancel</Button>
             <Button type="submit" className="dashboard-button" disabled={saving}>
-              {saving ? "Saving…" : editing ? "Save changes" : "Add person"}
+              {saving ? "Saving…" : editing ? "Save changes" : canManageRoles ? "Add person" : "Add researcher"}
             </Button>
           </div>
         </form>
