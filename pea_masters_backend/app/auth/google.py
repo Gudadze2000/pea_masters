@@ -25,6 +25,7 @@ from app.models import (
     RoleAssignment,
     User,
 )
+from app.names import official_name
 
 router = APIRouter(prefix="/api/v1/auth/google", tags=["auth"])
 
@@ -94,6 +95,21 @@ async def google_callback(request: Request):
     return response
 
 
+def sync_official_name(db: Session, user: User, claims: dict[str, Any], org_id: Any, ip: str | None) -> None:
+    """Uses the name from ISU's Google directory unless someone deliberately corrected it in PEA."""
+    display, given, family = official_name(claims)
+    if user.name_source == "manual" or not display:
+        return
+    changed = user.display_name != display
+    before = {"display_name": user.display_name, "name_source": user.name_source}
+    user.display_name, user.given_name, user.family_name = display, given, family
+    if changed:
+        audit.record(db, "person.name_from_google", entity_type="user", entity_id=user.id, actor_user_id=user.id,
+                     organization_id=org_id, before=before,
+                     after={"display_name": display, "name_source": "google"}, ip=ip)
+    user.name_source = "google"
+
+
 def complete_login(claims: dict[str, Any], ip: str | None, user_agent: str | None) -> tuple[str | None, str]:
     """Checks the verified Google claims against our data. Returns (session token, "") or (None, error code)."""
     with SessionLocal() as db:
@@ -129,7 +145,7 @@ def complete_login(claims: dict[str, Any], ip: str | None, user_agent: str | Non
             # First Google sign-in: link to the account an Admin registered for this email
             user = db.scalar(select(User).where(func.lower(User.email) == email, User.deleted_at.is_(None)))
             if user is None and domain.allow_self_signup:
-                user = User(email=email, display_name=claims.get("name") or email)
+                user = User(email=email, display_name=official_name(claims)[0] or email)
                 db.add(user)
                 db.flush()
                 db.add(OrganizationMembership(user_id=user.id, organization_id=org_id))
@@ -154,8 +170,7 @@ def complete_login(claims: dict[str, Any], ip: str | None, user_agent: str | Non
 
         if user.status == "invited":  # registered by an Admin, signing in for the first time
             user.status = "active"
-        user.given_name = user.given_name or claims.get("given_name")
-        user.family_name = user.family_name or claims.get("family_name")
+        sync_official_name(db, user, claims, org_id, ip)
         user.last_login_at = func.now()
         identity.last_used_at = func.now()
         identity.email = email

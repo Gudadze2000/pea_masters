@@ -58,6 +58,7 @@ class User(Timestamps, Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
     email: Mapped[str] = mapped_column(Text)
     display_name: Mapped[str] = mapped_column(Text)
+    name_source: Mapped[str] = mapped_column(Text, server_default="registration")  # registration | google | manual
     given_name: Mapped[str | None] = mapped_column(Text)
     family_name: Mapped[str | None] = mapped_column(Text)
     preferred_locale: Mapped[str] = mapped_column(Text, server_default="ka")

@@ -23,10 +23,15 @@ export type Unit = UnitRef & {
 
 export type PersonStatus = "invited" | "active" | "deactivated"
 
+/** registration: typed or guessed when registered, replaced by Google's name at first sign-in;
+ *  google: the official name from ISU's Google directory; manual: corrected in PEA, never overwritten */
+export type NameSource = "registration" | "google" | "manual"
+
 export type Person = {
   id: string
   email: string
   display_name: string
+  name_source: NameSource
   status: PersonStatus
   roles: Role[]
   department: UnitRef | null

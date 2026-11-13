@@ -29,12 +29,14 @@ from app.models import (
     User,
     UserSession,
 )
+from app.names import name_from_email
 from app.units import UnitRef, find_department
 
 router = APIRouter(prefix="/api/v1/orgs/{org_id}/people", tags=["people"])
 
 Role = Literal["admin", "coordinator", "member"]
 Status = Literal["invited", "active", "deactivated"]
+NameSource = Literal["registration", "google", "manual"]
 ROLE_ORDER = ["admin", "coordinator", "member"]
 
 
@@ -42,6 +44,7 @@ class PersonOut(BaseModel):
     id: uuid.UUID
     email: str
     display_name: str
+    name_source: NameSource  # registration (replaced at first sign-in) | google (official) | manual (kept)
     status: Status
     roles: list[Role]
     department: UnitRef | None
@@ -58,7 +61,8 @@ class PeopleList(BaseModel):
 
 class PersonCreate(BaseModel):
     email: EmailStr
-    display_name: str = Field(min_length=1, max_length=200)
+    # Optional: guessed from name.surname.N@ addresses; replaced by the official Google name at first sign-in
+    display_name: str | None = Field(default=None, max_length=200)
     roles: list[Role] = Field(min_length=1)
     department_id: uuid.UUID | None = None
     coordinates_unit_id: uuid.UUID | None = None
@@ -135,6 +139,7 @@ def load_people(db: Session, org_id: uuid.UUID, user_ids: list[uuid.UUID] | None
 
     people = [
         PersonOut(id=user.id, email=user.email, display_name=user.display_name,
+                  name_source=user.name_source,  # type: ignore[arg-type]
                   status=person_status(user, membership),
                   roles=sorted(roles.get(user.id, set()), key=ROLE_ORDER.index),  # type: ignore[arg-type]
                   department=departments.get(user.id), faculty=faculty_of(user.id),
@@ -328,7 +333,11 @@ def register_person(org_id: uuid.UUID, body: PersonCreate,
 
     user = db.scalar(select(User).where(func.lower(User.email) == email, User.deleted_at.is_(None)))
     if user is None:
-        user = User(email=email, display_name=body.display_name.strip(), status="invited")
+        display_name = (body.display_name or "").strip() or name_from_email(email)
+        if not display_name:
+            raise problem(status.HTTP_422_UNPROCESSABLE_CONTENT, "name_required",
+                          "Enter their name: it can't be worked out from this email address.")
+        user = User(email=email, display_name=display_name, name_source="registration", status="invited")
         db.add(user)
         db.flush()
     elif db.scalar(select(OrganizationMembership.id).where(
@@ -358,8 +367,10 @@ def update_person(org_id: uuid.UUID, user_id: uuid.UUID, body: PersonUpdate,
             raise problem(status.HTTP_403_FORBIDDEN, "admins_move_people",
                           "Only Admins can move people to another department.")
     before = snapshot(db, org_id, user_id)
-    if body.display_name is not None:
-        db.get(User, user_id).display_name = body.display_name.strip()  # type: ignore[union-attr]
+    user = db.get(User, user_id)
+    if body.display_name is not None and body.display_name.strip() and body.display_name.strip() != user.display_name:
+        user.display_name = body.display_name.strip()  # type: ignore[union-attr]
+        user.name_source = "manual"  # a deliberate correction: Google's name won't replace it
     if "department_id" in body.model_fields_set:
         set_department(db, membership, body.department_id, actor)
     audit.record(db, "person.updated", entity_type="user", entity_id=user_id, actor_user_id=actor.user.id,

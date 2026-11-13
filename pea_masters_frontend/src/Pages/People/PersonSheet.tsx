@@ -5,6 +5,7 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@
 import "@/components/forms/forms.css"
 import type { Role } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
+import { nameFromEmail } from "@/lib/names"
 import { useLanguage } from "@/lib/language-context"
 import { groupByFaculty, localName, peopleApi, roleHints, roleLabels, type Person, type Unit } from "@/lib/people"
 
@@ -33,6 +34,8 @@ export function PersonSheet({ orgId, person, units, domainHint, canManageRoles, 
   const ownDepartments = units.filter(unit => headedDepartments.includes(unit.id))
   const [email, setEmail] = useState("")
   const [name, setName] = useState(person?.display_name ?? "")
+  /** While false, the name follows the email ("giorgi.kekelidze.3@…" → "Giorgi Kekelidze") */
+  const [nameEdited, setNameEdited] = useState(false)
   const [departmentId, setDepartmentId] = useState(person?.department?.id ?? (canManageRoles ? "" : ownDepartments[0]?.id ?? ""))
   const [roles, setRoles] = useState<Set<Role>>(new Set(person?.roles ?? ["member"]))
   const [coordinatesId, setCoordinatesId] = useState(person?.coordinates?.id ?? "")
@@ -111,6 +114,15 @@ export function PersonSheet({ orgId, person, units, domainHint, canManageRoles, 
   ))
 
   const fixedDepartment = units.find(unit => unit.id === departmentId)
+  const nameHint = !editing
+    ? "Filled in from the email. Replaced by their official Google name when they first sign in."
+    : name.trim() !== person.display_name
+      ? "Your correction will be kept: Google won't change it."
+      : person.name_source === "google"
+        ? "Official name from their Google account. If you change it, your version is kept."
+        : person.name_source === "manual"
+          ? "Corrected in PEA. Google won't change it."
+          : "Will be replaced by their official Google name when they first sign in."
 
   return (
     <Sheet open onOpenChange={open => { if (!open) onClose() }}>
@@ -136,7 +148,11 @@ export function PersonSheet({ orgId, person, units, domainHint, canManageRoles, 
                   <input id="person-email" className="form-control" type="email" autoComplete="off" value={email}
                     placeholder={`name.surname@${domainHint}`} aria-invalid={errors.email ? true : undefined}
                     aria-describedby={errors.email ? "person-email-error" : undefined}
-                    onChange={event => { setEmail(event.target.value); setErrors(current => ({ ...current, email: "" })) }} />
+                    onChange={event => {
+                      setEmail(event.target.value)
+                      if (!nameEdited) setName(nameFromEmail(event.target.value) ?? "")
+                      setErrors(current => ({ ...current, email: "", name: "" }))
+                    }} />
                   {errors.email && <p id="person-email-error" className="field-error">{errors.email}</p>}
                 </div>
               )}
@@ -145,9 +161,11 @@ export function PersonSheet({ orgId, person, units, domainHint, canManageRoles, 
                 <label htmlFor="person-name">Full name *</label>
                 <input id="person-name" className="form-control" type="text" autoComplete="off" value={name}
                   placeholder="Name Surname" aria-invalid={errors.name ? true : undefined}
-                  aria-describedby={errors.name ? "person-name-error" : undefined}
-                  onChange={event => { setName(event.target.value); setErrors(current => ({ ...current, name: "" })) }} />
-                {errors.name && <p id="person-name-error" className="field-error">{errors.name}</p>}
+                  aria-describedby={errors.name ? "person-name-error" : "person-name-hint"}
+                  onChange={event => { setName(event.target.value); setNameEdited(true); setErrors(current => ({ ...current, name: "" })) }} />
+                {errors.name
+                  ? <p id="person-name-error" className="field-error">{errors.name}</p>
+                  : <p id="person-name-hint" className="field-hint">{nameHint}</p>}
               </div>
 
               <div className="form-field span-4">

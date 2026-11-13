@@ -37,6 +37,9 @@ After the first Admin exists, everything else happens in the app: **Administrati
 The structure is organization → faculties → departments (Structure tab). Each department has at most one head
 (Coordinator), who registers, renames, deactivates and reactivates the Researchers of that department.
 
+Names (`app/names.py`): registering guesses the name from `name.surname.N@` addresses; each sign-in applies the
+official name from Google, unless someone corrected it by hand (`users.name_source` = `manual`).
+
 Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
 written to the audit log.
 
