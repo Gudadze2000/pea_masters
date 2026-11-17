@@ -29,6 +29,34 @@
 .evaluation-badge-rejected { background: var(--danger-soft); color: var(--destructive); }
 .evaluation-badge-submitted, .evaluation-badge-in-review { background: var(--info-soft); color: var(--info); }
 .evaluation-rejection { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--danger-soft); color: var(--destructive); font-size: 12px; line-height: 16px; }
+.evaluation-rejection p { flex: 1; min-width: 0; }
+.evaluation-ask { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent); border-radius: 99px; background: var(--card); color: var(--destructive); font-size: 12px; line-height: 16px; font-weight: 500; cursor: pointer; }
+.evaluation-ask:hover { background: color-mix(in srgb, var(--destructive) 8%, var(--card)); }
+.evaluation-ask:focus-visible { outline: 2px solid var(--destructive); outline-offset: 2px; }
+.evaluation-ask svg { width: 14px; height: 14px; }
+
+/* Hidden entries stay in the draft but aren't sent: dimmed, with a dashed badge */
+.evaluation-entry-hidden .evaluation-entry-description, .evaluation-entry-hidden .evaluation-attachment, .evaluation-entry-hidden .evaluation-entry-number { opacity: .55; }
+.evaluation-entry-hidden .evaluation-entry-description p { text-decoration: line-through; text-decoration-color: var(--color-neutral-400); }
+.evaluation-badge-hidden { background: transparent; border: 1px dashed var(--color-neutral-400); padding: 2px 9px; }
+.evaluation-check-icon { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; color: var(--muted-foreground); }
+.evaluation-banner-action { align-self: center; margin-left: auto; }
+.evaluation-banner > div { flex: 1; min-width: 0; }
+
+/* Contact your coordinator */
+.contact-person { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }
+.contact-person > div { flex: 1; min-width: 0; }
+.contact-person p { font-weight: 500; }
+.contact-person small { display: block; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); overflow-wrap: anywhere; }
+.contact-person a { color: inherit; }
+.contact-avatar { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; background: var(--color-brand-100); color: var(--color-brand-700); font-size: 14px; font-weight: 600; }
+.contact-copy { flex-shrink: 0; background: var(--card); }
+.contact-soon { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted-foreground); }
+.contact-soon svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+.contact-soon p { font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-700); }
+.contact-soon small { font-size: 12px; line-height: 16px; }
+.contact-footer a { text-decoration: none; }
+.evaluation-warning > svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; color: var(--color-warning-600); }
 .evaluation-empty { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; border-top: 1px solid var(--border); padding: 18px; font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
 .evaluation-summary .dashboard-card { display: flex; flex-direction: column; gap: 12px; }
 .evaluation-score { display: flex; align-items: baseline; gap: 8px; }
@@ -95,6 +123,11 @@
   .evaluation-rejection { padding: 10px 16px; }
   .evaluation-actions { flex-wrap: wrap; }
   .evaluation-modal-footer { flex-wrap: wrap; }
+  .contact-footer > * { flex: 1 1 100%; }
+  .contact-person { flex-wrap: wrap; }
+  .evaluation-banner { flex-wrap: wrap; }
+  .evaluation-banner-action { margin-left: 0; }
+  .evaluation-rejection { flex-wrap: wrap; }
 }
 
 /* ---------- ISU self-assessment parts ---------- */

@@ -20,6 +20,7 @@ from app.db import get_db
 from app.errors import problem
 from app.models import (
     Affiliation,
+    CoordinatorAssignment,
     File,
     Organization,
     OrganizationMembership,
@@ -46,11 +47,17 @@ class Ref(BaseModel):
     name: dict[str, str]
 
 
+class Contact(BaseModel):
+    name: str
+    email: str
+
+
 class AffiliationOut(BaseModel):
     organization: Ref
     faculty: Ref | None
     department: Ref | None
     position: Ref | None
+    coordinator: Contact | None  # who the person contacts about their evaluation: their head of department
 
 
 class ProfileOut(BaseModel):
@@ -71,6 +78,33 @@ class BiographyIn(BaseModel):
 
 def photo_url(file_id: uuid.UUID | None) -> str | None:
     return f"/api/v1/files/{file_id}" if file_id else None
+
+
+def coordinator_of(db: Session, org_id: uuid.UUID, user_id: uuid.UUID,
+                   department_id: uuid.UUID | None) -> Contact | None:
+    """The person's own Coordinator if one is assigned to them, otherwise the head of their department.
+    Nobody is their own coordinator, and only active members of the organization count."""
+    current = (
+        (CoordinatorAssignment.organization_id == org_id)
+        & CoordinatorAssignment.ends_on.is_(None)
+        & (CoordinatorAssignment.coordinator_user_id != user_id)
+    )
+    candidates = [(CoordinatorAssignment.target == "member") & (CoordinatorAssignment.member_user_id == user_id)]
+    if department_id:
+        candidates.append((CoordinatorAssignment.target == "unit") & (CoordinatorAssignment.unit_id == department_id))
+    for target in candidates:
+        coordinator = db.scalar(
+            select(User)
+            .join(CoordinatorAssignment, CoordinatorAssignment.coordinator_user_id == User.id)
+            .join(OrganizationMembership, (OrganizationMembership.user_id == User.id)
+                  & (OrganizationMembership.organization_id == org_id))
+            .where(current, target, OrganizationMembership.status == "active", User.status != "deactivated",
+                   User.deleted_at.is_(None))
+            .order_by(CoordinatorAssignment.starts_on.desc())
+            .limit(1))
+        if coordinator:
+            return Contact(name=coordinator.display_name, email=coordinator.email)
+    return None
 
 
 def build_profile(db: Session, user: User) -> ProfileOut:
@@ -94,6 +128,7 @@ def build_profile(db: Session, user: User) -> ProfileOut:
             faculty=Ref(id=faculty.id, name=faculty.name) if faculty else None,
             department=Ref(id=department.id, name=department.name) if department else None,
             position=Ref(id=position.id, name=position.name) if position else None,
+            coordinator=coordinator_of(db, org.id, user.id, department.id if department else None),
         ))
     return ProfileOut(
         user_id=user.id, display_name=user.display_name, given_name=user.given_name, family_name=user.family_name,

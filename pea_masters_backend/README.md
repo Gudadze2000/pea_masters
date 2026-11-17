@@ -43,6 +43,8 @@ official name from Google, unless someone corrected it by hand (`users.name_sour
 Profiles (`app/profiles.py`): each person edits their biography (English and Georgian, cleaned of anything unsafe by
 `app/richtext.py`) and photo in the General information part of **My profile**. Photos are checked, cropped to 512×512 and
 saved as JPEG in the `storage/` folder (`STORAGE_DIR`, ignored by git); the database keeps only their details.
+Each affiliation in `GET /api/v1/me/profile` also names the person's `coordinator` (their head of department, or a
+Coordinator assigned to them personally), whom the evaluation form's "Contact coordinator" writes to by email.
 
 Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
 written to the audit log.

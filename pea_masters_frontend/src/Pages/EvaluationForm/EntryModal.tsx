@@ -53,7 +53,7 @@ export function EntryModal({ recordId, entry, onClose, onSave }: {
           {files.map(file => <div className="evaluation-file" key={file}><span className="evaluation-file-icon"><Icon name="imgIconFile2" /></span><div><p>{file}</p><small>Selected locally</small></div><Button type="button" variant="ghost" size="icon-sm" aria-label={`Remove ${file}`} onClick={() => setFiles(files.filter(name => name !== file))}><Icon name="imgIconX" /></Button></div>)}
         </div>
         {error && <p className="field-error" role="alert">{error}</p>}
-        <div className="evaluation-entry-note"><Icon name="imgIconInfo" /><p>Entries can be edited until you submit the form. After submission the form is locked.</p></div>
+        <div className="evaluation-entry-note"><Icon name="imgIconInfo" /><p>You can edit entries until you submit. After that, use “Update submission” to add or change entries and resubmit before the deadline.</p></div>
       </div>
       <div className="evaluation-modal-footer"><Button type="button" variant="outline" className="dashboard-button" onClick={onClose}>Cancel</Button><Button type="submit" value="draft" variant="outline" className="dashboard-button">Save as draft</Button><Button type="submit" value="save" className="dashboard-button">Save entry</Button></div>
     </form>

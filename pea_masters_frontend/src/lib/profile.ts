@@ -12,7 +12,14 @@ import { localName } from "./people"
 
 type Ref = { id: string; name: Record<string, string> }
 
-export type ProfileAffiliation = { organization: Ref; faculty: Ref | null; department: Ref | null; position: Ref | null }
+/** Someone to get in touch with, e.g. the person's coordinator (head of department) */
+export type Contact = { name: string; email: string }
+
+export type ProfileAffiliation = {
+  organization: Ref; faculty: Ref | null; department: Ref | null; position: Ref | null
+  /** Who the person contacts about their evaluation; null when their department has no head */
+  coordinator: Contact | null
+}
 
 export type MyProfile = {
   user_id: string
@@ -88,6 +95,7 @@ export function useIdentity() {
     faculty: name(place?.faculty),
     department: name(place?.department),
     position: name(place?.position),
+    coordinator: place?.coordinator ?? null,
   }
 }
 

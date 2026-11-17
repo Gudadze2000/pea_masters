@@ -128,6 +128,26 @@ def test_photos_are_visible_inside_the_organization_only(researcher, signed_in, 
     assert signed_in(stranger).get(url).status_code == 404
 
 
+def test_profile_names_the_head_of_department_as_coordinator(as_admin, signed_in, base, db):
+    faculty = add_faculty(as_admin, base)
+    cs = add_department(as_admin, base, "Computer Science", faculty)
+    math = add_department(as_admin, base, "Mathematics", faculty)
+    head = register(as_admin, base, "nino.head@iliauni.edu.ge", roles=["coordinator", "member"], coordinates=cs,
+                    department_id=cs, name="Nino Head").json()
+    researcher = register(as_admin, base, "cs.researcher@iliauni.edu.ge", department_id=cs).json()
+    mathematician = register(as_admin, base, "math@iliauni.edu.ge", department_id=math).json()
+
+    [place] = as_person(signed_in, db, researcher).get(ME).json()["affiliations"]
+    assert place["coordinator"] == {"name": "Nino Head", "email": "nino.head@iliauni.edu.ge"}
+    # A department without a head, and the head themselves, have nobody to contact
+    assert as_person(signed_in, db, mathematician).get(ME).json()["affiliations"][0]["coordinator"] is None
+    assert as_person(signed_in, db, head).get(ME).json()["affiliations"][0]["coordinator"] is None
+
+    # A deactivated head is no longer anyone's coordinator
+    assert as_admin.post(f"{base}/people/{head['id']}/deactivate").status_code in (200, 204)
+    assert as_person(signed_in, db, researcher).get(ME).json()["affiliations"][0]["coordinator"] is None
+
+
 # --- others' profiles ---------------------------------------------------------------------------
 
 def test_admins_and_heads_see_profiles_within_their_reach(as_admin, signed_in, base, db):

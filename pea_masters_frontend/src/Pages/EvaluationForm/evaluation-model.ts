@@ -9,7 +9,12 @@ export type EvaluationEntry = {
   comment?: string
   /** Points claimed for this entry, only on record types scored per entry (RecordDef.variablePoints) */
   points?: number
+  /** The researcher chose not to send it: kept in the draft, left out of the score and the submission */
+  hidden?: boolean
 }
+
+/** Entries that are part of the form; hidden ones are kept but never sent or scored */
+export const isSent = (entry: EvaluationEntry) => !entry.hidden
 
 /** One kind of scored activity: the original records below and every item of the ISU self-assessment form */
 export type RecordDef = {
@@ -45,7 +50,7 @@ export type EvaluationLinkState = { edit?: { recordId: string; entryId: string }
 
 /** The first entry that needs action (rejected, or missing its evidence file), for links from other pages */
 export function findEntryNeedingAttention(entries: Record<string, EvaluationEntry[]>, kind: 'rejected' | 'missing-file', preferRecordId?: string) {
-  const needs = (entry: EvaluationEntry) => kind === 'rejected' ? entry.status === 'Rejected' : entry.files.length === 0 && entry.status !== 'Rejected'
+  const needs = (entry: EvaluationEntry) => entry.hidden ? false : kind === 'rejected' ? entry.status === 'Rejected' : entry.files.length === 0 && entry.status !== 'Rejected'
   const ids = preferRecordId ? [preferRecordId, ...Object.keys(entries).filter(id => id !== preferRecordId)] : Object.keys(entries)
   for (const recordId of ids) {
     const entry = entries[recordId]?.find(needs)
@@ -62,9 +67,9 @@ export type EvaluationEntries = Record<RecordId, EvaluationEntry[]>
 export const allRecords: readonly RecordDef[] = [...records, ...parts.flatMap(part => part.items)]
 export const findRecord = (id: RecordId) => allRecords.find(record => record.id === id)
 
-/** Entries that count: everything except rejected ones (the backend will only count approved ones) */
+/** Entries that count: everything sent except rejected ones (the backend will only count approved ones) */
 export function recordScore(record: RecordDef, entries: EvaluationEntry[] = []) {
-  const sum = entries.filter(entry => entry.status !== 'Rejected').reduce((total, entry) => total + (record.variablePoints ? entry.points ?? 0 : record.points), 0)
+  const sum = entries.filter(entry => isSent(entry) && entry.status !== 'Rejected').reduce((total, entry) => total + (record.variablePoints ? entry.points ?? 0 : record.points), 0)
   return record.maxPoints === undefined ? sum : Math.min(sum, record.maxPoints)
 }
 
@@ -98,6 +103,7 @@ const isEntry = (e: unknown): e is EvaluationEntry => {
     && Array.isArray(entry.files) && entry.files.every(file => typeof file === 'string')
     && ['Draft', 'Approved', 'Rejected', 'Submitted'].includes(entry.status as string)
     && (entry.points === undefined || (typeof entry.points === 'number' && Number.isFinite(entry.points)))
+    && (entry.hidden === undefined || typeof entry.hidden === 'boolean')
 }
 
 export function readDraft(): EvaluationEntries {
@@ -115,4 +121,50 @@ export function readDraft(): EvaluationEntries {
     }
   } catch { /* Storage may be unavailable. Keep the form usable in memory. */ }
   return initialEntries
+}
+
+/** Last moment to submit or resubmit, set by the admin. TODO: comes from the evaluation period on the server */
+export const DEADLINE = new Date('2026-11-30T23:59:59+04:00')
+export const deadlineLabel = DEADLINE.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Tbilisi' })
+
+/** What was last sent: when, and the entries as they were then (to cancel an update and to tell what changed) */
+export type Submission = { at: string; entries: EvaluationEntries }
+const submissionKey = 'pea-evaluation-submission-v1'
+
+export function readSubmission(): Submission | null {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(submissionKey) ?? 'null')
+    if (value && typeof value === 'object') {
+      const saved = value as Record<string, unknown>
+      const entries = saved.entries as Record<string, unknown> | undefined
+      if (typeof saved.at === 'string' && entries && typeof entries === 'object'
+        && Object.values(entries).every(list => Array.isArray(list) && list.every(isEntry))) {
+        return { at: saved.at, entries: entries as EvaluationEntries }
+      }
+    }
+  } catch { /* Storage may be unavailable */ }
+  return null
+}
+
+/** Saves the submission and the entries with it. TODO: POST to the API once evaluations are stored on the server */
+export function writeSubmission(submission: Submission) {
+  try {
+    localStorage.setItem(submissionKey, JSON.stringify(submission))
+    localStorage.setItem(draftKey, JSON.stringify(submission.entries))
+    return true
+  } catch { return false }
+}
+
+/** What an update changes compared with the last submission: new or edited entries, and entries hidden or shown again */
+export function changesSince(submitted: EvaluationEntries, current: EvaluationEntries) {
+  const before = new Map(Object.values(submitted).flat().map(entry => [entry.id, entry]))
+  let changed = 0, hidden = 0, shown = 0
+  for (const entry of Object.values(current).flat()) {
+    const old = before.get(entry.id)
+    if (!old) { if (isSent(entry)) changed++; continue }
+    if (isSent(old) && !isSent(entry)) hidden++
+    else if (!isSent(old) && isSent(entry)) shown++
+    else if (isSent(entry) && JSON.stringify(old) !== JSON.stringify(entry)) changed++
+  }
+  return { changed, hidden, shown, any: changed + hidden + shown > 0 }
 }
