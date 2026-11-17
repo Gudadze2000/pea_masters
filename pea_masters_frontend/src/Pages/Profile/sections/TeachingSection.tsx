@@ -3,15 +3,17 @@ import { Check, Info, RefreshCw, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { KeywordInput } from "@/components/forms/KeywordInput"
 import "@/components/forms/forms.css"
-import { initialInterests, lastSynced, programmes, students } from "../teaching/teachingMock"
+import { useStore } from "@/lib/store"
+import { savedTeachingInterests } from "../profile-data"
+import { lastSynced, programmes, students } from "../teaching/teachingMock"
 import "../teaching/TeachingPage.css"
 
 const syncedLabel = new Date(lastSynced).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
 
 /** Teaching: interests the person enters; programmes and supervised students imported from Argus. */
 export function TeachingSection() {
-  const [savedInterests, setSavedInterests] = useState(initialInterests)
-  const [interests, setInterests] = useState(initialInterests)
+  const savedInterests = useStore(savedTeachingInterests)
+  const [interests, setInterests] = useState(savedInterests)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState(false)
   const timer = useRef<number | undefined>(undefined)
@@ -32,7 +34,7 @@ export function TeachingSection() {
     setSaving(true)
     // TODO: replace with the API call once teaching is stored on the server
     timer.current = window.setTimeout(() => {
-      setSavedInterests(interests)
+      savedTeachingInterests.set(interests)
       setSaving(false)
       setNotice(true)
       timer.current = window.setTimeout(() => setNotice(false), 4000)

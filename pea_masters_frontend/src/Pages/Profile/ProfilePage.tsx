@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { useMyProfile } from "@/lib/profile"
 import { useQualifications } from "./qualifications/qualifications-store"
-import { capitalize, sections, type SectionDef } from "./qualifications/sections"
+import { capitalize, profileSections as ordered, type SectionDef } from "./qualifications/sections"
+import { PublicProfilePreview } from "./preview/PublicProfilePreview"
 import { AboutSection } from "./sections/AboutSection"
 import { LanguagesSection } from "./sections/LanguagesSection"
 import { ProfileHeader } from "./sections/ProfileHeader"
@@ -14,10 +15,6 @@ import { entryTitle, QualificationSection } from "./sections/QualificationSectio
 import { ResearchSection } from "./sections/ResearchSection"
 import { TeachingSection } from "./sections/TeachingSection"
 import "./ProfilePage.css"
-
-/** Order on the page: background first, then achievements, then service and other activities */
-const ORDER = ["education", "employment", "languages", "awards", "patents", "memberships", "committees", "consultancy", "creative", "other"]
-const ordered: SectionDef[] = ORDER.map(id => sections.find(section => section.id === id)).filter((s): s is SectionDef => !!s)
 
 type Editor = { sectionId: string; entryId: string | null }
 /** Router state for links that open an editor, e.g. from a notification */
@@ -46,6 +43,7 @@ export function ProfilePage() {
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set(linkState?.add ? [linkState.add] : []))
   const [deleting, setDeleting] = useState<Editor | null>(null)
   const [active, setActive] = useState("general")
+  const [previewing, setPreviewing] = useState(false)
 
   const isShown = (section: SectionDef) => (entries[section.id]?.length ?? 0) > 0 || revealed.has(section.id) || editor?.sectionId === section.id
   const shown = ordered.filter(isShown)
@@ -101,7 +99,7 @@ export function ProfilePage() {
 
   return (
     <WorkspaceLayout breadcrumb={[{ label: "My profile" }]}>
-      {openPanel => !profile ? (
+      {() => !profile ? (
         <div className="dashboard-content">
           <div className="page-heading"><div><h1>My profile</h1></div></div>
           <div className="dashboard-card" role={status === "error" ? "alert" : "status"}>
@@ -112,7 +110,7 @@ export function ProfilePage() {
         <div className="dashboard-content profile-page">
           <div className="profile-layout">
             <div className="profile-main">
-              <ProfileHeader onPreview={() => openPanel("Preview public profile")} />
+              <ProfileHeader onPreview={() => setPreviewing(true)} />
 
               <p className="section-notice profile-notice" role="status">{notice && <><Check aria-hidden="true" />{notice}</>}</p>
 
@@ -185,6 +183,8 @@ export function ProfilePage() {
               </ul>
             </nav>
           </div>
+
+          <PublicProfilePreview open={previewing} onClose={() => setPreviewing(false)} profile={profile} entries={entries} />
 
           <AlertDialog.Root open={deleting !== null} onOpenChange={open => { if (!open) setDeleting(null) }}>
             <AlertDialog.Portal>

@@ -5,7 +5,9 @@ import { KeywordInput } from "@/components/forms/KeywordInput"
 import { InlineRecordForm } from "@/components/forms/InlineRecordForm"
 import type { FieldDef } from "@/components/forms/field-types"
 import "@/components/forms/forms.css"
-import { initialResearch, PROJECT_ROLES, PROJECT_TYPES, type Collaboration, type Project, type ResearchOverview } from "../research/researchMock"
+import { useStore } from "@/lib/store"
+import { savedResearch } from "../profile-data"
+import { PROJECT_ROLES, PROJECT_TYPES, type Collaboration, type Project, type ResearchOverview } from "../research/researchMock"
 import "../research/ResearchPage.css"
 
 const currentYear = new Date().getFullYear()
@@ -42,8 +44,8 @@ type Editor =
 
 /** Research: interests, projects, collaborators and collaborating organisations. */
 export function ResearchSection() {
-  const [saved, setSaved] = useState<ResearchOverview>(initialResearch)
-  const [data, setData] = useState<ResearchOverview>(initialResearch)
+  const saved = useStore(savedResearch)
+  const [data, setData] = useState<ResearchOverview>(saved)
   const [editor, setEditor] = useState<Editor | null>(null)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState(false)
@@ -76,7 +78,7 @@ export function ResearchSection() {
     setSaving(true)
     // TODO: replace with the API call once the back end exists
     timer.current = window.setTimeout(() => {
-      setSaved(data)
+      savedResearch.set(data)
       setSaving(false)
       setNotice(true)
       timer.current = window.setTimeout(() => setNotice(false), 4000)

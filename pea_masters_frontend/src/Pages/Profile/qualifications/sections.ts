@@ -450,3 +450,7 @@ export const findSection = (id: string | undefined) => sections.find(section => 
 /** Paperclip meta item for cards with attachments */
 export const attachmentMeta = (count: number): MetaItem | undefined =>
   count > 0 ? { icon: Paperclip, text: count === 1 ? "1 document" : `${count} documents` } : undefined
+
+/** Order on the profile: background first, then achievements, then service and other activities */
+const PROFILE_ORDER = ["education", "employment", "languages", "awards", "patents", "memberships", "committees", "consultancy", "creative", "other"]
+export const profileSections: SectionDef[] = PROFILE_ORDER.map(id => sections.find(section => section.id === id)).filter((s): s is SectionDef => !!s)
