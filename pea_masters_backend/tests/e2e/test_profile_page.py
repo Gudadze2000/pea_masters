@@ -145,3 +145,40 @@ def test_research_saved_on_the_profile_appears_on_the_cv(admin_page: Page):
     page.get_by_label("New research interest").press("Enter")
     expect(cv).to_contain_text("Only on my CV")
     expect(cv).to_contain_text("Mountain agriculture")
+
+
+def test_video_lectures_play_on_the_profile(admin_page: Page, shot):
+    """Video lectures link videos from around the web; embeddable ones play on the page once the viewer presses play
+    (nothing loads from the video site before that), others link out."""
+    page = admin_page
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.goto("/profile")
+    page.locator("#add-more").get_by_role("button", name="Video lectures").click()
+    section = page.locator("#videos")
+    section.get_by_label(re.compile("^Title")).fill("Drought genes in wheat: an introduction")
+    section.get_by_label(re.compile("^Video link")).fill("youtu.be/dQw4w9WgXcQ?t=90")
+    section.get_by_label(re.compile("^Type")).select_option("Lecture")
+    section.get_by_role("button", name="Save entry").click()
+
+    card = section.locator(".entry-card", has_text="Drought genes in wheat")
+    expect(card.get_by_role("link", name="Open on YouTube")).to_have_attribute("href", "https://youtu.be/dQw4w9WgXcQ?t=90")
+    expect(card.locator("iframe")).to_have_count(0)  # nothing from YouTube until play
+    card.scroll_into_view_if_needed()
+    shot(page, "profile-02-video-before-play")
+    card.get_by_role("button", name="Play “Drought genes in wheat: an introduction”").click()
+    player = card.locator("iframe")
+    expect(player).to_have_attribute(
+        "src", "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&start=90&autoplay=1")
+    expect(player).to_have_attribute("title", "Drought genes in wheat: an introduction (YouTube)")
+
+    # A site that can't be embedded links out instead
+    section.get_by_role("button", name="Add video lecture").click()
+    section.get_by_label(re.compile("^Title")).fill("Genetics MOOC")
+    section.get_by_label(re.compile("^Video link")).fill("https://www.coursera.org/learn/genetics")
+    section.get_by_role("button", name="Save entry").click()
+    other = section.locator(".entry-card", has_text="Genetics MOOC")
+    expect(other.get_by_role("link", name="Watch on coursera.org")).to_be_visible()
+    expect(other.get_by_role("button", name=re.compile("^Play"))).to_have_count(0)
+
+    assert not errors, errors

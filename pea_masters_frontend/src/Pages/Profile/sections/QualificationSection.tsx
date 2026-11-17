@@ -1,5 +1,6 @@
 import { Pencil, Plus, Trash2, TriangleAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { VideoPlayer } from "@/components/media/VideoPlayer"
 import { ProfileEntryForm } from "../qualifications/ProfileEntryForm"
 import { StatusBadge } from "../qualifications/StatusBadge"
 import { attachmentMeta, type Entry, type SectionDef } from "../qualifications/sections"
@@ -32,6 +33,7 @@ function EntryCard({ section, entry, onEdit, onDelete, disabled }: { section: Se
         </ul>
       )}
       {description && <p className="entry-description">{description}</p>}
+      {section.videoField && entry.values[section.videoField] && <VideoPlayer url={entry.values[section.videoField]} title={title} />}
     </article>
   )
 }

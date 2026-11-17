@@ -1,0 +1,12 @@
+/* VideoPlayer.tsx: a 16:9 player that loads the video site only after "play" */
+.video-player { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 640px; margin: 0; }
+.video-player iframe, .video-player video, .video-poster { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 12px; background: #111; }
+.video-poster { position: relative; display: grid; place-items: center; overflow: hidden; color: #fff; cursor: pointer; background: linear-gradient(135deg, var(--color-brand-700, #6b1d2a), #1e1a1b); }
+.video-poster:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+.video-play { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: rgb(255 255 255 / 92%); color: var(--color-brand-700, #6b1d2a); transition: transform .15s; }
+.video-play svg { width: 28px; height: 28px; margin-left: 4px; fill: currentColor; }
+.video-poster:hover .video-play { transform: scale(1.06); }
+.video-poster-text { position: absolute; bottom: 12px; left: 14px; font-size: 12px; line-height: 16px; opacity: .85; }
+.video-player figcaption a, .video-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 20px; color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.video-player figcaption svg, .video-link svg { width: 14px; height: 14px; }
+@media (prefers-reduced-motion: reduce) { .video-play { transition: none; } }

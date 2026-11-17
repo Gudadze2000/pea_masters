@@ -1,4 +1,5 @@
-import { Award, Briefcase, BriefcaseBusiness, Building2, Calendar, FileText, Globe, GraduationCap, Hash, Languages, List, MapPin, Paperclip, Star, UserRound, Users, type LucideIcon } from "lucide-react"
+import { Award, Briefcase, BriefcaseBusiness, Building2, Calendar, FileText, Globe, GraduationCap, Hash, Languages, List, MapPin, MonitorPlay, Paperclip, Star, UserRound, Users, Video, type LucideIcon } from "lucide-react"
+import { PLAYABLE_SITES } from "@/lib/video"
 import type { FieldDef } from "@/components/forms/field-types"
 import { COUNTRIES } from "./countries"
 import { LANGUAGES, LEVELS, levelLabel } from "./languages"
@@ -51,6 +52,8 @@ export type SectionDef = {
   titleOf: (values: EntryValues) => string
   metaOf: (values: EntryValues) => MetaItem[]
   descriptionOf: (values: EntryValues) => string | undefined
+  /** Field holding a video link: the entry shows a player (Video lectures) */
+  videoField?: string
   entries: Entry[]
 }
 
@@ -410,6 +413,41 @@ export const sections: SectionDef[] = [
     entries: [],
   },
   {
+    id: "videos",
+    label: "Video lectures",
+    shortLabel: "Video lectures",
+    icon: MonitorPlay,
+    description: "Recorded lectures, talks and courses from anywhere on the web. They play right on your profile.",
+    formDescription: "A recorded lecture, talk or course",
+    noun: "video lecture",
+    titleField: "title",
+    documentLabel: "Upload slides or materials (optional)",
+    groups: [
+      { title: "Video", fields: [
+        { name: "title", label: "Title", type: "text", required: true },
+        { name: "url", label: "Video link", type: "url", required: true, placeholder: "https://www.youtube.com/watch?v=…", hint: `${PLAYABLE_SITES} play on PEA. Links to other sites open there.` },
+        { name: "kind", label: "Type", type: "select", span: 2, options: ["Lecture", "Course or lecture series", "Conference talk", "Seminar or webinar", "Interview", "Other"] },
+        { name: "language", label: "Language", type: "select", span: 2, options: LANGUAGES },
+        { name: "event", label: "Course, event or channel", type: "text", span: 2 },
+        { name: "date", label: "Date recorded", type: "date", span: 2 },
+      ] },
+      { title: "Description", fields: [
+        { name: "description", label: "Description", type: "textarea", placeholder: "What the video covers and who it is for" },
+        { name: "comment", label: "Comment", type: "textarea", span: 2, rows: 3, placeholder: "Optional remarks for the reviewer" },
+      ] },
+    ],
+    titleOf: v => v.title,
+    metaOf: v => meta([
+      { icon: Video, text: v.kind },
+      v.date ? dateMeta(v.date) : undefined,
+      { icon: Users, text: v.event },
+      { icon: Languages, text: v.language },
+    ]),  // the player links to the video itself
+    descriptionOf: v => v.description,
+    videoField: "url",
+    entries: [],
+  },
+  {
     id: "other",
     label: "Other activities",
     shortLabel: "Other activities",
@@ -452,5 +490,5 @@ export const attachmentMeta = (count: number): MetaItem | undefined =>
   count > 0 ? { icon: Paperclip, text: count === 1 ? "1 document" : `${count} documents` } : undefined
 
 /** Order on the profile: background first, then achievements, then service and other activities */
-const PROFILE_ORDER = ["education", "employment", "languages", "awards", "patents", "memberships", "committees", "consultancy", "creative", "other"]
+const PROFILE_ORDER = ["education", "employment", "languages", "awards", "patents", "memberships", "committees", "consultancy", "creative", "videos", "other"]
 export const profileSections: SectionDef[] = PROFILE_ORDER.map(id => sections.find(section => section.id === id)).filter((s): s is SectionDef => !!s)

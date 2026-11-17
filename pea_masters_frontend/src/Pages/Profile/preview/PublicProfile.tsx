@@ -1,4 +1,5 @@
 import { Building2, Mail } from "lucide-react"
+import { VideoPlayer } from "@/components/media/VideoPlayer"
 import type { ResearchOverview } from "../research/researchMock"
 import type { Entry, SectionDef } from "../qualifications/sections"
 import "@/components/forms/forms.css"
@@ -78,6 +79,7 @@ export function PublicProfile({ data }: { data: PublicProfileData }) {
                     </ul>
                   )}
                   {description && <p className="public-entry-description">{description}</p>}
+                  {section.videoField && entry.values[section.videoField] && <VideoPlayer url={entry.values[section.videoField]} title={section.titleOf(entry.values)} />}
                 </li>
               )
             })}
