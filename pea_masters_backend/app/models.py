@@ -184,6 +184,8 @@ class Profile(Base):
     __tablename__ = "profiles"
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)
     biography: Mapped[dict[str, str]] = mapped_column(JSONB, server_default="{}")  # {"en": html, "ka": html}
+    # {"orcid": ..., "researcher_id": ..., "scopus_id": ...}, see app/identifiers.py
+    identifiers: Mapped[dict[str, str]] = mapped_column(JSONB, server_default="{}")
     photo_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("files.id"))
     is_public: Mapped[bool] = mapped_column(server_default="false")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
@@ -226,3 +228,29 @@ class AuditLog(Base):
     ip: Mapped[str | None] = mapped_column(INET)
     prev_hash: Mapped[str | None] = mapped_column(Text)
     row_hash: Mapped[str] = mapped_column(Text)
+
+
+class WosLookup(Base):
+    """A cached Web of Science answer for one DOI (app/wos.py). record is null when the DOI isn't indexed."""
+    __tablename__ = "wos_lookups"
+    doi: Mapped[str] = mapped_column(Text, primary_key=True)
+    record: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    fetched_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class WosAuthorSearch(Base):
+    """A cached Web of Science search for one researcher's documents (app/wos.py), all pages together."""
+    __tablename__ = "wos_author_searches"
+    query: Mapped[str] = mapped_column(Text, primary_key=True)
+    total: Mapped[int]
+    hits: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    fetched_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class ExternalLookup(Base):
+    """A cached answer from an outside service (app/lookups.py); record is null when it found nothing."""
+    __tablename__ = "external_lookups"
+    source: Mapped[str] = mapped_column(Text, primary_key=True)
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    record: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    fetched_at: Mapped[datetime] = mapped_column(server_default=func.now())

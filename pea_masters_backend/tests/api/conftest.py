@@ -10,6 +10,7 @@ os.environ["GOOGLE_CLIENT_SECRET"] = "test-secret"
 os.environ["SESSION_SECRET"] = "test-session-secret"
 os.environ["PUBLIC_URL"] = "http://localhost:5173"
 os.environ["SECURE_COOKIES"] = "false"
+os.environ["CLARIVATE_API_KEY"] = "test-key"  # Clarivate itself is replaced in tests/api/test_wos.py
 os.environ["STORAGE_DIR"] = tempfile.mkdtemp(prefix="pea-test-storage-")  # uploads go to a throwaway folder
 
 import pytest  # noqa: E402
@@ -23,7 +24,9 @@ from app.db import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Organization, OrganizationDomain, OrganizationMembership, RoleAssignment, User  # noqa: E402
 
-TABLES = ("audit_log, profiles, files, coordinator_assignments, affiliations, positions, organization_units, "
+TABLES = ("external_lookups, wos_author_searches, wos_lookups, audit_log, profiles, files, coordinator_assignments, "
+          "affiliations, positions, "
+          "organization_units, "
           "unit_types, "
           "role_assignments, organization_memberships, sessions, password_credentials, "
           "auth_identities, identity_providers, organization_domains, organizations, users")

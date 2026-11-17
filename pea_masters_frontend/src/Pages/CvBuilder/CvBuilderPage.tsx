@@ -5,7 +5,8 @@ import { TriangleAlert, Check, Eye, EyeOff, Globe, Lock, Printer, UserRound } fr
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { useQualifications } from "@/Pages/Profile/qualifications/qualifications-store"
-import { useIdentity } from "@/lib/profile"
+import { saveIdentifiers, useIdentity, useMyProfile } from "@/lib/profile"
+import { SERVER_IDENTIFIERS } from "@/Pages/Profile/sections/IdentifiersCard"
 import { buildCvSections, sectionCounts } from "./cv-content"
 import { loadCv, saveCv, type CvData, type Visibility } from "./cv-model"
 import { ConfirmDialog, Segmented } from "./cv-ui"
@@ -54,6 +55,7 @@ function timeAgo(timestamp: number, now: number) {
 /** /cv-builder */
 export function CvBuilderPage() {
   const person = useIdentity()
+  const { profile } = useMyProfile()
   const { entries } = useQualifications()
   const [initial] = useState(loadCv)
   const [cv, setCv] = useState<CvData>(initial.data)
@@ -69,6 +71,23 @@ export function CvBuilderPage() {
   const noticeTimer = useRef<number | undefined>(undefined)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const now = useNow(30000)
+
+  // ORCID, ResearcherID and Scopus ID live on the profile (server); the CV shows those
+  const shown = useMemo<CvData>(() => profile ? {
+    ...cv,
+    profiles: { ...cv.profiles, ...Object.fromEntries(SERVER_IDENTIFIERS.map(({ key, server }) => [key, profile.identifiers[server] ?? ""])) },
+  } : cv, [cv, profile])
+
+  // IDs typed into the CV builder before they moved to the profile: move them over once
+  const moved = useRef(false)
+  useEffect(() => {
+    if (!profile || moved.current) return
+    moved.current = true
+    const local = Object.fromEntries(SERVER_IDENTIFIERS
+      .filter(({ key, server }) => cv.profiles[key] && !profile.identifiers[server])
+      .map(({ key, server }) => [server, cv.profiles[key]]))
+    if (Object.keys(local).length) void saveIdentifiers(local).catch(() => { /* invalid or offline: they stay in the CV builder */ })
+  }, [profile, cv.profiles])
 
   /* ---------- autosave to this browser ---------- */
 
@@ -285,7 +304,7 @@ export function CvBuilderPage() {
                 </div>
               ) : (
                 <div className="cv-paper-scroll">
-                  <CvPreview cv={cv} sections={sections} person={person} asVisitor={asVisitor} />
+                  <CvPreview cv={shown} sections={sections} person={person} asVisitor={asVisitor} />
                 </div>
               )}
             </aside>

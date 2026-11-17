@@ -159,3 +159,56 @@
   .evaluation-part-header { flex-direction: column; align-items: flex-start; }
   .evaluation-part-score { text-align: left; }
 }
+
+/* ---------- Web of Science check (WosCheck.tsx) ---------- */
+.wos-panel { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 10px; font-size: 13px; line-height: 20px; }
+.wos-panel > svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+.wos-panel > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wos-panel p { font-weight: 600; }
+.wos-panel small { font-size: 13px; line-height: 20px; color: var(--color-neutral-700); overflow-wrap: anywhere; }
+.wos-panel cite { font-style: normal; }
+.wos-checking, .wos-error { background: var(--muted); color: var(--color-neutral-600); }
+.wos-found { background: var(--success-soft); }
+.wos-found > svg, .wos-found p { color: var(--success); }
+.wos-missing { background: var(--color-warning-50); }
+.wos-missing > svg, .wos-missing p { color: var(--color-warning-600); }
+.wos-warning { display: flex; align-items: flex-start; gap: 6px; margin-top: 4px; color: var(--color-warning-600) !important; font-weight: 500; }
+.wos-warning svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 3px; }
+.wos-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 8px; }
+.wos-actions .dashboard-button, .wos-actions button { background: var(--card); }
+.wos-actions a { display: inline-flex; align-items: center; gap: 4px; color: var(--primary); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+.wos-actions a svg { width: 13px; height: 13px; }
+.wos-spin { animation: wos-spin 1s linear infinite; }
+@keyframes wos-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .wos-spin { animation: none; } }
+.wos-badge { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 99px; background: var(--success-soft); color: var(--success); font-size: 11px; line-height: 16px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+a.wos-badge:hover { text-decoration: underline; }
+.wos-badge-missing, .wos-badge-warn { background: var(--color-warning-50); color: var(--color-warning-600); }
+
+/* ---------- Missing from your form (MissingFromForm.tsx) ---------- */
+.missing-card { display: flex; flex-direction: column; gap: 12px; padding: 16px 20px; border: 1px solid var(--color-brand-200, var(--border)); border-radius: 14px; background: var(--card); }
+.missing-quiet { flex-direction: row; align-items: center; gap: 10px; border-style: dashed; font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
+.missing-quiet svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--muted-foreground); }
+.missing-heading { display: flex; align-items: flex-start; gap: 12px; }
+.missing-heading > svg { width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px; color: var(--primary); }
+.missing-heading h2 { font-size: 15px; line-height: 22px; font-weight: 600; }
+.missing-heading p { font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.missing-list { display: flex; flex-direction: column; }
+.missing-list li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+.missing-list li > div:first-child { flex: 1; min-width: 0; }
+.missing-list p { font-size: 13px; line-height: 20px; font-weight: 500; overflow-wrap: anywhere; }
+.missing-list small { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); overflow-wrap: anywhere; }
+.missing-warn { color: var(--color-warning-600) !important; }
+.missing-actions { display: flex; flex-shrink: 0; gap: 4px; }
+.missing-actions button { background: var(--card); }
+.missing-more { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; }
+.missing-more svg { width: 14px; height: 14px; transition: transform .15s; }
+.missing-chevron-open { transform: rotate(180deg); }
+.evaluation-duplicate { padding: 10px 12px; border-radius: 8px; background: var(--color-warning-50); color: var(--color-warning-600); font-size: 13px; line-height: 20px; }
+@media (max-width: 767.98px) {
+  .missing-list li { flex-direction: column; align-items: stretch; }
+}
+.wos-unknown { background: var(--danger-soft); }
+.wos-unknown > svg, .wos-unknown p { color: var(--destructive); }
+.wos-good { color: var(--success) !important; font-weight: 500; }
+.wos-badge-bad { background: var(--danger-soft); color: var(--destructive); }

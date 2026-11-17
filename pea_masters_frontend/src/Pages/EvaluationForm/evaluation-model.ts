@@ -11,6 +11,26 @@ export type EvaluationEntry = {
   points?: number
   /** The researcher chose not to send it: kept in the draft, left out of the score and the submission */
   hidden?: boolean
+  /** Web of Science check of the entry's DOI when it was saved, shown to the researcher and the reviewer */
+  wos?: WosCheck
+}
+
+export type WosCheck = {
+  doi: string
+  found: boolean
+  checkedAt: string
+  title?: string
+  source?: string
+  year?: number
+  timesCited?: number
+  recordUrl?: string
+  /** False when the researcher's family name isn't among the authors */
+  includesYou?: boolean
+  /** Not in Web of Science: whether Crossref knows the DOI at all */
+  registered?: boolean
+  /** Not in Web of Science: whether its journal is in Web of Science's journal list, and the journal's name */
+  journalInWos?: boolean
+  journal?: string
 }
 
 /** Entries that are part of the form; hidden ones are kept but never sent or scored */
@@ -104,6 +124,8 @@ const isEntry = (e: unknown): e is EvaluationEntry => {
     && ['Draft', 'Approved', 'Rejected', 'Submitted'].includes(entry.status as string)
     && (entry.points === undefined || (typeof entry.points === 'number' && Number.isFinite(entry.points)))
     && (entry.hidden === undefined || typeof entry.hidden === 'boolean')
+    && (entry.wos === undefined || (typeof entry.wos === 'object' && entry.wos !== null
+      && typeof (entry.wos as Record<string, unknown>).doi === 'string' && typeof (entry.wos as Record<string, unknown>).found === 'boolean'))
 }
 
 export function readDraft(): EvaluationEntries {
@@ -122,6 +144,9 @@ export function readDraft(): EvaluationEntries {
   } catch { /* Storage may be unavailable. Keep the form usable in memory. */ }
   return initialEntries
 }
+
+/** Publication years that count for this evaluation (academic years 2024-25 and 2025-26). TODO: from the evaluation period on the server */
+export const PUBLICATION_YEARS = { from: 2024, to: 2026 }
 
 /** Last moment to submit or resubmit, set by the admin. TODO: comes from the evaluation period on the server */
 export const DEADLINE = new Date('2026-11-30T23:59:59+04:00')

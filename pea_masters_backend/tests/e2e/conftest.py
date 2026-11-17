@@ -21,6 +21,7 @@ from pathlib import Path
 
 E2E_DB = "postgresql+psycopg://pea:pea@127.0.0.1:5434/pea_e2e"
 API_PORT, APP_PORT = 8011, 5180  # away from the usual 8000/5173 and Vite's fallback ports
+CLARIVATE_PORT = 8012  # fake Web of Science Starter API (fake_clarivate.py): browser tests never use the real quota
 APP_URL = f"http://localhost:{APP_PORT}"
 
 if "app.db" in sys.modules:  # tests/api already pointed the app at pea_test in this run
@@ -31,6 +32,9 @@ os.environ.setdefault("GOOGLE_CLIENT_ID", "e2e-client.apps.googleusercontent.com
 os.environ.setdefault("GOOGLE_CLIENT_SECRET", "e2e-secret")
 os.environ.setdefault("SESSION_SECRET", "e2e-session-secret")
 os.environ["STORAGE_DIR"] = tempfile.mkdtemp(prefix="pea-e2e-storage-")  # uploads go to a throwaway folder
+os.environ["WOS_STARTER_URL"] = f"http://127.0.0.1:{CLARIVATE_PORT}/v1"
+os.environ["CLARIVATE_API_KEY"] = "e2e-key"  # overrides the real key in .env
+os.environ["CROSSREF_URL"] = f"http://127.0.0.1:{CLARIVATE_PORT}/crossref"  # the same fake server answers for Crossref
 
 import psycopg  # noqa: E402
 import pytest  # noqa: E402
@@ -42,6 +46,7 @@ from app.auth.google import complete_login  # noqa: E402
 from app.auth.sessions import COOKIE_NAME, create_session  # noqa: E402
 from app.db import SessionLocal, engine  # noqa: E402
 from app.models import Organization, OrganizationDomain, OrganizationMembership, RoleAssignment, User  # noqa: E402
+from tests.e2e import fake_clarivate  # noqa: E402
 
 BACKEND = Path(__file__).parents[2]
 FRONTEND = BACKEND.parent / "pea_masters_frontend"
@@ -103,12 +108,13 @@ def database():
 
 @pytest.fixture(scope="session")
 def servers(database):
-    for port in (API_PORT, APP_PORT):
+    for port in (API_PORT, APP_PORT, CLARIVATE_PORT):
         if not port_free(port):
             pytest.exit(f"Port {port} is in use. Stop whatever runs there and try again.")
     bun = shutil.which("bun")
     if bun is None:
         pytest.exit("Bun isn't on PATH; it's needed to run the frontend.")
+    clarivate = fake_clarivate.start(CLARIVATE_PORT)
     env = {**os.environ, "DATABASE_URL": E2E_DB, "PUBLIC_URL": APP_URL, "PEA_API_URL": f"http://127.0.0.1:{API_PORT}"}
     logs = Path(__file__).parent / "logs"
     logs.mkdir(exist_ok=True)
@@ -124,6 +130,7 @@ def servers(database):
     finally:
         for process in (app, api):
             stop(process)
+        clarivate.shutdown()
 
 
 @pytest.fixture(scope="session")

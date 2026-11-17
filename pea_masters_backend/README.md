@@ -46,6 +46,25 @@ saved as JPEG in the `storage/` folder (`STORAGE_DIR`, ignored by git); the data
 Each affiliation in `GET /api/v1/me/profile` also names the person's `coordinator` (their head of department, or a
 Coordinator assigned to them personally), whom the evaluation form's "Contact coordinator" writes to by email.
 
+Web of Science (`app/wos.py`): `GET /api/v1/wos/lookup?doi=…` checks an article in Web of Science Core Collection
+through Clarivate's Starter API (title, journal, year, times cited, authors, and whether the signed-in person is one of
+them). Set `CLARIVATE_API_KEY` in `.env`; without it the check is switched off. Answers are cached in `wos_lookups`
+(7 days when found, 1 day when not), so each DOI costs at most one request of the 20,000 a day. API tests replace
+Clarivate, and browser tests run a fake one (`tests/e2e/fake_clarivate.py`), so tests never use the quota.
+
+Related endpoints:
+- `PUT /api/v1/me/profile/identifiers`: ORCID iD, ResearcherID and Scopus Author ID, checked and stored on the
+  profile (`app/identifiers.py`); My profile → Research identifiers.
+- `GET /api/v1/wos/me/documents?from_year=&to_year=`: the person's Web of Science documents by those identifiers,
+  with document count, citations and an h-index PEA calculates (cached a day in `wos_author_searches`). Used by the
+  evaluation form ("Missing from your form") and the CV builder (import, metrics).
+- `GET /api/v1/crossref/lookup?doi=` (`app/crossref.py`): whether a DOI is registered and what it is, for articles not
+  in Web of Science; `GET /api/v1/wos/journal?issn=`: whether the journal is in Web of Science's journal list. Both
+  cached in `external_lookups` (`app/lookups.py`). `CROSSREF_MAILTO` (optional) is a project address, never a person's.
+- `GET /api/v1/orgs/{org}/research-output?from_year=&to_year=&unit_id=` (`app/research_output.py`): Web of Science
+  output per person and year for Admins (whole organization, a faculty or a department) and heads of department
+  (their department); People → Research output.
+
 Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
 written to the audit log.
 

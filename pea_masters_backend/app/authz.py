@@ -39,6 +39,7 @@ class Action(StrEnum):
     MANAGE_ROLES = "people.roles"  # change roles, move to another department
     VIEW_UNITS = "units.view"
     MANAGE_UNITS = "units.manage"  # faculties and departments
+    VIEW_RESEARCH_OUTPUT = "research.view"  # Web of Science output of the people one manages
 
 
 # Which organization roles may perform each action. Root (the developers) may do everything, everywhere.
@@ -51,6 +52,7 @@ POLICY: dict[Action, frozenset[str]] = {
     Action.MANAGE_ROLES: frozenset({"admin"}),
     Action.VIEW_UNITS: frozenset({"admin", "coordinator", "member"}),
     Action.MANAGE_UNITS: frozenset({"admin"}),
+    Action.VIEW_RESEARCH_OUTPUT: frozenset({"admin", "coordinator"}),
 }
 
 # Strongest first; the strongest role that allows an action is the one acted under

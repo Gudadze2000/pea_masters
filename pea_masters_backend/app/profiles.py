@@ -18,6 +18,7 @@ from app.auth.sessions import client_ip, current_user
 from app.authz import Action, Actor, authorize, get_actor, get_organization
 from app.db import get_db
 from app.errors import problem
+from app.identifiers import Identifiers
 from app.models import (
     Affiliation,
     CoordinatorAssignment,
@@ -68,6 +69,7 @@ class ProfileOut(BaseModel):
     email: str
     biography: dict[str, str]  # {"en": html, "ka": html}
     photo_url: str | None
+    identifiers: Identifiers
     affiliations: list[AffiliationOut]  # one per organization the person is an active member of
     updated_at: datetime | None
 
@@ -134,6 +136,7 @@ def build_profile(db: Session, user: User) -> ProfileOut:
         user_id=user.id, display_name=user.display_name, given_name=user.given_name, family_name=user.family_name,
         email=user.email, biography=dict(profile.biography) if profile else {},
         photo_url=photo_url(profile.photo_file_id) if profile else None,
+        identifiers=Identifiers.model_construct(**(profile.identifiers if profile else {})),
         affiliations=affiliations, updated_at=profile.updated_at if profile else None,
     )
 
@@ -182,6 +185,29 @@ def update_my_profile(body: BiographyIn, request: Request, user: User = Depends(
     audit.record(db, "profile.biography_updated", entity_type="profile", entity_id=user.id, actor_user_id=user.id,
                  after={lang: text_length(html) for lang, html in biography.items()},  # lengths, not the text
                  ip=client_ip(request))
+    db.commit()
+    return build_profile(db, user)
+
+
+@router.put("/api/v1/me/profile/identifiers", response_model=ProfileOut)
+def update_my_identifiers(body: Identifiers, request: Request, user: User = Depends(current_user),
+                          db: Session = Depends(get_db)):
+    """Sets the person's ORCID iD, ResearcherID and Scopus Author ID. Fields left out are unchanged; an empty
+    string or null removes one. Values are checked and stored in their canonical form."""
+    profile = profile_of(db, user.id)
+    identifiers = dict(profile.identifiers)
+    for key in body.model_fields_set:
+        value = getattr(body, key)
+        if value:
+            identifiers[key] = value
+        else:
+            identifiers.pop(key, None)
+    if identifiers != profile.identifiers:
+        audit.record(db, "profile.identifiers_updated", entity_type="profile", entity_id=user.id,
+                     actor_user_id=user.id, before=dict(profile.identifiers), after=identifiers,
+                     ip=client_ip(request))
+        profile.identifiers = identifiers
+        profile.updated_at = func.now()
     db.commit()
     return build_profile(db, user)
 

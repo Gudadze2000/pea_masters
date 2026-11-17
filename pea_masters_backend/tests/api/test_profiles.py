@@ -208,3 +208,31 @@ def test_heads_of_department_cannot_set_positions(as_admin, signed_in, base, db)
     assert error_code(c.patch(f"{base}/people/{researcher['id']}", json={"position_id": professor})) == \
         "admins_set_positions"
     assert c.post(f"{base}/positions", json={"name_en": "Dean"}).status_code == 403
+
+
+# --- researcher identifiers ---------------------------------------------------------------------
+
+def test_identifiers_are_checked_and_stored_in_canonical_form(researcher, db):
+    profile = researcher.put(f"{ME}/identifiers", json={
+        "orcid": "https://orcid.org/0000-0002-1825-0097", "researcher_id": "abc-1234-2020",
+        "scopus_id": "https://www.scopus.com/authid/detail.uri?authorId=57190000000"}).json()
+    assert profile["identifiers"] == {"orcid": "0000-0002-1825-0097", "researcher_id": "ABC-1234-2020",
+                                      "scopus_id": "57190000000"}
+    assert researcher.get(ME).json()["identifiers"]["researcher_id"] == "ABC-1234-2020"
+
+    # Fields left out stay; an empty value removes one
+    profile = researcher.put(f"{ME}/identifiers", json={"scopus_id": ""}).json()
+    assert profile["identifiers"] == {"orcid": "0000-0002-1825-0097", "researcher_id": "ABC-1234-2020",
+                                      "scopus_id": None}
+
+
+@pytest.mark.parametrize("field, value", [
+    ("orcid", "0000-0002-1825-0098"),  # wrong check digit
+    ("orcid", "1234"),
+    ("researcher_id", "ABCD-1234-2020"),
+    ("scopus_id", "12345"),
+])
+def test_bad_identifiers_are_refused(researcher, field, value):
+    response = researcher.put(f"{ME}/identifiers", json={field: value})
+    assert response.status_code == 422
+    assert researcher.get(ME).json()["identifiers"][field] is None

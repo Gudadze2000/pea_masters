@@ -67,12 +67,6 @@
 .cv-tabs [aria-selected="true"] .count-badge { background: var(--color-brand-100); color: var(--primary); }
 
 /* Profile links */
-.cv-link-input { position: relative; }
-.cv-link-input .form-control { padding-right: 64px; }
-.cv-link-open { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px; border-radius: var(--radius-sm); color: var(--muted-foreground); }
-.cv-link-open:hover { background: var(--muted); color: var(--primary); }
-.cv-link-open svg { width: 14px; height: 14px; }
-.cv-link-open .cv-link-ok { color: var(--success); }
 
 /* Publications */
 .cv-inline-setting { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-700); }
@@ -272,3 +266,32 @@
   .cv-paper a[href]:hover { text-decoration: none; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Identifiers kept on the profile, shown read-only in "Research profiles" */
+.cv-profile-id { display: flex; flex-direction: column; gap: 4px; }
+.cv-profile-id-label { font-size: 14px; line-height: 22px; font-weight: 500; }
+.cv-profile-id p { display: flex; align-items: center; min-height: 40px; padding: 8px 12px; border: 1px dashed var(--input); border-radius: var(--radius-md); font-size: 14px; }
+.cv-profile-id a { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-weight: 500; }
+.cv-profile-id a svg { width: 14px; height: 14px; }
+.cv-profile-id-empty { color: var(--muted-foreground); }
+.cv-profile-id .field-hint { color: var(--primary); }
+.cv-spin { animation: cv-spin 1s linear infinite; }
+@keyframes cv-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cv-spin { animation: none; } }
+
+/* Import from Web of Science (WosImportSheet.tsx) */
+.cv-wos-body { display: flex; flex-direction: column; gap: 12px; }
+.cv-wos-status { display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
+.cv-wos-status:has(svg) { flex-direction: row; align-items: center; gap: 8px; }
+.cv-wos-status svg { width: 16px; height: 16px; }
+.cv-wos-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.cv-wos-list li + li { border-top: 1px solid var(--border); }
+.cv-wos-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; cursor: pointer; }
+.cv-wos-item:hover { background: var(--muted); }
+.cv-wos-item input { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; accent-color: var(--primary); }
+.cv-wos-item > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cv-wos-title { font-size: 14px; line-height: 20px; font-weight: 500; overflow-wrap: anywhere; }
+.cv-wos-item small { font-size: 12px; line-height: 18px; color: var(--muted-foreground); }
+.cv-wos-item-done { cursor: default; opacity: .65; }
+.cv-wos-item-done:hover { background: none; }
+.cv-wos-warn { color: var(--color-warning-600) !important; }

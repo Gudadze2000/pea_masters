@@ -30,9 +30,13 @@ export type MyProfile = {
   /** HTML per language: { en, ka } */
   biography: Partial<Record<"en" | "ka", string>>
   photo_url: string | null
+  /** Checked and stored in canonical form by the server (app/identifiers.py) */
+  identifiers: Identifiers
   affiliations: ProfileAffiliation[]
   updated_at: string | null
 }
+
+export type Identifiers = { orcid: string | null; researcher_id: string | null; scopus_id: string | null }
 
 export const BIOGRAPHY_MAX_LENGTH = 3000
 
@@ -106,6 +110,11 @@ function saved(profile: MyProfile) {
 
 export async function saveBiography(biography: Partial<Record<"en" | "ka", string>>) {
   return saved(await api<MyProfile>("/me/profile", { method: "PUT", body: { biography } }))
+}
+
+/** Sets the given identifiers; an empty string removes one. Throws ApiError (422) when one is invalid. */
+export async function saveIdentifiers(identifiers: Partial<Identifiers>) {
+  return saved(await api<MyProfile>("/me/profile/identifiers", { method: "PUT", body: identifiers }))
 }
 
 export async function uploadPhoto(photo: Blob) {

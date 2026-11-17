@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     session_hours: int = 12
     # Uploaded files (photos, documents). A folder for now; object storage (S3-compatible) on a server later.
     storage_dir: str = "storage"
+    # Clarivate Web of Science Starter API (app/wos.py). Empty: article checks are switched off.
+    clarivate_api_key: str = ""
+    wos_starter_url: str = "https://api.clarivate.com/apis/wos-starter/v1"
+    # Optional project contact address for Crossref's "polite" pool (app/crossref.py). Never a person's own address.
+    crossref_mailto: str = ""
+    crossref_url: str = "https://api.crossref.org"
 
     @property
     def google_redirect_uri(self) -> str:

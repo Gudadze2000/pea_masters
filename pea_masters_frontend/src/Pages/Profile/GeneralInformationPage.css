@@ -62,3 +62,11 @@
 }
 
 .readonly-empty { color: var(--muted-foreground); font-weight: 400; }
+
+/* Research identifiers (IdentifiersCard.tsx) */
+.identifiers-card { scroll-margin-top: 24px; }
+.identifiers-card .card-heading { align-items: flex-start; gap: 16px; }
+.identifiers-card .card-subtitle { margin-top: 2px; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.identifiers-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+@media (max-width: 1099.98px) { .identifiers-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 767.98px) { .identifiers-card .card-heading { flex-direction: column; } }

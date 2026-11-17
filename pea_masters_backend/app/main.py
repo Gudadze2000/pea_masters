@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import people, positions, profiles, units
+from app import crossref, people, positions, profiles, research_output, units, wos
 from app.auth import google, sessions
 from app.config import settings
 
@@ -20,6 +20,9 @@ app.include_router(units.router)
 app.include_router(people.router)
 app.include_router(positions.router)
 app.include_router(profiles.router)
+app.include_router(wos.router)
+app.include_router(crossref.router)
+app.include_router(research_output.router)
 
 
 @app.get("/api/v1/health", tags=["meta"])

@@ -6,8 +6,11 @@ import { WorkspaceLayout } from '@/components/layout/WorkspaceLayout'
 import { useSession } from '@/lib/auth'
 import { useIdentity } from '@/lib/profile'
 import { ContactCoordinator, type ContactTopic } from './ContactCoordinator'
-import { EntryModal } from './EntryModal'
+import { EntryModal, type UsedDoi } from './EntryModal'
 import { EvaluationIcon as Icon, EvaluationModal } from './EvaluationModal'
+import { WosBadge } from './WosCheck'
+import { MissingFromForm } from './MissingFromForm'
+import { citationOf, findDoi } from '@/lib/wos'
 import {
   allRecords, changesSince, DEADLINE, deadlineLabel, draftKey, isSent, partScore, readDraft, readSubmission, recordScore, records,
   writeSubmission, type EvaluationEntries, type EvaluationEntry, type EvaluationLinkState, type RecordDef, type RecordId, type Submission,
@@ -51,7 +54,7 @@ function RecordCard({ record, entries, locked, compact, onAdd, onEdit, onToggleH
       return <div className={`evaluation-entry${hidden ? ' evaluation-entry-hidden' : ''}`} key={entry.id}>
         <div className="evaluation-entry-row">
           <span className="evaluation-entry-number">{index + 1}</span>
-          <div className="evaluation-entry-description"><p>{entry.description}</p><small>{hidden ? 'Hidden: not sent with your form' : [entry.detail, record.variablePoints && entry.points !== undefined ? pts(entry.points) : ''].filter(Boolean).join(' · ')}</small></div>
+          <div className="evaluation-entry-description"><p>{entry.description}</p><small>{hidden ? 'Hidden: not sent with your form' : [entry.detail, record.variablePoints && entry.points !== undefined ? pts(entry.points) : ''].filter(Boolean).join(' · ')}</small>{!hidden && entry.wos && <WosBadge check={entry.wos} />}</div>
           <div className="evaluation-attachment">{entry.files.length ? <><Icon name="imgIconClip" /><span title={entry.files.join(', ')}>{entry.files[0]}{entry.files.length > 1 && ` +${entry.files.length - 1}`}</span></> : <span className="evaluation-no-file">No file attached</span>}</div>
           <div className="evaluation-status"><Badge status={hidden ? 'Hidden' : entry.status} /></div>
           <div className="evaluation-entry-actions">{locked ? <Icon name="imgIconLock" /> : <>
@@ -90,7 +93,7 @@ export function EvaluationForm() {
     return target && entry ? { recordId: target.recordId, entry } : null
   })
   const [tab, setTab] = useState<Tab>(() => parts.find(part => part.items.some(item => item.id === linked?.recordId))?.id ?? 'records')
-  const [editing, setEditing] = useState<{ recordId: RecordId; entry?: EvaluationEntry } | null>(locked ? null : linked)
+  const [editing, setEditing] = useState<{ recordId: RecordId; entry?: EvaluationEntry; initial?: { description: string; detail: string } } | null>(locked ? null : linked)
   const linkHandled = useRef(false)
   useEffect(() => {
     if (linkHandled.current || !location.state) return
@@ -167,6 +170,15 @@ export function EvaluationForm() {
   const card = (record: RecordDef, compact = false) => <RecordCard key={record.id} record={record} entries={listOf(record.id)} locked={locked} compact={compact}
     onAdd={() => setEditing({ recordId: record.id })} onEdit={entry => setEditing({ recordId: record.id, entry })}
     onToggleHidden={entry => toggleHidden(record.id, entry)} onAsk={entry => ask(record, entry)} />
+  /** DOIs in every entry except the one being edited */
+  const usedDois = (except?: string) => {
+    const used = new Map<string, UsedDoi>()
+    for (const [recordId, list] of Object.entries(entries)) for (const entry of list) {
+      const doi = entry.wos?.doi ?? findDoi(entry.detail) ?? findDoi(entry.description)
+      if (doi && entry.id !== except && !used.has(doi)) used.set(doi, { recordId, description: entry.description })
+    }
+    return used
+  }
   const activePart = parts.find(part => part.id === tab)
   const activeScore = isu.scores.find(score => score.part.id === tab)
   const tabs: { id: Tab; label: string }[] = [{ id: 'records', label: 'Scored records' }, ...parts.map(part => ({ id: part.id, label: `${part.numeral} · ${part.name}` }))]
@@ -206,7 +218,10 @@ export function EvaluationForm() {
             <div className="evaluation-part-score"><strong>{pts(activeScore.raw)}</strong><span>{activePart.min !== undefined ? `of at least ${activePart.min}` : `${pts(activeScore.counted)} counted (max ${activePart.cap})`}</span></div>
           </div>
           {activePart.items.map(record => card(record, true))}
-        </> : records.map(record => card(record))}
+        </> : <>
+          {!closed && <MissingFromForm entries={entries} locked={locked} onAdd={article => setEditing({ recordId: 'article', initial: { description: citationOf(article), detail: article.doi } })} />}
+          {records.map(record => card(record))}
+        </>}
       </div>
       <aside className="evaluation-summary" aria-label="Evaluation summary">
         <section className="dashboard-card"><h2>Your score</h2><div className="evaluation-score"><strong>{score}</strong><span>/ 128 pts available</span></div><progress value={score} max={128} aria-label="Provisional score" /><small>Only approved entries count towards your final score. Provisional score includes submitted entries.{hiddenCount > 0 && ` Hidden entries don't count.`}</small></section>
@@ -239,7 +254,7 @@ export function EvaluationForm() {
         <section className="dashboard-card"><h2>Deadline</h2><div className="evaluation-deadline"><span><Icon name="imgIconClock" /></span><div><p>{deadlineLabel}</p><small>{closed ? 'The evaluation period has ended' : `${daysLeft} days left · set by your admin`}</small></div></div><small className="evaluation-check"><Icon name="imgIconMail" />Reminder emails are sent if the form is still a draft.</small><small>Until the deadline you can resubmit as often as you need, e.g. when a new article is published.</small></section>
       </aside>
     </div>
-    {editing && <EntryModal recordId={editing.recordId} entry={editing.entry} onClose={() => setEditing(null)} onSave={saveEntry} />}
+    {editing && <EntryModal recordId={editing.recordId} entry={editing.entry} initial={editing.initial} usedDois={usedDois(editing.entry?.id)} onClose={() => setEditing(null)} onSave={saveEntry} />}
     {contact && <ContactCoordinator topic={contact.topic} onClose={() => setContact(null)} />}
     <EvaluationModal open={review} onClose={() => setReview(false)}
       title={updating ? 'Resubmit evaluation?' : 'Submit evaluation for review?'}
