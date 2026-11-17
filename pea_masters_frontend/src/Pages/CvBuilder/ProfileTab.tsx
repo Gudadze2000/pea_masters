@@ -3,6 +3,9 @@ import { Link } from "react-router"
 import { CircleCheck, ExternalLink, LoaderCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { KeywordInput } from "@/components/forms/KeywordInput"
+import { Switch } from "@/components/forms/Switch"
+import { useStore } from "@/lib/store"
+import { savedResearch } from "@/Pages/Profile/profile-data"
 import { ApiError } from "@/lib/api"
 import { useMyProfile } from "@/lib/profile"
 import { fetchMyDocuments } from "@/lib/wos"
@@ -26,6 +29,7 @@ export function ProfileTab({ cv, change }: { cv: CvData; change: ChangeCv }) {
 
   const summaryLength = cv.personal.summary.length
   const { profile } = useMyProfile()
+  const profileInterests = useStore(savedResearch).interests
   const [metricsState, setMetricsState] = useState<{ busy: boolean; message: string | null }>({ busy: false, message: null })
 
   const fillMetrics = async () => {
@@ -59,15 +63,36 @@ export function ProfileTab({ cv, change }: { cv: CvData; change: ChangeCv }) {
 
       <section className="dashboard-card cv-card" aria-labelledby="cv-interests-heading">
         <div className="card-heading"><h2 id="cv-interests-heading">Research interests</h2></div>
-        <KeywordInput
-          id="cv-interests"
-          keywords={cv.interests}
-          onChange={interests => change(current => ({ ...current, interests }))}
-          label="Research interests"
-          inputLabel="New research interest"
-          showAddButton={false}
-          emptyText="No research interests yet. Add keywords that describe your research."
-        />
+        <div className="cv-switch-row">
+          <div>
+            <p id="cv-profile-interests-label">Use the interests from My profile</p>
+            <small id="cv-profile-interests-hint">Change them once, under My profile → Research. Turn this off to write a different list for the CV.</small>
+          </div>
+          <Switch id="cv-profile-interests" checked={cv.useProfileInterests} labelledBy="cv-profile-interests-label" describedBy="cv-profile-interests-hint"
+            onChange={useProfileInterests => change(current => ({
+              ...current, useProfileInterests,
+              // Starting a separate list: begin from the profile's, not from nothing
+              interests: !useProfileInterests && current.interests.length === 0 ? [...profileInterests] : current.interests,
+            }))} />
+        </div>
+        {cv.useProfileInterests ? (
+          profileInterests.length ? (
+            <ul className="keyword-chips" aria-label="Research interests from My profile">
+              {profileInterests.map(interest => <li key={interest} className="keyword-chip">{interest}</li>)}
+            </ul>
+          ) : <p className="field-hint">No research interests on your profile yet.</p>
+        ) : (
+          <KeywordInput
+            id="cv-interests"
+            keywords={cv.interests}
+            onChange={interests => change(current => ({ ...current, interests }))}
+            label="Research interests"
+            inputLabel="New research interest"
+            showAddButton={false}
+            emptyText="No research interests yet. Add keywords that describe your research."
+          />
+        )}
+        {cv.useProfileInterests && <Link className="field-hint cv-profile-link" to="/profile#research">Edit them in My profile → Research</Link>}
       </section>
 
       <section className="dashboard-card cv-card" aria-labelledby="cv-profiles-heading">

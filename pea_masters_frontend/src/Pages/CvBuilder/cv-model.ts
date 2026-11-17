@@ -58,6 +58,8 @@ export type CvData = {
   sections: { id: SectionId; enabled: boolean }[]
   personal: { headline: string; phone: string; summary: string }
   profiles: ProfileLinks
+  /** Show the research interests from My profile → Research instead of the CV's own list */
+  useProfileInterests: boolean
   interests: string[]
   publications: Publication[]
   talks: Talk[]
@@ -74,11 +76,11 @@ export type SectionMeta = { label: string; source: string }
 /** Where each section's content comes from, shown in "Sections & layout" */
 export const SECTION_META: Record<SectionId, SectionMeta> = {
   summary: { label: "Research statement", source: "CV builder" },
-  interests: { label: "Research interests", source: "CV builder" },
+  interests: { label: "Research interests", source: "My profile → Research, or CV builder" },
   appointments: { label: "Academic appointments", source: "Qualifications → Employment" },
   education: { label: "Education", source: "Qualifications → Education" },
   publications: { label: "Publications", source: "CV builder" },
-  grants: { label: "Grants & research projects", source: "Research overview" },
+  grants: { label: "Grants & research projects", source: "My profile → Research" },
   talks: { label: "Talks & presentations", source: "CV builder" },
   teaching: { label: "Teaching", source: "Teaching" },
   supervision: { label: "Student supervision", source: "Teaching" },
@@ -114,7 +116,8 @@ export const initialCv: CvData = {
     summary: "I study how plants adapt to drought and climate change, combining molecular genetics with field work on Caucasian wheat landraces. My lab maps drought-response genes and works with seed banks to keep local varieties available for breeding.",
   },
   profiles: { orcid: "", scopus: "", researcherId: "", scholar: "", researchGate: "", semanticScholar: "", website: "", github: "" },
-  interests: ["Plant molecular genetics", "Climate adaptation", "Caucasian flora", "Landraces"],
+  useProfileInterests: true,
+  interests: [],
   publications: [
     { id: "pub1", type: "Journal article", status: "Published", authors: "Beridze N; Mchedlidze D; Schulz K", title: "Allelic variation in drought-response genes of Caucasian wheat landraces", venue: "Plant Genetic Resources", year: "2024", volume: "22", issue: "3", pages: "145-158", doi: "10.5555/pea.2024.0145", url: "" },
     { id: "pub2", type: "Conference paper", status: "Published", authors: "Gelashvili A; Beridze N", title: "Root architecture of drought-tolerant wheat accessions under field conditions", venue: "Proceedings of the European Plant Science Conference", year: "2022", volume: "", issue: "", pages: "88-91", doi: "", url: "" },
@@ -129,6 +132,9 @@ export const initialCv: CvData = {
 }
 
 /* ---------- browser storage ---------- */
+
+/** The sample interests older CVs started with: not something the researcher chose */
+const LEGACY_SAMPLE_INTERESTS = "Plant molecular genetics|Climate adaptation|Caucasian flora|Landraces"
 
 const STORAGE_KEY = "pea.cv-builder.v1"
 
@@ -149,6 +155,9 @@ export function normaliseCv(raw: unknown): CvData | null {
     metrics: { ...initialCv.metrics, ...data.metrics },
     sections,
     interests: Array.isArray(data.interests) ? data.interests.filter(item => typeof item === "string") : [],
+    // CVs saved before this option: keep a list the researcher wrote themselves, otherwise follow the profile
+    useProfileInterests: typeof data.useProfileInterests === "boolean" ? data.useProfileInterests
+      : !(Array.isArray(data.interests) && data.interests.length > 0 && data.interests.join("|") !== LEGACY_SAMPLE_INTERESTS),
     publications: Array.isArray(data.publications) ? data.publications.map(pub => ({ ...emptyPublication(), ...pub, id: pub.id || crypto.randomUUID() })) : [],
     talks: Array.isArray(data.talks) ? data.talks.map(talk => ({ ...talk, id: talk.id || crypto.randomUUID() })) : [],
   }

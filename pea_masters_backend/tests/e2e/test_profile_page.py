@@ -114,3 +114,34 @@ def test_profile_is_one_page_with_contents(admin_page: Page, shot):
     page.goto("/profile/qualifications/awards/new")
     awards = page.get_by_role("region", name=re.compile("^Awards"))
     expect(awards.get_by_role("button", name="Save entry")).to_be_visible()
+
+
+def test_research_saved_on_the_profile_appears_on_the_cv(admin_page: Page):
+    """Projects and research interests saved under My profile → Research show on the CV; the CV can keep its own
+    interests instead. (Research is kept in the browser for now, so the CV is opened without reloading the page.)"""
+    page = admin_page
+    page.goto("/profile")
+    research = page.locator("#research")
+    research.get_by_role("button", name="Add project").click()
+    research.get_by_label(re.compile("^Project title")).fill("Svaneti seed survey")
+    research.get_by_label(re.compile("^Donor")).fill("GNSF")
+    research.get_by_label(re.compile("^Type")).select_option("Local")
+    research.get_by_label(re.compile("^Start year")).select_option("2025")
+    research.get_by_label(re.compile("^Your role")).select_option("PI")
+    research.get_by_role("button", name="Add project").last.click()
+    research.get_by_label("New research interest").fill("Mountain agriculture")
+    research.get_by_label("New research interest").press("Enter")
+    research.get_by_role("button", name="Save").click()
+    expect(research.get_by_role("status")).to_contain_text("Changes saved")
+
+    page.get_by_role("button", name="CV builder").click()
+    cv = page.locator(".cv-paper")
+    expect(cv).to_contain_text("Svaneti seed survey")
+    expect(cv).to_contain_text("Mountain agriculture")
+
+    # A separate list for the CV starts from the profile's and then goes its own way
+    page.get_by_role("switch", name="Use the interests from My profile").click()
+    page.get_by_label("New research interest").fill("Only on my CV")
+    page.get_by_label("New research interest").press("Enter")
+    expect(cv).to_contain_text("Only on my CV")
+    expect(cv).to_contain_text("Mountain agriculture")

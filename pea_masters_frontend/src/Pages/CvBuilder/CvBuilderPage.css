@@ -295,3 +295,10 @@
 .cv-wos-item-done { cursor: default; opacity: .65; }
 .cv-wos-item-done:hover { background: none; }
 .cv-wos-warn { color: var(--color-warning-600) !important; }
+
+/* "Use the interests from My profile" */
+.cv-switch-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 12px 14px; border-radius: 10px; background: var(--muted); }
+.cv-switch-row p { font-size: 14px; line-height: 22px; font-weight: 500; }
+.cv-switch-row small { display: block; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.cv-switch-row .switch { flex-shrink: 0; margin-top: 2px; }
+.cv-profile-link { color: var(--primary); }
