@@ -5,7 +5,10 @@
    don't shift sideways when they grow long enough to scroll, and the top bar always runs the full width. */
 .dashboard-main { position: relative; min-width: 0; flex: 1; height: 100svh; display: flex; flex-direction: column; }
 .dashboard-main > .dashboard-topbar { flex-shrink: 0; }
-.dashboard-main > .dashboard-content { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+/* position: relative makes the content the containing block of absolutely positioned children (e.g. .sr-only
+   labels), so it clips them. Otherwise they're positioned against .dashboard-main, stretch the page and add a
+   second, page-level scrollbar. */
+.dashboard-main > .dashboard-content { position: relative; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .dashboard-main > .dashboard-content::-webkit-scrollbar { display: none; }
 
 /* Custom scrollbar (ContentScrollbar.tsx): shows while scrolling or while the pointer is over the content,
