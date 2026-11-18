@@ -238,6 +238,11 @@ Connection details for tools like DBeaver: host `127.0.0.1`, port `5434`, databa
 
 ## 7. Tests and code checks
 
+GitHub runs the same checks automatically on every pull request and on every push to `main` and
+`backup_test_branch` (`.github/workflows/ci.yml`): lint, API tests, the frontend build and the browser tests. The result
+shows on the pull request; merge only when it's green. If the browser tests fail, the run keeps their screenshots and
+server logs for 7 days (open the run → *Artifacts*).
+
 Run these in `pea_masters_backend` with Docker Desktop running. Tests use their own databases and never touch your data.
 
 ```powershell
