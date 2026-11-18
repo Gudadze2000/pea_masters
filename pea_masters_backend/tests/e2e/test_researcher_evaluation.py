@@ -306,6 +306,8 @@ def test_connect_orcid_and_import_works(admin_page: Page, shot):
     sheet.get_by_role("button", name="Add 2 publications").click()
     expect(page.get_by_role("status").filter(has_text="from ORCID")).to_contain_text("2 publications added from ORCID.")
     expect(page.locator(".cv-pub-card", has_text="Seed banks of Georgia")).to_contain_text("Admin T")
+    page.get_by_role("button", name="Save", exact=True).click()
+    expect(page.locator(".cv-save-status")).to_contain_text("Saved ·")
 
     page.get_by_role("button", name="My profile", exact=True).click()
     card.get_by_role("button", name="Disconnect to change it").click()

@@ -52,11 +52,12 @@ export function Segmented<T extends string>({ label, value, options, onChange, c
 }
 
 /** Confirmation dialog with the same look as "Delete this entry?" on Qualifications */
-export function ConfirmDialog({ open, title, description, confirmLabel, danger, onConfirm, onCancel }: {
+export function ConfirmDialog({ open, title, description, confirmLabel, cancelLabel = "Cancel", danger, onConfirm, onCancel }: {
   open: boolean
   title: string
   description: ReactNode
   confirmLabel: string
+  cancelLabel?: string
   danger?: boolean
   onConfirm: () => void
   onCancel: () => void
@@ -69,7 +70,7 @@ export function ConfirmDialog({ open, title, description, confirmLabel, danger, 
           <AlertDialog.Title className="confirm-title">{title}</AlertDialog.Title>
           <AlertDialog.Description className="confirm-description" render={<div />}>{description}</AlertDialog.Description>
           <div className="confirm-actions">
-            <AlertDialog.Close render={<Button variant="outline" className="dashboard-button" />}>Cancel</AlertDialog.Close>
+            <AlertDialog.Close render={<Button variant="outline" className="dashboard-button" />}>{cancelLabel}</AlertDialog.Close>
             <Button className={`dashboard-button ${danger ? "danger-solid" : ""}`} onClick={onConfirm}>{confirmLabel}</Button>
           </div>
         </AlertDialog.Popup>

@@ -152,6 +152,32 @@ def test_profile_is_one_page_with_contents(admin_page: Page, shot, tmp_path):
     expect(awards.get_by_role("button", name="Save entry")).to_be_visible()
 
 
+def test_a_cv_kept_in_the_browser_moves_to_the_server(admin_page: Page):
+    """CVs used to live in the browser and start from a sample CV. Opening the CV builder moves the browser copy to the
+    server once, without the sample items, and forgets the browser copy."""
+    page = admin_page
+    page.goto("/home")
+    old_cv = {"data": {"version": 1, "visibility": "private", "personal": {
+        "headline": "Associate Professor of Biology", "phone": "",
+        "summary": "I study how plants adapt to drought and climate change, combining molecular genetics..."},
+        "publications": [
+            {"id": "pub1", "type": "Journal article", "status": "Published", "title": "Allelic variation (sample)"},
+            {"id": "mine", "type": "Book", "status": "Published", "title": "My own book", "authors": "Admin T"}],
+        "talks": [{"id": "talk1", "title": "Mining landraces (sample)", "type": "Keynote"}]}, "savedAt": 1}
+    page.evaluate("cv => localStorage.setItem('pea.cv-builder.v1', JSON.stringify(cv))", old_cv)
+
+    page.get_by_role("button", name="CV builder").click()
+    expect(page.get_by_role("status").filter(has_text="from this browser")).to_contain_text(
+        "Your CV from this browser is now saved on the server.")
+    expect(page.locator(".cv-paper")).to_contain_text("My own book")
+    expect(page.locator(".cv-paper")).not_to_contain_text("(sample)")
+    expect(page.get_by_role("textbox", name="Research statement")).to_have_value("")
+    assert page.evaluate("localStorage.getItem('pea.cv-builder.v1')") is None
+
+    page.reload()
+    expect(page.locator(".cv-paper")).to_contain_text("My own book")  # it's on the server now
+
+
 def test_research_saved_on_the_profile_appears_on_the_cv(admin_page: Page):
     """Projects and research interests saved under My profile → Research are kept on the server and show on the CV;
     the CV can keep its own interests instead."""
@@ -183,6 +209,23 @@ def test_research_saved_on_the_profile_appears_on_the_cv(admin_page: Page):
     page.get_by_label("New research interest").press("Enter")
     expect(cv).to_contain_text("Only on my CV")
     expect(cv).to_contain_text("Mountain agriculture")
+
+    # The CV is saved with the Save button; leaving with unsaved changes asks first
+    statement = "I map drought-response genes in Caucasian wheat."
+    page.get_by_role("textbox", name="Research statement").fill(statement)
+    expect(page.locator(".cv-save-status")).to_have_text("Unsaved changes")
+    page.get_by_role("button", name="My profile", exact=True).click()
+    leave = page.get_by_role("alertdialog")
+    expect(leave).to_contain_text("Leave without saving?")
+    leave.get_by_role("button", name="Stay on this page").click()
+    expect(page).to_have_url(re.compile(r"/cv-builder$"))
+    expect(page.get_by_role("textbox", name="Research statement")).to_have_value(statement)  # nothing lost
+
+    page.get_by_role("button", name="Save", exact=True).click()
+    expect(page.locator(".cv-save-status")).to_contain_text("Saved ·")
+    page.reload()
+    expect(page.get_by_role("textbox", name="Research statement")).to_have_value(statement)
+    expect(page.locator(".cv-paper")).to_contain_text("Only on my CV")
 
 
 def test_video_lectures_play_on_the_profile(admin_page: Page, shot):

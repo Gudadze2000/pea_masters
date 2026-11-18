@@ -117,7 +117,7 @@ export function LayoutTab({ cv, change, counts, replace }: Props) {
         open={pending !== null}
         title={pending?.kind === "reset" ? "Start over?" : "Replace your CV with this backup?"}
         description={pending?.kind === "reset"
-          ? "Your publications, talks, links and layout choices on this page will be replaced with the sample CV. Your profile pages aren't affected."
+          ? "Your statement, publications, talks, links and layout choices on this page will be cleared. Your profile pages aren't affected."
           : "Everything on this page will be replaced with the backup. Export a backup first if you want to keep the current version."}
         confirmLabel={pending?.kind === "reset" ? "Start over" : "Replace"}
         danger
@@ -125,7 +125,7 @@ export function LayoutTab({ cv, change, counts, replace }: Props) {
         onConfirm={() => {
           // Visibility never changes through an import: going public always needs the explicit confirmation
           if (pending?.kind === "import") replace({ ...pending.data, visibility: cv.visibility }, "Backup imported.")
-          else replace(initialCv, "CV reset to the sample data. It is private again.")
+          else replace(initialCv, "CV cleared. It is private again.")
           setPending(null)
         }}
       />

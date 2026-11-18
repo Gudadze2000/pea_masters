@@ -277,3 +277,11 @@ class ProfileEntryFile(Base):
     entry_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profile_entries.id", ondelete="CASCADE"), primary_key=True)
     file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("files.id"), primary_key=True)
     position: Mapped[int] = mapped_column(server_default="0")
+
+
+class Cv(Base):
+    """The CV builder's CV for one person (app/cv.py)"""
+    __tablename__ = "cvs"
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    data: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())

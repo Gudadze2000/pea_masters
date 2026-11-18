@@ -302,3 +302,6 @@
 .cv-switch-row small { display: block; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
 .cv-switch-row .switch { flex-shrink: 0; margin-top: 2px; }
 .cv-profile-link { color: var(--primary); }
+
+/* Save button: unsaved changes */
+.cv-save-status.unsaved { color: var(--color-warning-600); font-weight: 500; }
