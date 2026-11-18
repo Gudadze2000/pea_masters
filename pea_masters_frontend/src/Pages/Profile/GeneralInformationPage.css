@@ -70,3 +70,13 @@
 .identifiers-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
 @media (max-width: 1099.98px) { .identifiers-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 767.98px) { .identifiers-card .card-heading { flex-direction: column; } }
+.identifier-label { font-size: 14px; line-height: 22px; font-weight: 500; }
+.identifier-verified { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 40px; }
+.identifier-verified a { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-weight: 500; }
+.identifier-verified a svg { width: 14px; height: 14px; }
+.identifier-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; background: var(--success-soft); color: var(--success); font-size: 12px; line-height: 18px; font-weight: 500; }
+.identifier-badge svg { width: 14px; height: 14px; }
+.identifier-connect { align-self: flex-start; margin-top: 4px; height: 36px; text-decoration: none; }
+.identifiers-outcome { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--success-soft); color: var(--success); font-size: 14px; }
+.identifiers-outcome svg { width: 18px; height: 18px; flex-shrink: 0; }
+.identifiers-card .form-field { display: flex; flex-direction: column; gap: 4px; }

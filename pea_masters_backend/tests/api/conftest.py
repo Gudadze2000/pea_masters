@@ -10,6 +10,11 @@ os.environ["GOOGLE_CLIENT_SECRET"] = "test-secret"
 os.environ["SESSION_SECRET"] = "test-session-secret"
 os.environ["PUBLIC_URL"] = "http://localhost:5173"
 os.environ["SECURE_COOKIES"] = "false"
+# ORCID is never called either: tests/api/test_orcid.py replaces its calls. These keep the real .env values out.
+os.environ["ORCID_CLIENT_ID"] = "APP-TESTCLIENT"
+os.environ["ORCID_CLIENT_SECRET"] = "test-orcid-secret"
+os.environ["ORCID_BASE_URL"] = "https://orcid.test"
+os.environ["ORCID_REDIRECT_URI"] = "https://forwarder.test/pea-orcid/callback/"
 os.environ["CLARIVATE_API_KEY"] = "test-key"  # Clarivate itself is replaced in tests/api/test_wos.py
 os.environ["STORAGE_DIR"] = tempfile.mkdtemp(prefix="pea-test-storage-")  # uploads go to a throwaway folder
 

@@ -186,6 +186,7 @@ class Profile(Base):
     biography: Mapped[dict[str, str]] = mapped_column(JSONB, server_default="{}")  # {"en": html, "ka": html}
     # {"orcid": ..., "researcher_id": ..., "scopus_id": ...}, see app/identifiers.py
     identifiers: Mapped[dict[str, str]] = mapped_column(JSONB, server_default="{}")
+    orcid_verified_at: Mapped[datetime | None]  # set by "Connect ORCID" (app/orcid.py)
     photo_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("files.id"))
     is_public: Mapped[bool] = mapped_column(server_default="false")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

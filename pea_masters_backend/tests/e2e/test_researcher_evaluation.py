@@ -277,3 +277,39 @@ def test_research_output_overview(admin_page: Page, google_sign_in, shot):
     expect(rows).to_have_count(2)
     expect(head.locator(".research-output")).to_contain_text(RESEARCHER[0])
     expect(head.get_by_label("Faculty or department")).to_have_count(0)
+
+
+def test_connect_orcid_and_import_works(admin_page: Page, shot):
+    """"Connect ORCID iD" sends the person to ORCID (the fake one approves at once) and back; the iD is then verified.
+    The CV builder imports the record's public works. Disconnecting makes the iD editable again."""
+    page = admin_page
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.goto("/profile#identifiers")
+    card = page.locator("#identifiers")
+    card.get_by_role("link", name="Connect ORCID iD").click()
+
+    expect(page).to_have_url(re.compile(r"/profile#identifiers$"))  # the outcome is dropped from the address
+    expect(card.get_by_role("status").filter(has_text="ORCID")).to_have_text(
+        "Your ORCID iD is connected: PEA now knows it really is yours.")
+    expect(card.get_by_text("Verified with ORCID")).to_be_visible()
+    expect(card.get_by_role("link", name=fake_clarivate.ORCID_ID)).to_be_visible()
+    assert fake_clarivate.requests.count("orcid:token") == 1
+    shot(page, "profile-03-orcid-connected")
+
+    page.get_by_role("button", name="CV builder").click()
+    page.get_by_role("tab", name="Publications").click()
+    page.get_by_role("button", name="Import from ORCID").click()
+    sheet = page.get_by_role("dialog")
+    expect(sheet).to_contain_text(f"2 public works on ORCID record {fake_clarivate.ORCID_ID}.")
+    expect(sheet.locator(".cv-wos-item")).to_have_count(2)
+    sheet.get_by_role("button", name="Add 2 publications").click()
+    expect(page.get_by_role("status").filter(has_text="from ORCID")).to_contain_text("2 publications added from ORCID.")
+    expect(page.locator(".cv-pub-card", has_text="Seed banks of Georgia")).to_contain_text("Admin T")
+
+    page.get_by_role("button", name="My profile", exact=True).click()
+    card.get_by_role("button", name="Disconnect to change it").click()
+    expect(card.get_by_role("textbox", name="ORCID iD")).to_have_value(fake_clarivate.ORCID_ID)
+    expect(card.get_by_role("link", name="Connect ORCID iD")).to_be_visible()
+
+    assert not errors, errors

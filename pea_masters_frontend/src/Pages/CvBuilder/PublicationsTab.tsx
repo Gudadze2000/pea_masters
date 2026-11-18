@@ -9,7 +9,7 @@ import { ConfirmDialog, Field, Segmented } from "./cv-ui"
 import { type ChangeCv, yearError } from "./form-utils"
 import { cleanDoi, isDoi, isHttpUrl } from "./identifiers"
 import { fetchDoi, parseBibtex, publicationKey, type PublicationDraft } from "./importers"
-import { WosImportSheet } from "./WosImportSheet"
+import { ImportSheet, type ImportSource } from "./ImportSheet"
 
 const publicationFields: FieldDef[] = [
   { name: "type", label: "Type", type: "select", required: true, span: 2, options: PUBLICATION_TYPES },
@@ -33,7 +33,7 @@ export function PublicationsTab({ cv, change }: { cv: CvData; change: ChangeCv }
   const [editor, setEditor] = useState<Editor | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [bibtexOpen, setBibtexOpen] = useState(false)
-  const [wosOpen, setWosOpen] = useState(false)
+  const [importFrom, setImportFrom] = useState<ImportSource | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const session = useRef(0)
@@ -67,7 +67,8 @@ export function PublicationsTab({ cv, change }: { cv: CvData; change: ChangeCv }
         <div className="card-heading cv-card-heading-wrap">
           <h2 id="cv-publications-heading">Publications <span className="count-badge">{cv.publications.length}</span></h2>
           <div className="cv-card-actions">
-            <Button variant="outline" className="dashboard-button compact" onClick={() => setWosOpen(true)}><Download />Import from Web of Science</Button>
+            <Button variant="outline" className="dashboard-button compact" onClick={() => setImportFrom("wos")}><Download />Import from Web of Science</Button>
+            <Button variant="outline" className="dashboard-button compact" onClick={() => setImportFrom("orcid")}><Download />Import from ORCID</Button>
             <Button variant="outline" className="dashboard-button compact" onClick={() => setBibtexOpen(true)}><FileUp />Import BibTeX</Button>
             <Button className="dashboard-button compact" onClick={() => openEditor(null)}><Plus />Add publication</Button>
           </div>
@@ -169,14 +170,16 @@ export function PublicationsTab({ cv, change }: { cv: CvData; change: ChangeCv }
         }}
       />
 
-      <WosImportSheet
-        open={wosOpen}
-        onOpenChange={setWosOpen}
+      <ImportSheet
+        source={importFrom ?? "wos"}
+        open={importFrom !== null}
+        onOpenChange={open => { if (!open) setImportFrom(null) }}
         existingKeys={existingKeys}
         onImport={drafts => {
+          const from = importFrom === "orcid" ? "ORCID" : "Web of Science"
           change(current => ({ ...current, publications: [...drafts.map(draft => ({ ...draft, id: crypto.randomUUID() })), ...current.publications] }))
-          setNotice(drafts.length === 1 ? "1 publication added from Web of Science." : `${drafts.length} publications added from Web of Science.`)
-          setWosOpen(false)
+          setNotice(`${drafts.length === 1 ? "1 publication" : `${drafts.length} publications`} added from ${from}.${importFrom === "orcid" ? " Check their authors: ORCID lists only you." : ""}`)
+          setImportFrom(null)
         }}
       />
 

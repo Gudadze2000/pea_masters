@@ -35,6 +35,12 @@ os.environ["STORAGE_DIR"] = tempfile.mkdtemp(prefix="pea-e2e-storage-")  # uploa
 os.environ["WOS_STARTER_URL"] = f"http://127.0.0.1:{CLARIVATE_PORT}/v1"
 os.environ["CLARIVATE_API_KEY"] = "e2e-key"  # overrides the real key in .env
 os.environ["CROSSREF_URL"] = f"http://127.0.0.1:{CLARIVATE_PORT}/crossref"  # the same fake server answers for Crossref
+# ...and for ORCID, whose sign-in it approves at once and sends straight back to PEA (no forwarding page in tests)
+os.environ["ORCID_CLIENT_ID"] = "APP-E2E"
+os.environ["ORCID_CLIENT_SECRET"] = "e2e-orcid-secret"
+os.environ["ORCID_BASE_URL"] = f"http://127.0.0.1:{CLARIVATE_PORT}/orcid"
+os.environ["ORCID_API_URL"] = f"http://127.0.0.1:{CLARIVATE_PORT}/orcid-pub/v3.0"
+os.environ["ORCID_REDIRECT_URI"] = f"{APP_URL}/api/v1/orcid/callback"
 
 import psycopg  # noqa: E402
 import pytest  # noqa: E402

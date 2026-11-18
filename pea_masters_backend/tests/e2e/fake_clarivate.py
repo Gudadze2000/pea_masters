@@ -1,13 +1,16 @@
 """A stand-in for Clarivate's Web of Science Starter API, for the browser tests. It answers GET /v1/documents like the
 real API (same JSON shape): DOI look-ups (q=DO="…") from RECORDS and author searches (q=AI=(…) AND PY=(from-to), with
 paging) from AUTHORS, and journals (GET /v1/journals?issn=) from JOURNALS. It insists on the X-ApiKey header and counts
-requests so tests can check that PEA caches. It also plays Crossref (GET /crossref/works/{doi}) from WORKS."""
+requests so tests can check that PEA caches. It also plays Crossref (GET /crossref/works/{doi}) from WORKS, and
+ORCID: /orcid/oauth/authorize approves
+at once and redirects back with a code, /orcid/oauth/token answers with ORCID_ID, and /orcid-pub/v3.0/{id}/works lists
+ORCID_WORKS."""
 
 import json
 import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 KEY = "e2e-key"
 
@@ -56,6 +59,18 @@ JOURNALS = {"1432-2048": {"id": "PLANTA-2025", "name": "PLANTA", "isoTitle": "Pl
                           "eIssn": "1432-2048", "links": [{"type": "Journal Citation Report record",
                                                            "url": "https://www.webofscience.com/jcr/planta"}]}}
 
+# The ORCID record the fake sign-in returns, and its public works
+ORCID_ID = "0000-0002-1825-0097"
+ORCID_WORKS = {"group": [
+    {"work-summary": [{"put-code": 1, "type": "journal-article",
+                       "title": {"title": {"value": "Barley in the Caucasus"}},
+                       "journal-title": {"value": "Genetic Resources"}, "publication-date": {"year": {"value": "2022"}},
+                       "external-ids": {"external-id": [{"external-id-type": "doi",
+                                                         "external-id-value": "10.5555/pea.e2e.orcid-1"}]}}]},
+    {"work-summary": [{"put-code": 2, "type": "book-chapter", "title": {"title": {"value": "Seed banks of Georgia"}},
+                       "publication-date": {"year": {"value": "2020"}}, "external-ids": {"external-id": []}}]},
+]}
+
 requests: list[str] = []  # DOIs and author queries asked for, in order
 
 
@@ -63,6 +78,16 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802 (http.server's naming)
         url = urlparse(self.path)
         params = parse_qs(url.query)
+        if url.path == "/orcid/oauth/authorize":
+            requests.append("orcid:authorize")
+            back = params["redirect_uri"][0] + "?" + urlencode({"code": "e2e-code", "state": params["state"][0]})
+            self.send_response(302)
+            self.send_header("Location", back)
+            self.end_headers()
+            return None
+        if url.path.startswith("/orcid-pub/v3.0/") and url.path.endswith("/works"):
+            requests.append("orcid:works")
+            return self.reply(200, ORCID_WORKS)
         if url.path.startswith("/crossref/works/"):
             doi = url.path.removeprefix("/crossref/works/")
             requests.append(f"crossref:{doi}")
@@ -91,6 +116,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(400, {"message": f"unsupported query {query}"})
         self.reply(200, {"metadata": {"total": len(hits), "page": page, "limit": limit},
                          "hits": hits[(page - 1) * limit:page * limit]})
+
+    def do_POST(self):  # noqa: N802 (http.server's naming)
+        if urlparse(self.path).path != "/orcid/oauth/token":
+            return self.reply(404, {"message": "no"})
+        form = parse_qs(self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode())
+        if form.get("client_secret") != ["e2e-orcid-secret"]:
+            return self.reply(401, {"error": "invalid_client"})
+        if form.get("grant_type") == ["authorization_code"]:
+            requests.append("orcid:token")
+            return self.reply(200, {"access_token": "e2e", "orcid": ORCID_ID, "name": "Test Admin"})
+        return self.reply(200, {"access_token": "e2e-read-public", "scope": "/read-public"})
 
     def reply(self, status: int, body: dict):
         data = json.dumps(body).encode()

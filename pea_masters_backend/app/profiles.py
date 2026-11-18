@@ -70,6 +70,7 @@ class ProfileOut(BaseModel):
     biography: dict[str, str]  # {"en": html, "ka": html}
     photo_url: str | None
     identifiers: Identifiers
+    orcid_verified: bool  # the ORCID iD was proven by signing in to ORCID
     affiliations: list[AffiliationOut]  # one per organization the person is an active member of
     updated_at: datetime | None
 
@@ -137,6 +138,7 @@ def build_profile(db: Session, user: User) -> ProfileOut:
         email=user.email, biography=dict(profile.biography) if profile else {},
         photo_url=photo_url(profile.photo_file_id) if profile else None,
         identifiers=Identifiers.model_construct(**(profile.identifiers if profile else {})),
+        orcid_verified=bool(profile and profile.orcid_verified_at),
         affiliations=affiliations, updated_at=profile.updated_at if profile else None,
     )
 
@@ -202,6 +204,8 @@ def update_my_identifiers(body: Identifiers, request: Request, user: User = Depe
             identifiers[key] = value
         else:
             identifiers.pop(key, None)
+    if identifiers.get("orcid") != profile.identifiers.get("orcid"):
+        profile.orcid_verified_at = None
     if identifiers != profile.identifiers:
         audit.record(db, "profile.identifiers_updated", entity_type="profile", entity_id=user.id,
                      actor_user_id=user.id, before=dict(profile.identifiers), after=identifiers,

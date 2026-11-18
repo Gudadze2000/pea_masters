@@ -98,3 +98,8 @@ export function crossrefCitation(work: CrossrefWork) {
   const authors = names.join("; ") + (work.authors.length > names.length ? " et al." : "")
   return `${authors}${work.year ? ` (${work.year})` : ""}. ${work.title ?? ""}. ${work.container_title ?? work.publisher ?? ""}.`.replace(/\s+/g, " ").replace(/^\. /, "").trim()
 }
+
+/** GET /api/v1/orcid/me/works: public works on the person's ORCID record (app/orcid.py) */
+export type OrcidWork = { put_code: number; title: string; type: string | null; year: number | null; journal: string | null; doi: string | null; url: string | null }
+export type OrcidWorks = { orcid: string; verified: boolean; works: OrcidWork[]; checked_at: string }
+export const fetchOrcidWorks = () => api<OrcidWorks>("/orcid/me/works")

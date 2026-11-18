@@ -279,7 +279,7 @@
 @keyframes cv-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .cv-spin { animation: none; } }
 
-/* Import from Web of Science (WosImportSheet.tsx) */
+/* Import from Web of Science or ORCID (ImportSheet.tsx) */
 .cv-wos-body { display: flex; flex-direction: column; gap: 12px; }
 .cv-wos-status { display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
 .cv-wos-status:has(svg) { flex-direction: row; align-items: center; gap: 8px; }

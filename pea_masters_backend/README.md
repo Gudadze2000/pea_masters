@@ -65,6 +65,18 @@ Related endpoints:
   output per person and year for Admins (whole organization, a faculty or a department) and heads of department
   (their department); People → Research output.
 
+ORCID (`app/orcid.py`, free Public API): **Connect ORCID iD** (My profile → Research identifiers) sends the person to
+ORCID to sign in; ORCID returns to `/api/v1/orcid/callback`, PEA checks the one-time state and stores the iD as verified
+(`profiles.orcid_verified_at`; changing the iD by hand drops it). `GET /api/v1/orcid/me/works` lists the record's public
+works for the CV builder's **Import from ORCID**. Settings: `ORCID_CLIENT_ID`, `ORCID_CLIENT_SECRET`, `ORCID_BASE_URL`
+(`https://sandbox.orcid.org` for testing, `https://orcid.org` for real use) and `ORCID_REDIRECT_URI`.
+
+ORCID only accepts `https` redirect URIs, never `localhost`. In development the registered redirect URI is a small
+forwarding page on GitHub Pages (`https://<user>.github.io/pea-orcid/callback/`) that sends the browser on to
+`http://localhost:5173/api/v1/orcid/callback`. Once PEA has its own `https` address, register
+`https://<pea-address>/api/v1/orcid/callback` and leave `ORCID_REDIRECT_URI` empty. ORCID Public API credentials are
+personal to whoever registers them and can't be transferred.
+
 Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
 written to the audit log.
 
