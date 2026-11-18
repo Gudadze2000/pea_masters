@@ -7,16 +7,13 @@ import { useIdentity, type MyProfile } from "@/lib/profile"
 import { useStore } from "@/lib/store"
 import { savedResearch, savedTeachingInterests } from "../profile-data"
 import { profileSections, type Entry } from "../qualifications/sections"
-import { programmes } from "../teaching/teachingMock"
+import { programmes } from "../teaching/argus"
 import { PublicProfile, type PublicProfileData } from "./PublicProfile"
 
 type Props = { open: boolean; onClose: () => void; profile: MyProfile; entries: Record<string, Entry[]> }
 
-/** Visitors only see entries an admin has approved, as on the public CV */
-const isPublic = (entry: Entry) => entry.status === "approved"
-
 /**
- * "Preview public profile": the owner's saved profile exactly as other people see it, with a note on what's left out.
+ * "Preview public profile": the owner's saved profile exactly as other people see it.
  */
 export function PublicProfilePreview({ open, onClose, profile, entries }: Props) {
   const identity = useIdentity()
@@ -38,16 +35,12 @@ export function PublicProfilePreview({ open, onClose, profile, entries }: Props)
       email: identity.email,
       biography: lang ? { html: profile.biography[lang]!, lang } : null,
       qualifications: profileSections
-        .map(section => ({ section, entries: (entries[section.id] ?? []).filter(isPublic) }))
+        .map(section => ({ section, entries: entries[section.id] ?? [] }))
         .filter(group => group.entries.length > 0),
       teaching: { interests, programmes },
       research,
     }
   }, [identity, language, profile, entries, interests, research])
-
-  const hidden = Object.values(entries).flat().filter(entry => !isPublic(entry))
-  const pending = hidden.filter(entry => entry.status === "submitted").length
-  const notShown = hidden.length - pending
 
   return (
     <Dialog.Root open={open} onOpenChange={value => { if (!value) onClose() }}>
@@ -63,14 +56,6 @@ export function PublicProfilePreview({ open, onClose, profile, entries }: Props)
             </div>
             <Dialog.Close render={<Button variant="outline" size="icon" className="icon-button" aria-label="Close preview" />}><X /></Dialog.Close>
           </div>
-
-          {hidden.length > 0 && (
-            <p className="public-preview-note">
-              Only entries approved by a reviewer appear here.
-              {pending > 0 && ` ${pending === 1 ? "1 entry is" : `${pending} entries are`} waiting for review.`}
-              {notShown > 0 && ` ${notShown === 1 ? "1 draft or rejected entry is" : `${notShown} drafts or rejected entries are`} hidden.`}
-            </p>
-          )}
 
           <div className="public-preview-body">
             <PublicProfile data={data} />

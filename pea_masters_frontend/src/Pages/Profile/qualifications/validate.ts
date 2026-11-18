@@ -1,4 +1,3 @@
-import type { SaveMode } from "./qualifications-store"
 import { allFields, type EntryValues, type SectionDef } from "./sections"
 
 /** "gnsf.ge/x" → "https://gnsf.ge/x" so people don't have to type the protocol */
@@ -13,11 +12,11 @@ function isValidUrl(value: string) {
   }
 }
 
-/** Returns field name → error message. Drafts only need the title field. */
-export function validateEntry(section: SectionDef, values: EntryValues, mode: SaveMode) {
+/** Returns field name → error message */
+export function validateEntry(section: SectionDef, values: EntryValues) {
   const fields = allFields(section)
   const errors: Record<string, string> = {}
-  const required = mode === "draft" ? fields.filter(field => field.name === section.titleField) : fields.filter(field => field.required)
+  const required = fields.filter(field => field.required)
   for (const field of required) {
     if (!values[field.name]?.trim()) errors[field.name] = `${field.label} is required.`
   }

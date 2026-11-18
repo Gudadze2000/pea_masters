@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app import audit, storage
 from app.auth.sessions import client_ip, current_user
-from app.authz import Action, Actor, authorize, get_actor, get_organization
+from app.authz import Action, Actor, authorize, coordinated_members, get_actor, get_organization
 from app.db import get_db
 from app.errors import problem
 from app.identifiers import Identifiers
@@ -306,14 +306,23 @@ def person_profile(org_id: uuid.UUID, user_id: uuid.UUID, actor: Actor = Depends
 
 @router.get("/api/v1/files/{file_id}", response_class=FileResponse)
 def get_file(file_id: uuid.UUID, actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
-    """Serves an uploaded file to its owner, Root, and anyone sharing an organization with the owner."""
+    """Serves an uploaded file to its owner and Root. Photos also to anyone sharing an organization with the owner;
+    supporting documents only to those who review the owner: Admins of their organization and their head of
+    department."""
     file = db.get(File, file_id)
     if file is None or file.deleted_at is not None:
         raise problem(status.HTTP_404_NOT_FOUND, "not_found", "File not found.")
     if not (actor.is_root or file.owner_user_id == actor.user.id):
         owner_orgs = set(db.scalars(select(OrganizationMembership.organization_id).where(
             OrganizationMembership.user_id == file.owner_user_id)))
-        if not owner_orgs & set(actor.roles):
+        if file.purpose == "document":
+            allowed = any("admin" in actor.roles_in(org) or (
+                "coordinator" in actor.roles_in(org)
+                and file.owner_user_id in set(db.scalars(coordinated_members(actor.user.id, org))))
+                for org in owner_orgs)
+        else:
+            allowed = bool(owner_orgs & set(actor.roles))
+        if not allowed:
             raise problem(status.HTTP_404_NOT_FOUND, "not_found", "File not found.")  # don't reveal it exists
     return FileResponse(
         storage.path_of(file.storage_key), media_type=file.mime_type,

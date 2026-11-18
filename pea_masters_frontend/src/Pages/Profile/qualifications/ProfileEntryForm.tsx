@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
-import { TriangleAlert, X } from "lucide-react"
+import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DocumentUpload } from "./DocumentUpload"
 import { FormField } from "@/components/forms/FormField"
-import { useQualifications, type SaveMode } from "./qualifications-store"
+import { ApiError } from "@/lib/api"
+import { useQualifications } from "./qualifications-store"
 import { allFields, capitalize, type Entry, type EntryDocument, type EntryValues, type SectionDef } from "./sections"
 import { cleanValues, validateEntry } from "./validate"
 import "./QualificationsPage.css"
@@ -15,6 +16,9 @@ export function ProfileEntryForm({ section, entry, onClose }: { section: Section
   const [documents, setDocuments] = useState<EntryDocument[]>(() => entry?.documents ?? [])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [dirty, setDirty] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
@@ -36,18 +40,26 @@ export function ProfileEntryForm({ section, entry, onClose }: { section: Section
     if (errors[name]) setErrors(current => { const next = { ...current }; delete next[name]; return next })
   }
 
-  const save = (mode: SaveMode, event?: FormEvent) => {
+  const save = async (event?: FormEvent) => {
     event?.preventDefault()
-    const found = validateEntry(section, values, mode)
+    if (saving || uploading) return
+    const found = validateEntry(section, values)
     setErrors(found)
     const firstInvalid = allFields(section).find(field => found[field.name])
     if (firstInvalid) {
       formRef.current?.querySelector<HTMLElement>(`#field-${firstInvalid.name}`)?.focus()
       return
     }
-    saveEntry(section.id, entry?.id ?? null, cleanValues(section, values), documents, mode)
-    flash(mode === "draft" ? `${capitalize(section.noun)} saved as draft.` : `${capitalize(section.noun)} submitted for review.`)
-    onClose()
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await saveEntry(section.id, entry?.id ?? null, cleanValues(section, values), documents)
+      flash(`${capitalize(section.noun)} saved.`)
+      onClose()
+    } catch (cause) {
+      setSaveError(cause instanceof ApiError ? cause.message : "It couldn't be saved. Check your connection and try again.")
+      setSaving(false)
+    }
   }
 
   const errorCount = Object.keys(errors).length
@@ -59,17 +71,8 @@ export function ProfileEntryForm({ section, entry, onClose }: { section: Section
         <div><h3 id="profile-entry-editor-title">{title}</h3><p>{section.formDescription}</p></div>
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Cancel editing" onClick={onClose}><X /></Button>
       </div>
-          <form ref={formRef} className="profile-entry-fields" aria-labelledby="profile-entry-editor-title" noValidate onSubmit={event => save("submit", event)}>
+          <form ref={formRef} className="profile-entry-fields" aria-labelledby="profile-entry-editor-title" noValidate onSubmit={event => void save(event)}>
             <div className="entry-page-main">
-              {entry?.status === "rejected" && entry.adminComment && (
-                <div className="rejected-banner" role="note">
-                  <TriangleAlert aria-hidden="true" />
-                  <div>
-                    <p>Rejected by {entry.reviewer ?? "your faculty admin"}</p>
-                    <small>“{entry.adminComment}” Make the changes and save the entry to resubmit it.</small>
-                  </div>
-                </div>
-              )}
               {errorCount > 0 && (
                 <p className="form-error-summary" role="alert">
                   {errorCount === 1 ? "1 field needs your attention." : `${errorCount} fields need your attention.`}
@@ -89,14 +92,13 @@ export function ProfileEntryForm({ section, entry, onClose }: { section: Section
 
             <section className="profile-entry-documents" aria-labelledby="document-heading">
               <div className="card-heading"><h2 id="document-heading">Supporting document</h2></div>
-              <DocumentUpload label={section.documentLabel} documents={documents} onChange={next => { setDocuments(next); setDirty(true) }} />
+              <DocumentUpload label={section.documentLabel} documents={documents} onChange={next => { setDocuments(next); setDirty(true) }} onBusyChange={setUploading} />
             </section>
+            {saveError && <p className="form-error-summary" role="alert">{saveError}</p>}
             <div className="inline-record-actions">
               <Button type="button" variant="outline" className="dashboard-button" onClick={onClose}>Cancel</Button>
-              <Button type="button" variant="outline" className="dashboard-button" onClick={() => save("draft")}>Save as draft</Button>
-              <Button type="submit" className="dashboard-button">Save entry</Button>
+              <Button type="submit" className="dashboard-button" disabled={saving || uploading}>{saving ? "Saving…" : uploading ? "Uploading…" : "Save entry"}</Button>
             </div>
-            <p className="field-hint">Saved entries are sent to your faculty admin for review. Drafts stay private until you save the entry.</p>
           </form>
     </section>
   )

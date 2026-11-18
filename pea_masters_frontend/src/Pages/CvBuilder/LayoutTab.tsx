@@ -93,13 +93,6 @@ export function LayoutTab({ cv, change, counts, replace }: Props) {
             )
           })}
         </ol>
-        <label className="cv-checkbox">
-          <input type="checkbox" checked={cv.includeSubmitted} onChange={e => change(current => ({ ...current, includeSubmitted: e.target.checked }))} />
-          <span>
-            Include qualification entries that are still waiting for review
-            <small>By default the CV only shows entries your faculty admin has approved.</small>
-          </span>
-        </label>
       </section>
 
       <section className="dashboard-card cv-card" aria-labelledby="cv-backup-heading">

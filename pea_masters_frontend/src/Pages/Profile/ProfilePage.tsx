@@ -34,7 +34,7 @@ function scrollToSection(id: string, behavior: ScrollBehavior = "smooth") {
  */
 export function ProfilePage() {
   const { status, profile } = useMyProfile()
-  const { entries, deleteEntry, notice, flash } = useQualifications()
+  const { entries, status: entriesStatus, reload, deleteEntry, notice, flash } = useQualifications()
   const location = useLocation()
   const linkState = location.state as ProfileLinkState | null
   const [editor, setEditor] = useState<Editor | null>(() =>
@@ -89,9 +89,10 @@ export function ProfilePage() {
   const confirmDelete = () => {
     if (!deleting) return
     const section = ordered.find(s => s.id === deleting.sectionId)
-    deleteEntry(deleting.sectionId, deleting.entryId!)
     setDeleting(null)
-    flash(`${capitalize(section?.noun ?? "entry")} deleted.`)
+    deleteEntry(deleting.sectionId, deleting.entryId!)
+      .then(() => flash(`${capitalize(section?.noun ?? "entry")} deleted.`))
+      .catch(() => flash("That entry couldn't be deleted. Try again."))
   }
 
   const deletingSection = deleting ? ordered.find(s => s.id === deleting.sectionId) : undefined
@@ -117,7 +118,12 @@ export function ProfilePage() {
               <AboutSection profile={profile} />
 
               <p className="profile-group-label">Professional &amp; qualifications</p>
-              {shown.map(section => section.id === "languages"
+              {entriesStatus !== "ready" && (
+                <div className="dashboard-card" role={entriesStatus === "error" ? "alert" : "status"}>
+                  {entriesStatus === "error" ? <>Your profile sections couldn't be loaded. <Button variant="link" onClick={reload}>Try again</Button></> : "Loading your profile sections…"}
+                </div>
+              )}
+              {entriesStatus === "ready" && shown.map(section => section.id === "languages"
                 ? <LanguagesSection key={section.id} onEmptied={() => setRevealed(current => { const next = new Set(current); next.delete("languages"); return next })} />
                 : (
                   <QualificationSection
@@ -133,7 +139,7 @@ export function ProfilePage() {
                   />
                 ))}
 
-              {hidden.length > 0 && (
+              {entriesStatus === "ready" && hidden.length > 0 && (
                 <section id="add-more" className="dashboard-card add-more" aria-labelledby="add-more-heading">
                   <h2 id="add-more-heading">Add to your profile</h2>
                   <p>Sections you haven't filled in yet. Add only what applies to you.</p>

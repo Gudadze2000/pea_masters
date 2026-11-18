@@ -79,7 +79,7 @@ def test_profile_is_saved_on_the_server_and_shown_everywhere(admin_page: Page, o
     shot(page, "8-settings-account")
 
 
-def test_profile_is_one_page_with_contents(admin_page: Page, shot):
+def test_profile_is_one_page_with_contents(admin_page: Page, shot, tmp_path):
     page = admin_page
     page.goto("/home")
     sidebar = page.locator(".dashboard-sidebar")
@@ -87,10 +87,36 @@ def test_profile_is_one_page_with_contents(admin_page: Page, shot):
     expect(page).to_have_url(re.compile(r"/profile$"))
     expect(sidebar.get_by_text("Professional & qualifications")).to_have_count(0)  # no sub-menu any more
 
-    # Every part is on one page, listed in the contents
+    # A new profile has no sample entries: the fixed parts, and every section waiting in "Add to your profile"
     contents = page.get_by_role("navigation", name="On this page")
-    for label in ("General information", "Education", "Employment", "Languages", "Awards", "Teaching", "Research"):
+    for label in ("General information", "Teaching", "Research"):
         expect(contents.get_by_role("button", name=re.compile(label))).to_be_visible()
+    expect(contents.get_by_role("button", name=re.compile(r"^Add \d+ more sections"))).to_be_visible()
+    add_more = page.get_by_role("region", name="Add to your profile")
+    expect(add_more.get_by_role("button", name="Awards")).to_be_visible()
+
+    # An award with its certificate is saved on the server: still there after a reload, with the document attached
+    add_more.get_by_role("button", name="Awards").click()
+    awards = page.get_by_role("region", name=re.compile("^Awards"))
+    awards.get_by_label(re.compile("^Award title")).fill("Young Scientist Award")
+    awards.get_by_label(re.compile("^Award body")).fill("Shota Rustaveli National Science Foundation")
+    awards.get_by_label(re.compile("^Award date")).fill("2023-06-15")
+    certificate = tmp_path / "certificate.pdf"
+    certificate.write_bytes(b"%PDF-1.7\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF\n")
+    awards.locator("input[type=file]").set_input_files(certificate)
+    expect(awards.get_by_role("link", name="certificate.pdf")).to_be_visible()  # uploaded straight away
+    awards.get_by_role("button", name="Save entry").click()
+    expect(page.locator(".profile-notice")).to_contain_text("Award saved.")
+
+    page.reload()
+    card = page.locator("#awards .entry-card", has_text="Young Scientist Award")
+    expect(card).to_contain_text("1 document")
+    expect(card.locator(".status-badge")).to_have_count(0)  # the profile isn't reviewed: saved means on it
+
+    # ...so it's on the public profile straight away
+    page.get_by_role("button", name="Preview public profile").click()
+    expect(page.get_by_role("dialog")).to_contain_text("Young Scientist Award")
+    page.get_by_role("dialog").get_by_role("button", name="Back to editing").click()
     shot(page, "9-profile-one-page")
 
     # The contents jump to a part of the page
@@ -98,8 +124,18 @@ def test_profile_is_one_page_with_contents(admin_page: Page, shot):
     expect(page).to_have_url(re.compile(r"#awards$"))
     expect(page.get_by_role("heading", name=re.compile("^Awards"), level=2)).to_be_in_viewport()
 
+    # The Languages table is saved as a whole, also on the server
+    add_more.get_by_role("button", name="Languages").click()
+    languages = page.locator("#languages")
+    languages.get_by_label("Language, row 1").select_option("English")
+    for skill in ("Read", "Write", "Speak"):
+        languages.get_by_label(f"{skill} level for English").select_option(index=5)
+    languages.get_by_role("button", name="Save").click()
+    expect(languages.get_by_role("status")).to_contain_text("Languages saved")
+    page.reload()
+    expect(page.locator("#languages").get_by_label("Language, row 1")).to_have_value("English")
+
     # Empty sections wait in "Add to your profile" until chosen
-    add_more = page.get_by_role("region", name="Add to your profile")
     expect(page.get_by_role("heading", name=re.compile("^Creative activities"), level=2)).to_have_count(0)
     add_more.get_by_role("button", name="Creative activities").click()
     creative = page.get_by_role("region", name=re.compile("^Creative activities"))
@@ -117,8 +153,8 @@ def test_profile_is_one_page_with_contents(admin_page: Page, shot):
 
 
 def test_research_saved_on_the_profile_appears_on_the_cv(admin_page: Page):
-    """Projects and research interests saved under My profile → Research show on the CV; the CV can keep its own
-    interests instead. (Research is kept in the browser for now, so the CV is opened without reloading the page.)"""
+    """Projects and research interests saved under My profile → Research are kept on the server and show on the CV;
+    the CV can keep its own interests instead."""
     page = admin_page
     page.goto("/profile")
     research = page.locator("#research")
@@ -133,6 +169,8 @@ def test_research_saved_on_the_profile_appears_on_the_cv(admin_page: Page):
     research.get_by_label("New research interest").press("Enter")
     research.get_by_role("button", name="Save").click()
     expect(research.get_by_role("status")).to_contain_text("Changes saved")
+    page.reload()
+    expect(page.locator("#research")).to_contain_text("Svaneti seed survey")  # saved on the server
 
     page.get_by_role("button", name="CV builder").click()
     cv = page.locator(".cv-paper")

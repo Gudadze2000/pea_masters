@@ -1,6 +1,6 @@
 import { Building2, Mail } from "lucide-react"
 import { VideoPlayer } from "@/components/media/VideoPlayer"
-import type { ResearchOverview } from "../research/researchMock"
+import type { ResearchOverview } from "@/lib/profile-entries"
 import type { Entry, SectionDef } from "../qualifications/sections"
 import "@/components/forms/forms.css"
 import "../ProfilePage.css"
@@ -27,8 +27,8 @@ export type PublicProfileData = {
 const period = (start: string, end: string) => `${start} - ${end || "present"}`
 
 /**
- * A researcher's profile as other people see it: read-only, without review statuses, attachments or anything
- * meant only for the owner or reviewers. Used by the owner's preview; meant for the public profile page too.
+ * A researcher's profile as other people see it: read-only, without attachments or anything meant only for the
+ * owner. Used by the owner's preview; meant for the public profile page too.
  */
 export function PublicProfile({ data }: { data: PublicProfileData }) {
   const { teaching, research } = data

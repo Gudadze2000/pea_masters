@@ -125,3 +125,7 @@
   .rejected-banner { flex-wrap: wrap; }
   .rejected-banner .fix-button { margin-left: 30px; }
 }
+
+.document-spin { animation: document-spin 1s linear infinite; }
+@keyframes document-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .document-spin { animation: none; } }

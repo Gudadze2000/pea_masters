@@ -177,6 +177,7 @@ class File(Base):
     uploaded_at: Mapped[datetime] = mapped_column(server_default=func.now())
     deleted_at: Mapped[datetime | None]
     deleted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    purpose: Mapped[str] = mapped_column(Text, server_default="photo")  # photo | document (stricter access)
 
 
 class Profile(Base):
@@ -187,6 +188,8 @@ class Profile(Base):
     # {"orcid": ..., "researcher_id": ..., "scopus_id": ...}, see app/identifiers.py
     identifiers: Mapped[dict[str, str]] = mapped_column(JSONB, server_default="{}")
     orcid_verified_at: Mapped[datetime | None]  # set by "Connect ORCID" (app/orcid.py)
+    research: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default="{}")  # app/profile_entries.py
+    teaching: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default="{}")
     photo_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("files.id"))
     is_public: Mapped[bool] = mapped_column(server_default="false")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
@@ -255,3 +258,22 @@ class ExternalLookup(Base):
     key: Mapped[str] = mapped_column(Text, primary_key=True)
     record: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     fetched_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class ProfileEntry(Base):
+    """One entry of a profile section: an award, a degree, a language, a video lecture... (app/profile_entries.py)"""
+    __tablename__ = "profile_entries"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    section: Mapped[str] = mapped_column(Text)
+    values: Mapped[dict[str, str]] = mapped_column("entry_values", JSONB, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+
+class ProfileEntryFile(Base):
+    """A supporting document attached to a profile entry"""
+    __tablename__ = "profile_entry_files"
+    entry_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profile_entries.id", ondelete="CASCADE"), primary_key=True)
+    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("files.id"), primary_key=True)
+    position: Mapped[int] = mapped_column(server_default="0")

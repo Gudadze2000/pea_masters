@@ -29,7 +29,8 @@ from app.db import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Organization, OrganizationDomain, OrganizationMembership, RoleAssignment, User  # noqa: E402
 
-TABLES = ("external_lookups, wos_author_searches, wos_lookups, audit_log, profiles, files, coordinator_assignments, "
+TABLES = ("profile_entry_files, profile_entries, external_lookups, wos_author_searches, wos_lookups, audit_log, "
+          "profiles, files, coordinator_assignments, "
           "affiliations, positions, "
           "organization_units, "
           "unit_types, "

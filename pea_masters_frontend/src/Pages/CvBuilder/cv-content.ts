@@ -1,6 +1,6 @@
 import type { Entry } from "@/Pages/Profile/qualifications/sections"
-import type { ResearchOverview } from "@/Pages/Profile/research/researchMock"
-import { programmes, students } from "@/Pages/Profile/teaching/teachingMock"
+import type { ResearchOverview } from "@/lib/profile-entries"
+import { programmes, students } from "@/Pages/Profile/teaching/argus"
 import { formatCitation, type CitationPart } from "./citations"
 import { SECTION_META, type CvData, type PublicationType, type SectionId } from "./cv-model"
 
@@ -66,7 +66,6 @@ const PUBLICATION_GROUPS: { label: string; types: PublicationType[] }[] = [
 export function buildCvSections(cv: CvData, qualifications: Record<string, Entry[]>, options: ViewOptions): CvSection[] {
   const visible = (sectionId: string) =>
     (qualifications[sectionId] ?? [])
-      .filter(entry => entry.status === "approved" || (cv.includeSubmitted && entry.status === "submitted"))
       .map(entry => entry.values)
 
   const build = (id: SectionId): CvSection | null => {

@@ -77,6 +77,15 @@ forwarding page on GitHub Pages (`https://<user>.github.io/pea-orcid/callback/`)
 `https://<pea-address>/api/v1/orcid/callback` and leave `ORCID_REDIRECT_URI` empty. ORCID Public API credentials are
 personal to whoever registers them and can't be transferred.
 
+Profile sections (`app/profile_entries.py`): qualification entries (education, employment, languages, awards, video
+lectures, ...) are stored in `profile_entries`, with supporting documents (PDF, JPG or PNG up to 10 MB, recognised by
+their content) attached through `profile_entry_files`. The profile and the CV are the person's own and aren't
+reviewed: a saved entry is on the profile straight away. Only the evaluation form is reviewed by the head of department.
+Documents (`files.purpose = 'document'`) can be opened only by their owner, Admins of their organization and their head
+of department; photos stay visible inside the organization. Research and
+Teaching interests are kept in `profiles.research` and `profiles.teaching`. Programmes and supervised students will come
+from Argus, which isn't connected yet.
+
 Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
 written to the audit log.
 

@@ -53,8 +53,6 @@ export type CvData = {
   publicFields: { email: boolean; phone: boolean; metrics: boolean }
   template: Template
   citationStyle: CitationStyle
-  /** Also show qualification entries that are still waiting for review */
-  includeSubmitted: boolean
   sections: { id: SectionId; enabled: boolean }[]
   personal: { headline: string; phone: string; summary: string }
   profiles: ProfileLinks
@@ -108,7 +106,6 @@ export const initialCv: CvData = {
   publicFields: { email: true, phone: false, metrics: true },
   template: "classic",
   citationStyle: "APA",
-  includeSubmitted: false,
   sections: DEFAULT_ORDER.map(id => ({ id, enabled: id !== "metrics" && id !== "patents" })),
   personal: {
     headline: "Associate Professor of Biology",

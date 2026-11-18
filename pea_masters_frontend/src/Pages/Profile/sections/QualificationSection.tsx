@@ -1,8 +1,7 @@
-import { Pencil, Plus, Trash2, TriangleAlert } from "lucide-react"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { VideoPlayer } from "@/components/media/VideoPlayer"
 import { ProfileEntryForm } from "../qualifications/ProfileEntryForm"
-import { StatusBadge } from "../qualifications/StatusBadge"
 import { attachmentMeta, type Entry, type SectionDef } from "../qualifications/sections"
 import "../qualifications/QualificationsPage.css"
 
@@ -17,7 +16,6 @@ function EntryCard({ section, entry, onEdit, onDelete, disabled }: { section: Se
       <div className="entry-card-heading">
         <h3>{title}</h3>
         <div className="entry-card-actions">
-          <StatusBadge status={entry.status} />
           <Button variant="outline" size="icon" className="icon-button" aria-label={`Edit ${title}`} disabled={disabled} onClick={onEdit}><Pencil /></Button>
           <Button variant="outline" size="icon" className="icon-button danger" aria-label={`Delete ${title}`} disabled={disabled} onClick={onDelete}><Trash2 /></Button>
         </div>
@@ -54,7 +52,6 @@ type Props = {
 /** One profile section (Awards, Education, ...): its entries as cards, edited in place. */
 export function QualificationSection({ section, entries, editing, busy, onAdd, onEdit, onDelete, onCloseEditor }: Props) {
   const Icon = section.icon
-  const rejected = entries.filter(entry => entry.status === "rejected")
   const editingEntry = editing ? entries.find(entry => entry.id === editing) ?? null : null
   const headingId = `${section.id}-heading`
 
@@ -71,18 +68,6 @@ export function QualificationSection({ section, entries, editing, busy, onAdd, o
         <Button variant="outline" className="dashboard-button" disabled={busy} onClick={onAdd}><Plus />Add {section.noun}</Button>
       </div>
 
-      {rejected.length > 0 && (
-        <div className="rejected-banner">
-          <TriangleAlert aria-hidden="true" />
-          <div>
-            <p>{rejected.length === 1 ? "1 entry was rejected" : `${rejected.length} entries were rejected`}</p>
-            {rejected.map(entry => (
-              <small key={entry.id}>{entryTitle(section, entry)}: “{entry.adminComment ?? "See the reviewer's comment."}” Edit the entry and resubmit.</small>
-            ))}
-          </div>
-          <Button variant="outline" className="fix-button" disabled={busy} onClick={() => onEdit(rejected[0].id)}>Fix entry</Button>
-        </div>
-      )}
 
       {editing !== undefined && (
         <ProfileEntryForm key={`${section.id}/${editing ?? "new"}`} section={section} entry={editingEntry} onClose={onCloseEditor} />

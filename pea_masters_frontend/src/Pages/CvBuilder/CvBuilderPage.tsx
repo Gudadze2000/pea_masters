@@ -7,7 +7,7 @@ import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { useQualifications } from "@/Pages/Profile/qualifications/qualifications-store"
 import { saveIdentifiers, useIdentity, useMyProfile } from "@/lib/profile"
 import { SERVER_IDENTIFIERS } from "@/Pages/Profile/sections/IdentifiersCard"
-import { savedResearch } from "@/Pages/Profile/profile-data"
+import { savedResearch, useProfileData } from "@/Pages/Profile/profile-data"
 import { useStore } from "@/lib/store"
 import { buildCvSections, sectionCounts } from "./cv-content"
 import { loadCv, saveCv, type CvData, type Visibility } from "./cv-model"
@@ -58,6 +58,7 @@ function timeAgo(timestamp: number, now: number) {
 export function CvBuilderPage() {
   const person = useIdentity()
   const { profile } = useMyProfile()
+  useProfileData()
   const research = useStore(savedResearch)
   const { entries } = useQualifications()
   const [initial] = useState(loadCv)
