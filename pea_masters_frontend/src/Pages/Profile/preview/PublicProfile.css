@@ -1,0 +1,54 @@
+/* Public profile (PublicProfile.tsx) and the owner's preview dialog (PublicProfilePreview.tsx) */
+
+/* Preview dialog */
+.public-preview-backdrop { z-index: 60; }
+.public-preview { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 61; display: flex; flex-direction: column; width: min(820px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); border-radius: 16px; background: var(--background); box-shadow: 0 20px 60px rgb(0 0 0 / 18%); overflow: hidden; }
+.public-preview-header { display: flex; gap: 16px; justify-content: space-between; align-items: flex-start; padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--card); }
+.public-preview-title { display: flex; align-items: center; gap: 8px; font-size: 18px; line-height: 26px; font-weight: 600; }
+.public-preview-title svg { width: 18px; height: 18px; color: var(--primary); }
+.public-preview-description { margin-top: 4px; font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
+.public-preview-note { padding: 10px 24px; background: var(--info-soft); color: var(--info); font-size: 13px; line-height: 20px; }
+.public-preview-body { flex: 1; min-height: 0; overflow-y: auto; padding: 24px; }
+.public-preview-footer { display: flex; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid var(--border); background: var(--card); }
+
+/* The profile itself */
+.public-profile { display: flex; flex-direction: column; gap: 16px; }
+.public-profile-header { display: flex; align-items: center; gap: 20px; padding: 24px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.public-profile-identity { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.public-profile-identity h2 { font-size: 24px; line-height: 32px; font-weight: 600; }
+.public-profile-identity p { color: var(--color-neutral-700); }
+.public-profile-identity small { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); overflow-wrap: anywhere; }
+.public-profile-identity small svg { width: 14px; height: 14px; flex: none; }
+.public-profile-identity a { color: inherit; }
+
+.public-profile-empty { padding: 24px; border: 1px dashed var(--border); border-radius: 14px; text-align: center; color: var(--muted-foreground); }
+
+.public-profile-section { display: flex; flex-direction: column; gap: 12px; padding: 24px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.public-profile-section h3 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.public-profile-section h4 { margin-top: 4px; font-size: 13px; line-height: 20px; font-weight: 600; color: var(--color-neutral-700); }
+
+.public-profile-bio { font-size: 14px; line-height: 22px; color: var(--color-neutral-700); overflow-wrap: anywhere; }
+.public-profile-bio > * + * { margin-top: 8px; }
+.public-profile-bio ul { list-style: disc; padding-left: 20px; }
+.public-profile-bio ol { list-style: decimal; padding-left: 20px; }
+.public-profile-bio a { color: var(--primary); text-decoration: underline; }
+.public-profile-bio img { max-width: 100%; height: auto; }
+
+.public-profile-entries { display: flex; flex-direction: column; }
+.public-profile-entries > li { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid var(--border); }
+.public-profile-entries > li:first-child { padding-top: 0; border-top: 0; }
+.public-entry-title { font-size: 14px; line-height: 22px; font-weight: 500; }
+.public-entry-description { font-size: 13px; line-height: 20px; color: var(--color-neutral-700); white-space: pre-line; }
+
+.public-profile-list { display: flex; flex-direction: column; gap: 8px; }
+.public-profile-list li { display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 22px; }
+.public-profile-list small { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+
+@media (max-width: 767.98px) {
+  .public-preview { width: 100vw; max-height: 100dvh; height: 100dvh; border-radius: 0; }
+  .public-preview-header, .public-preview-body, .public-preview-footer { padding-left: 16px; padding-right: 16px; }
+  .public-preview-note { padding: 10px 16px; }
+  .public-profile-header { flex-direction: column; align-items: flex-start; padding: 16px; }
+  .public-profile-section { padding: 16px; }
+  .public-profile-header .profile-header-avatar { width: 72px; height: 72px; font-size: 24px; }
+}

@@ -4,6 +4,9 @@ import { cleanDoi } from "./identifiers"
 /** Publication without an id, as produced by the importers */
 export type PublicationDraft = Omit<Publication, "id">
 
+/** Two publications are the same when their DOIs match, or (without a DOI) their titles */
+export const publicationKey = (pub: Pick<Publication, "doi" | "title">) => pub.doi ? `doi:${pub.doi.toLowerCase()}` : `title:${pub.title.toLowerCase().replace(/\W+/g, "")}`
+
 /* ---------- DOI → Crossref ---------- */
 
 const CROSSREF_TYPES: Record<string, PublicationType> = {

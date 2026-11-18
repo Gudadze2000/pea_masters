@@ -12,7 +12,14 @@ import { localName } from "./people"
 
 type Ref = { id: string; name: Record<string, string> }
 
-export type ProfileAffiliation = { organization: Ref; faculty: Ref | null; department: Ref | null; position: Ref | null }
+/** Someone to get in touch with, e.g. the person's coordinator (head of department) */
+export type Contact = { name: string; email: string }
+
+export type ProfileAffiliation = {
+  organization: Ref; faculty: Ref | null; department: Ref | null; position: Ref | null
+  /** Who the person contacts about their evaluation; null when their department has no head */
+  coordinator: Contact | null
+}
 
 export type MyProfile = {
   user_id: string
@@ -23,9 +30,15 @@ export type MyProfile = {
   /** HTML per language: { en, ka } */
   biography: Partial<Record<"en" | "ka", string>>
   photo_url: string | null
+  /** Checked and stored in canonical form by the server (app/identifiers.py) */
+  identifiers: Identifiers
+  /** The ORCID iD was proven by signing in to ORCID ("Connect ORCID") */
+  orcid_verified: boolean
   affiliations: ProfileAffiliation[]
   updated_at: string | null
 }
+
+export type Identifiers = { orcid: string | null; researcher_id: string | null; scopus_id: string | null }
 
 export const BIOGRAPHY_MAX_LENGTH = 3000
 
@@ -88,6 +101,7 @@ export function useIdentity() {
     faculty: name(place?.faculty),
     department: name(place?.department),
     position: name(place?.position),
+    coordinator: place?.coordinator ?? null,
   }
 }
 
@@ -99,6 +113,19 @@ function saved(profile: MyProfile) {
 export async function saveBiography(biography: Partial<Record<"en" | "ka", string>>) {
   return saved(await api<MyProfile>("/me/profile", { method: "PUT", body: { biography } }))
 }
+
+/** Sets the given identifiers; an empty string removes one. Throws ApiError (422) when one is invalid. */
+export async function saveIdentifiers(identifiers: Partial<Identifiers>) {
+  return saved(await api<MyProfile>("/me/profile/identifiers", { method: "PUT", body: identifiers }))
+}
+
+/** Keeps the ORCID iD but no longer marks it as proven, so it can be changed */
+export async function disconnectOrcid() {
+  return saved(await api<MyProfile>("/orcid/connection", { method: "DELETE" }))
+}
+
+/** Full-page trip to ORCID and back (the server redirects); comes back to /profile?orcid=… */
+export const CONNECT_ORCID_URL = "/api/v1/orcid/connect"
 
 export async function uploadPhoto(photo: Blob) {
   const form = new FormData()

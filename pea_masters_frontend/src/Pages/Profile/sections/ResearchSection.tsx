@@ -5,7 +5,11 @@ import { KeywordInput } from "@/components/forms/KeywordInput"
 import { InlineRecordForm } from "@/components/forms/InlineRecordForm"
 import type { FieldDef } from "@/components/forms/field-types"
 import "@/components/forms/forms.css"
-import { initialResearch, PROJECT_ROLES, PROJECT_TYPES, type Collaboration, type Project, type ResearchOverview } from "../research/researchMock"
+import { useStore } from "@/lib/store"
+import { retryProfileData, saveResearch, savedResearch, useProfileData } from "../profile-data"
+import { SectionLoading } from "./SectionLoading"
+import { ApiError } from "@/lib/api"
+import { PROJECT_ROLES, PROJECT_TYPES, type Collaboration, type Project, type ResearchOverview } from "../research/research-model"
 import "../research/ResearchPage.css"
 
 const currentYear = new Date().getFullYear()
@@ -42,11 +46,18 @@ type Editor =
 
 /** Research: interests, projects, collaborators and collaborating organisations. */
 export function ResearchSection() {
-  const [saved, setSaved] = useState<ResearchOverview>(initialResearch)
-  const [data, setData] = useState<ResearchOverview>(initialResearch)
+  const status = useProfileData()
+  if (status !== "ready") return <SectionLoading id="research" title="Research" status={status} onRetry={retryProfileData} />
+  return <ResearchEditor />
+}
+
+function ResearchEditor() {
+  const saved = useStore(savedResearch)
+  const [data, setData] = useState<ResearchOverview>(saved)
   const [editor, setEditor] = useState<Editor | null>(null)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const session = useRef(0)
   const timer = useRef<number | undefined>(undefined)
 
@@ -72,15 +83,19 @@ export function ResearchSection() {
     setEditor({ ...next, session: session.current } as Editor)
   }
 
-  const save = () => {
+  const save = async () => {
     setSaving(true)
-    // TODO: replace with the API call once the back end exists
-    timer.current = window.setTimeout(() => {
-      setSaved(data)
-      setSaving(false)
+    setError(null)
+    try {
+      setData(await saveResearch(data))
       setNotice(true)
+      window.clearTimeout(timer.current)
       timer.current = window.setTimeout(() => setNotice(false), 4000)
-    }, 500)
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "Your research couldn't be saved. Try again.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   const editingCollaboration = editor?.kind === "collaboration" && editor.id ? data.collaborations.find(person => person.id === editor.id) : undefined
@@ -96,10 +111,11 @@ export function ResearchSection() {
             <div className="page-actions">
               <span className="save-status" role="status">{notice && !dirty && <><Check aria-hidden="true" />Changes saved</>}</span>
               {dirty && <Button variant="outline" className="dashboard-button" disabled={saving || editor !== null} onClick={() => setData(saved)}>Discard changes</Button>}
-              <Button className="dashboard-button" disabled={!dirty || saving || editor !== null} onClick={save}><Save />{saving ? "Saving…" : "Save"}</Button>
+              <Button className="dashboard-button" disabled={!dirty || saving || editor !== null} onClick={() => void save()}><Save />{saving ? "Saving…" : "Save"}</Button>
             </div>
           </div>
 
+          {error && <p className="form-error-summary" role="alert">{error}</p>}
           <section className="dashboard-card research-card" aria-labelledby="research-interests-heading">
             <div className="card-heading"><h3 id="research-interests-heading">Research interests</h3></div>
             <KeywordInput

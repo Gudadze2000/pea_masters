@@ -43,6 +43,53 @@ official name from Google, unless someone corrected it by hand (`users.name_sour
 Profiles (`app/profiles.py`): each person edits their biography (English and Georgian, cleaned of anything unsafe by
 `app/richtext.py`) and photo in the General information part of **My profile**. Photos are checked, cropped to 512×512 and
 saved as JPEG in the `storage/` folder (`STORAGE_DIR`, ignored by git); the database keeps only their details.
+Each affiliation in `GET /api/v1/me/profile` also names the person's `coordinator` (their head of department, or a
+Coordinator assigned to them personally), whom the evaluation form's "Contact coordinator" writes to by email.
+
+Web of Science (`app/wos.py`): `GET /api/v1/wos/lookup?doi=…` checks an article in Web of Science Core Collection
+through Clarivate's Starter API (title, journal, year, times cited, authors, and whether the signed-in person is one of
+them). Set `CLARIVATE_API_KEY` in `.env`; without it the check is switched off. Answers are cached in `wos_lookups`
+(7 days when found, 1 day when not), so each DOI costs at most one request of the 20,000 a day. API tests replace
+Clarivate, and browser tests run a fake one (`tests/e2e/fake_clarivate.py`), so tests never use the quota.
+
+Related endpoints:
+- `PUT /api/v1/me/profile/identifiers`: ORCID iD, ResearcherID and Scopus Author ID, checked and stored on the
+  profile (`app/identifiers.py`); My profile → Research identifiers.
+- `GET /api/v1/wos/me/documents?from_year=&to_year=`: the person's Web of Science documents by those identifiers,
+  with document count, citations and an h-index PEA calculates (cached a day in `wos_author_searches`). Used by the
+  evaluation form ("Missing from your form") and the CV builder (import, metrics).
+- `GET /api/v1/crossref/lookup?doi=` (`app/crossref.py`): whether a DOI is registered and what it is, for articles not
+  in Web of Science; `GET /api/v1/wos/journal?issn=`: whether the journal is in Web of Science's journal list. Both
+  cached in `external_lookups` (`app/lookups.py`). `CROSSREF_MAILTO` (optional) is a project address, never a person's.
+- `GET /api/v1/orgs/{org}/research-output?from_year=&to_year=&unit_id=` (`app/research_output.py`): Web of Science
+  output per person and year for Admins (whole organization, a faculty or a department) and heads of department
+  (their department); People → Research output.
+
+ORCID (`app/orcid.py`, free Public API): **Connect ORCID iD** (My profile → Research identifiers) sends the person to
+ORCID to sign in; ORCID returns to `/api/v1/orcid/callback`, PEA checks the one-time state and stores the iD as verified
+(`profiles.orcid_verified_at`; changing the iD by hand drops it). `GET /api/v1/orcid/me/works` lists the record's public
+works for the CV builder's **Import from ORCID**. Settings: `ORCID_CLIENT_ID`, `ORCID_CLIENT_SECRET`, `ORCID_BASE_URL`
+(`https://sandbox.orcid.org` for testing, `https://orcid.org` for real use) and `ORCID_REDIRECT_URI`.
+
+ORCID only accepts `https` redirect URIs, never `localhost`. In development the registered redirect URI is a small
+forwarding page on GitHub Pages (`https://<user>.github.io/pea-orcid/callback/`) that sends the browser on to
+`http://localhost:5173/api/v1/orcid/callback`. Once PEA has its own `https` address, register
+`https://<pea-address>/api/v1/orcid/callback` and leave `ORCID_REDIRECT_URI` empty. ORCID Public API credentials are
+personal to whoever registers them and can't be transferred.
+
+Profile sections (`app/profile_entries.py`): qualification entries (education, employment, languages, awards, video
+lectures, ...) are stored in `profile_entries`, with supporting documents (PDF, JPG or PNG up to 10 MB, recognised by
+their content) attached through `profile_entry_files`. The profile and the CV are the person's own and aren't
+reviewed: a saved entry is on the profile straight away. Only the evaluation form is reviewed by the head of department.
+Documents (`files.purpose = 'document'`) can be opened only by their owner, Admins of their organization and their head
+of department; photos stay visible inside the organization. Research and
+Teaching interests are kept in `profiles.research` and `profiles.teaching`. Programmes and supervised students will come
+from Argus, which isn't connected yet.
+
+CV builder (`app/cv.py`): each person's CV (headline, research statement, links, publications, talks, layout,
+visibility) is one document in `cvs`, saved with the page's Save button or Ctrl+S (`GET`/`PUT /api/v1/me/cv`) and
+checked against its shape before it's stored. Leaving the page with unsaved changes asks first. Qualifications, research and teaching on the CV come from the profile, not from this document.
+Making a CV public or private is recorded in the audit log; ordinary saves aren't.
 
 Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
 written to the audit log.

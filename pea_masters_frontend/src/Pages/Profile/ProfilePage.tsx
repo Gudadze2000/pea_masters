@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { useMyProfile } from "@/lib/profile"
 import { useQualifications } from "./qualifications/qualifications-store"
-import { capitalize, sections, type SectionDef } from "./qualifications/sections"
+import { capitalize, profileSections as ordered, type SectionDef } from "./qualifications/sections"
+import { PublicProfilePreview } from "./preview/PublicProfilePreview"
 import { AboutSection } from "./sections/AboutSection"
 import { LanguagesSection } from "./sections/LanguagesSection"
 import { ProfileHeader } from "./sections/ProfileHeader"
@@ -14,10 +15,6 @@ import { entryTitle, QualificationSection } from "./sections/QualificationSectio
 import { ResearchSection } from "./sections/ResearchSection"
 import { TeachingSection } from "./sections/TeachingSection"
 import "./ProfilePage.css"
-
-/** Order on the page: background first, then achievements, then service and other activities */
-const ORDER = ["education", "employment", "languages", "awards", "patents", "memberships", "committees", "consultancy", "creative", "other"]
-const ordered: SectionDef[] = ORDER.map(id => sections.find(section => section.id === id)).filter((s): s is SectionDef => !!s)
 
 type Editor = { sectionId: string; entryId: string | null }
 /** Router state for links that open an editor, e.g. from a notification */
@@ -37,7 +34,7 @@ function scrollToSection(id: string, behavior: ScrollBehavior = "smooth") {
  */
 export function ProfilePage() {
   const { status, profile } = useMyProfile()
-  const { entries, deleteEntry, notice, flash } = useQualifications()
+  const { entries, status: entriesStatus, reload, deleteEntry, notice, flash } = useQualifications()
   const location = useLocation()
   const linkState = location.state as ProfileLinkState | null
   const [editor, setEditor] = useState<Editor | null>(() =>
@@ -46,6 +43,7 @@ export function ProfilePage() {
   const [revealed, setRevealed] = useState<Set<string>>(() => new Set(linkState?.add ? [linkState.add] : []))
   const [deleting, setDeleting] = useState<Editor | null>(null)
   const [active, setActive] = useState("general")
+  const [previewing, setPreviewing] = useState(false)
 
   const isShown = (section: SectionDef) => (entries[section.id]?.length ?? 0) > 0 || revealed.has(section.id) || editor?.sectionId === section.id
   const shown = ordered.filter(isShown)
@@ -91,9 +89,10 @@ export function ProfilePage() {
   const confirmDelete = () => {
     if (!deleting) return
     const section = ordered.find(s => s.id === deleting.sectionId)
-    deleteEntry(deleting.sectionId, deleting.entryId!)
     setDeleting(null)
-    flash(`${capitalize(section?.noun ?? "entry")} deleted.`)
+    deleteEntry(deleting.sectionId, deleting.entryId!)
+      .then(() => flash(`${capitalize(section?.noun ?? "entry")} deleted.`))
+      .catch(() => flash("That entry couldn't be deleted. Try again."))
   }
 
   const deletingSection = deleting ? ordered.find(s => s.id === deleting.sectionId) : undefined
@@ -101,7 +100,7 @@ export function ProfilePage() {
 
   return (
     <WorkspaceLayout breadcrumb={[{ label: "My profile" }]}>
-      {openPanel => !profile ? (
+      {() => !profile ? (
         <div className="dashboard-content">
           <div className="page-heading"><div><h1>My profile</h1></div></div>
           <div className="dashboard-card" role={status === "error" ? "alert" : "status"}>
@@ -112,14 +111,19 @@ export function ProfilePage() {
         <div className="dashboard-content profile-page">
           <div className="profile-layout">
             <div className="profile-main">
-              <ProfileHeader onPreview={() => openPanel("Preview public profile")} />
+              <ProfileHeader onPreview={() => setPreviewing(true)} />
 
               <p className="section-notice profile-notice" role="status">{notice && <><Check aria-hidden="true" />{notice}</>}</p>
 
               <AboutSection profile={profile} />
 
               <p className="profile-group-label">Professional &amp; qualifications</p>
-              {shown.map(section => section.id === "languages"
+              {entriesStatus !== "ready" && (
+                <div className="dashboard-card" role={entriesStatus === "error" ? "alert" : "status"}>
+                  {entriesStatus === "error" ? <>Your profile sections couldn't be loaded. <Button variant="link" onClick={reload}>Try again</Button></> : "Loading your profile sections…"}
+                </div>
+              )}
+              {entriesStatus === "ready" && shown.map(section => section.id === "languages"
                 ? <LanguagesSection key={section.id} onEmptied={() => setRevealed(current => { const next = new Set(current); next.delete("languages"); return next })} />
                 : (
                   <QualificationSection
@@ -135,7 +139,7 @@ export function ProfilePage() {
                   />
                 ))}
 
-              {hidden.length > 0 && (
+              {entriesStatus === "ready" && hidden.length > 0 && (
                 <section id="add-more" className="dashboard-card add-more" aria-labelledby="add-more-heading">
                   <h2 id="add-more-heading">Add to your profile</h2>
                   <p>Sections you haven't filled in yet. Add only what applies to you.</p>
@@ -185,6 +189,8 @@ export function ProfilePage() {
               </ul>
             </nav>
           </div>
+
+          <PublicProfilePreview open={previewing} onClose={() => setPreviewing(false)} profile={profile} entries={entries} />
 
           <AlertDialog.Root open={deleting !== null} onOpenChange={open => { if (!open) setDeleting(null) }}>
             <AlertDialog.Portal>

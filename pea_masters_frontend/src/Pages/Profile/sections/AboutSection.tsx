@@ -7,6 +7,7 @@ import { BIOGRAPHY_MAX_LENGTH, removePhoto, saveBiography, uploadPhoto, useIdent
 import { htmlTextLength } from "../html-text"
 import { PhotoUpload } from "../PhotoUpload"
 import { RichTextEditor } from "../RichTextEditor"
+import { IdentifiersCard } from "./IdentifiersCard"
 import "../GeneralInformationPage.css"
 
 const languageCopy = {
@@ -127,6 +128,8 @@ export function AboutSection({ profile }: { profile: MyProfile }) {
         <div className="card-heading"><h3>Photograph</h3></div>
         <PhotoUpload photo={draft.photo} initials={identity.initials} onChange={photo => { setDraft(current => ({ ...current, photo })); setSavedNotice(false) }} />
       </div>
+
+      <IdentifiersCard profile={profile} />
     </section>
   )
 }

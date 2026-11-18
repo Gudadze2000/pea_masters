@@ -128,6 +128,26 @@ def test_photos_are_visible_inside_the_organization_only(researcher, signed_in, 
     assert signed_in(stranger).get(url).status_code == 404
 
 
+def test_profile_names_the_head_of_department_as_coordinator(as_admin, signed_in, base, db):
+    faculty = add_faculty(as_admin, base)
+    cs = add_department(as_admin, base, "Computer Science", faculty)
+    math = add_department(as_admin, base, "Mathematics", faculty)
+    head = register(as_admin, base, "nino.head@iliauni.edu.ge", roles=["coordinator", "member"], coordinates=cs,
+                    department_id=cs, name="Nino Head").json()
+    researcher = register(as_admin, base, "cs.researcher@iliauni.edu.ge", department_id=cs).json()
+    mathematician = register(as_admin, base, "math@iliauni.edu.ge", department_id=math).json()
+
+    [place] = as_person(signed_in, db, researcher).get(ME).json()["affiliations"]
+    assert place["coordinator"] == {"name": "Nino Head", "email": "nino.head@iliauni.edu.ge"}
+    # A department without a head, and the head themselves, have nobody to contact
+    assert as_person(signed_in, db, mathematician).get(ME).json()["affiliations"][0]["coordinator"] is None
+    assert as_person(signed_in, db, head).get(ME).json()["affiliations"][0]["coordinator"] is None
+
+    # A deactivated head is no longer anyone's coordinator
+    assert as_admin.post(f"{base}/people/{head['id']}/deactivate").status_code in (200, 204)
+    assert as_person(signed_in, db, researcher).get(ME).json()["affiliations"][0]["coordinator"] is None
+
+
 # --- others' profiles ---------------------------------------------------------------------------
 
 def test_admins_and_heads_see_profiles_within_their_reach(as_admin, signed_in, base, db):
@@ -188,3 +208,31 @@ def test_heads_of_department_cannot_set_positions(as_admin, signed_in, base, db)
     assert error_code(c.patch(f"{base}/people/{researcher['id']}", json={"position_id": professor})) == \
         "admins_set_positions"
     assert c.post(f"{base}/positions", json={"name_en": "Dean"}).status_code == 403
+
+
+# --- researcher identifiers ---------------------------------------------------------------------
+
+def test_identifiers_are_checked_and_stored_in_canonical_form(researcher, db):
+    profile = researcher.put(f"{ME}/identifiers", json={
+        "orcid": "https://orcid.org/0000-0002-1825-0097", "researcher_id": "abc-1234-2020",
+        "scopus_id": "https://www.scopus.com/authid/detail.uri?authorId=57190000000"}).json()
+    assert profile["identifiers"] == {"orcid": "0000-0002-1825-0097", "researcher_id": "ABC-1234-2020",
+                                      "scopus_id": "57190000000"}
+    assert researcher.get(ME).json()["identifiers"]["researcher_id"] == "ABC-1234-2020"
+
+    # Fields left out stay; an empty value removes one
+    profile = researcher.put(f"{ME}/identifiers", json={"scopus_id": ""}).json()
+    assert profile["identifiers"] == {"orcid": "0000-0002-1825-0097", "researcher_id": "ABC-1234-2020",
+                                      "scopus_id": None}
+
+
+@pytest.mark.parametrize("field, value", [
+    ("orcid", "0000-0002-1825-0098"),  # wrong check digit
+    ("orcid", "1234"),
+    ("researcher_id", "ABCD-1234-2020"),
+    ("scopus_id", "12345"),
+])
+def test_bad_identifiers_are_refused(researcher, field, value):
+    response = researcher.put(f"{ME}/identifiers", json={field: value})
+    assert response.status_code == 422
+    assert researcher.get(ME).json()["identifiers"][field] is None

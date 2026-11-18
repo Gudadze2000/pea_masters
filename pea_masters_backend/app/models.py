@@ -177,6 +177,7 @@ class File(Base):
     uploaded_at: Mapped[datetime] = mapped_column(server_default=func.now())
     deleted_at: Mapped[datetime | None]
     deleted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    purpose: Mapped[str] = mapped_column(Text, server_default="photo")  # photo | document (stricter access)
 
 
 class Profile(Base):
@@ -184,6 +185,11 @@ class Profile(Base):
     __tablename__ = "profiles"
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)
     biography: Mapped[dict[str, str]] = mapped_column(JSONB, server_default="{}")  # {"en": html, "ka": html}
+    # {"orcid": ..., "researcher_id": ..., "scopus_id": ...}, see app/identifiers.py
+    identifiers: Mapped[dict[str, str]] = mapped_column(JSONB, server_default="{}")
+    orcid_verified_at: Mapped[datetime | None]  # set by "Connect ORCID" (app/orcid.py)
+    research: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default="{}")  # app/profile_entries.py
+    teaching: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default="{}")
     photo_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("files.id"))
     is_public: Mapped[bool] = mapped_column(server_default="false")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
@@ -226,3 +232,56 @@ class AuditLog(Base):
     ip: Mapped[str | None] = mapped_column(INET)
     prev_hash: Mapped[str | None] = mapped_column(Text)
     row_hash: Mapped[str] = mapped_column(Text)
+
+
+class WosLookup(Base):
+    """A cached Web of Science answer for one DOI (app/wos.py). record is null when the DOI isn't indexed."""
+    __tablename__ = "wos_lookups"
+    doi: Mapped[str] = mapped_column(Text, primary_key=True)
+    record: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    fetched_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class WosAuthorSearch(Base):
+    """A cached Web of Science search for one researcher's documents (app/wos.py), all pages together."""
+    __tablename__ = "wos_author_searches"
+    query: Mapped[str] = mapped_column(Text, primary_key=True)
+    total: Mapped[int]
+    hits: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    fetched_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class ExternalLookup(Base):
+    """A cached answer from an outside service (app/lookups.py); record is null when it found nothing."""
+    __tablename__ = "external_lookups"
+    source: Mapped[str] = mapped_column(Text, primary_key=True)
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    record: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    fetched_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class ProfileEntry(Base):
+    """One entry of a profile section: an award, a degree, a language, a video lecture... (app/profile_entries.py)"""
+    __tablename__ = "profile_entries"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    section: Mapped[str] = mapped_column(Text)
+    values: Mapped[dict[str, str]] = mapped_column("entry_values", JSONB, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+
+class ProfileEntryFile(Base):
+    """A supporting document attached to a profile entry"""
+    __tablename__ = "profile_entry_files"
+    entry_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profile_entries.id", ondelete="CASCADE"), primary_key=True)
+    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("files.id"), primary_key=True)
+    position: Mapped[int] = mapped_column(server_default="0")
+
+
+class Cv(Base):
+    """The CV builder's CV for one person (app/cv.py)"""
+    __tablename__ = "cvs"
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    data: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())

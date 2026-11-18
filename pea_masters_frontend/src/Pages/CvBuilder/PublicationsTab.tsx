@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
-import { BookOpen, Calendar, FileUp, Hash, Link2, LoaderCircle, Pencil, Plus, Search, Trash2, X } from "lucide-react"
+import { BookOpen, Calendar, Download, FileUp, Hash, Link2, LoaderCircle, Pencil, Plus, Search, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RecordSheet } from "@/components/forms/RecordSheet"
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
@@ -8,7 +8,8 @@ import { CITATION_STYLES, PUBLICATION_STATUSES, PUBLICATION_TYPES, type Citation
 import { ConfirmDialog, Field, Segmented } from "./cv-ui"
 import { type ChangeCv, yearError } from "./form-utils"
 import { cleanDoi, isDoi, isHttpUrl } from "./identifiers"
-import { fetchDoi, parseBibtex, type PublicationDraft } from "./importers"
+import { fetchDoi, parseBibtex, publicationKey, type PublicationDraft } from "./importers"
+import { ImportSheet, type ImportSource } from "./ImportSheet"
 
 const publicationFields: FieldDef[] = [
   { name: "type", label: "Type", type: "select", required: true, span: 2, options: PUBLICATION_TYPES },
@@ -24,7 +25,6 @@ const publicationFields: FieldDef[] = [
   { name: "url", label: "Link (if no DOI)", type: "url", span: 2, placeholder: "https://" },
 ]
 
-const publicationKey = (pub: Pick<Publication, "doi" | "title">) => pub.doi ? `doi:${pub.doi.toLowerCase()}` : `title:${pub.title.toLowerCase().replace(/\W+/g, "")}`
 
 type Editor = { id: string | null; initial: Partial<PublicationDraft>; imported: boolean; session: number }
 
@@ -33,6 +33,7 @@ export function PublicationsTab({ cv, change }: { cv: CvData; change: ChangeCv }
   const [editor, setEditor] = useState<Editor | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [bibtexOpen, setBibtexOpen] = useState(false)
+  const [importFrom, setImportFrom] = useState<ImportSource | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const session = useRef(0)
@@ -66,6 +67,8 @@ export function PublicationsTab({ cv, change }: { cv: CvData; change: ChangeCv }
         <div className="card-heading cv-card-heading-wrap">
           <h2 id="cv-publications-heading">Publications <span className="count-badge">{cv.publications.length}</span></h2>
           <div className="cv-card-actions">
+            <Button variant="outline" className="dashboard-button compact" onClick={() => setImportFrom("wos")}><Download />Import from Web of Science</Button>
+            <Button variant="outline" className="dashboard-button compact" onClick={() => setImportFrom("orcid")}><Download />Import from ORCID</Button>
             <Button variant="outline" className="dashboard-button compact" onClick={() => setBibtexOpen(true)}><FileUp />Import BibTeX</Button>
             <Button className="dashboard-button compact" onClick={() => openEditor(null)}><Plus />Add publication</Button>
           </div>
@@ -164,6 +167,19 @@ export function PublicationsTab({ cv, change }: { cv: CvData; change: ChangeCv }
           change(current => ({ ...current, publications: [...drafts.map(draft => ({ ...draft, id: crypto.randomUUID() })), ...current.publications] }))
           setNotice(drafts.length === 1 ? "1 publication imported." : `${drafts.length} publications imported.`)
           setBibtexOpen(false)
+        }}
+      />
+
+      <ImportSheet
+        source={importFrom ?? "wos"}
+        open={importFrom !== null}
+        onOpenChange={open => { if (!open) setImportFrom(null) }}
+        existingKeys={existingKeys}
+        onImport={drafts => {
+          const from = importFrom === "orcid" ? "ORCID" : "Web of Science"
+          change(current => ({ ...current, publications: [...drafts.map(draft => ({ ...draft, id: crypto.randomUUID() })), ...current.publications] }))
+          setNotice(`${drafts.length === 1 ? "1 publication" : `${drafts.length} publications`} added from ${from}.${importFrom === "orcid" ? " Check their authors: ORCID lists only you." : ""}`)
+          setImportFrom(null)
         }}
       />
 

@@ -10,10 +10,11 @@ import { groupByFaculty, localName, peopleApi, positionsApi, roleLabels, statusL
 import { ConfirmSheet } from "./ConfirmSheet"
 import { PersonSheet } from "./PersonSheet"
 import { PositionsPanel } from "./PositionsPanel"
+import { ResearchOutputPanel } from "./ResearchOutputPanel"
 import { StructurePanel } from "./StructurePanel"
 import "./PeoplePage.css"
 
-type Tab = "people" | "structure"
+type Tab = "people" | "structure" | "output"
 type Dialog = { kind: "add" } | { kind: "edit"; person: Person } | { kind: "deactivate"; person: Person } | { kind: "reactivate"; person: Person }
 
 const statusClass: Record<PersonStatus, string> = { active: "status-active", invited: "status-submitted", deactivated: "status-draft" }
@@ -139,12 +140,11 @@ export function PeoplePage() {
             </div>
           </div>
 
-          {canManageRoles && (
-            <div className="segmented people-tabs" role="tablist" aria-label="People sections">
-              <button type="button" role="tab" aria-selected={tab === "people"} aria-checked={tab === "people"} onClick={() => setTab("people")}>People ({people.length})</button>
-              <button type="button" role="tab" aria-selected={tab === "structure"} aria-checked={tab === "structure"} onClick={() => setTab("structure")}>Structure</button>
-            </div>
-          )}
+          <div className="segmented people-tabs" role="tablist" aria-label="People sections">
+            <button type="button" role="tab" aria-selected={tab === "people"} aria-checked={tab === "people"} onClick={() => setTab("people")}>{isHead ? "Researchers" : "People"} ({people.length})</button>
+            {canManageRoles && <button type="button" role="tab" aria-selected={tab === "structure"} aria-checked={tab === "structure"} onClick={() => setTab("structure")}>Structure</button>}
+            <button type="button" role="tab" aria-selected={tab === "output"} aria-checked={tab === "output"} onClick={() => setTab("output")}>Research output</button>
+          </div>
 
           {loadError && (
             <div className="form-error-summary people-load-error" role="alert">
@@ -152,7 +152,9 @@ export function PeoplePage() {
             </div>
           )}
 
-          {tab === "structure" && canManageRoles ? (
+          {tab === "output" ? (
+            <ResearchOutputPanel key={org.id} orgId={org.id} units={units} canPickUnit={canManageRoles} />
+          ) : tab === "structure" && canManageRoles ? (
             <>
               <StructurePanel orgId={org.id} units={units} onChanged={finish} />
               <PositionsPanel orgId={org.id} positions={positions} onChanged={finish} />

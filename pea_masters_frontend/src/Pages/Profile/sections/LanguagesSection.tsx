@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Check, Info, Languages, Plus, Save, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ApiError } from "@/lib/api"
 import { useQualifications } from "../qualifications/qualifications-store"
 import { LANGUAGES, LEVELS } from "../qualifications/languages"
 import type { Entry } from "../qualifications/sections"
@@ -22,7 +23,6 @@ type RowErrors = Partial<Record<keyof Row, boolean>>
 const emptyRow = (): Row => ({ id: crypto.randomUUID(), language: "", read: "", write: "", speak: "" })
 const toRow = (entry: Entry): Row => ({ id: entry.id, language: entry.values.language ?? "", read: entry.values.read ?? "", write: entry.values.write ?? "", speak: entry.values.speak ?? "" })
 const isBlank = (row: Row) => !row.language && SKILLS.every(skill => !row[skill.key])
-const sameRow = (a: Row, b: Row) => a.language === b.language && SKILLS.every(skill => a[skill.key] === b[skill.key])
 
 /** Languages: all of them edited at once in a table, with a level for reading, writing and speaking. */
 export function LanguagesSection({ onEmptied }: { onEmptied: () => void }) {
@@ -32,6 +32,8 @@ export function LanguagesSection({ onEmptied }: { onEmptied: () => void }) {
   const [errors, setErrors] = useState<Record<string, RowErrors>>({})
   const [dirty, setDirty] = useState(false)
   const [notice, setNotice] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const tableRef = useRef<HTMLDivElement>(null)
   const focusRowId = useRef<string | null>(null)
 
@@ -87,23 +89,21 @@ export function LanguagesSection({ onEmptied }: { onEmptied: () => void }) {
       return
     }
 
-    // Unchanged rows keep their review status; new or changed rows go back to review.
-    // TODO: send to the API once qualifications are stored on the server
-    const next: Entry[] = filled.map(row => {
-      const previous = saved.find(entry => entry.id === row.id)
-      const unchanged = previous && sameRow(toRow(previous), row)
-      return {
-        id: row.id,
-        status: unchanged ? previous.status : "submitted",
-        values: { language: row.language, read: row.read, write: row.write, speak: row.speak },
-        documents: previous?.documents ?? [],
-      }
-    })
-    replaceSection(SECTION_ID, next)
-    setRows(next.length ? next.map(toRow) : [emptyRow()])
-    setDirty(false)
-    setNotice(true)
-    if (next.length === 0) onEmptied()
+    // Rows that were saved before keep their id; new ones get one from the server
+    setSaving(true)
+    setSaveError(null)
+    replaceSection(SECTION_ID, filled.map(row => ({
+      ...(saved.some(entry => entry.id === row.id) ? { id: row.id } : {}),
+      values: { language: row.language, read: row.read, write: row.write, speak: row.speak },
+    })))
+      .then(next => {
+        setRows(next.length ? next.map(toRow) : [emptyRow()])
+        setDirty(false)
+        setNotice(true)
+        if (next.length === 0) onEmptied()
+      })
+      .catch((cause: unknown) => setSaveError(cause instanceof ApiError ? cause.message : "Your languages couldn't be saved. Try again."))
+      .finally(() => setSaving(false))
   }
 
   const errorCount = Object.values(errors).filter(rowErrors => Object.values(rowErrors).some(Boolean)).length
@@ -123,10 +123,11 @@ export function LanguagesSection({ onEmptied }: { onEmptied: () => void }) {
         <div className="page-actions">
           <span className="save-status" role="status">{notice && !dirty && <><Check aria-hidden="true" />Languages saved</>}</span>
           <Button variant="outline" className="dashboard-button" onClick={addRow}><Plus />Add language</Button>
-          <Button className="dashboard-button" disabled={!dirty} onClick={save}><Save />Save</Button>
+          <Button className="dashboard-button" disabled={!dirty || saving} onClick={save}><Save />{saving ? "Saving…" : "Save"}</Button>
         </div>
       </div>
 
+      {saveError && <p className="form-error-summary" role="alert">{saveError}</p>}
       {errorCount > 0 && (
         <p className="form-error-summary" role="alert">
           Complete the highlighted {errorCount === 1 ? "row" : "rows"}: each language needs a level for reading, writing and speaking.

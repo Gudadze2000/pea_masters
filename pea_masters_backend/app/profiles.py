@@ -15,11 +15,13 @@ from sqlalchemy.orm import Session
 
 from app import audit, storage
 from app.auth.sessions import client_ip, current_user
-from app.authz import Action, Actor, authorize, get_actor, get_organization
+from app.authz import Action, Actor, authorize, coordinated_members, get_actor, get_organization
 from app.db import get_db
 from app.errors import problem
+from app.identifiers import Identifiers
 from app.models import (
     Affiliation,
+    CoordinatorAssignment,
     File,
     Organization,
     OrganizationMembership,
@@ -46,11 +48,17 @@ class Ref(BaseModel):
     name: dict[str, str]
 
 
+class Contact(BaseModel):
+    name: str
+    email: str
+
+
 class AffiliationOut(BaseModel):
     organization: Ref
     faculty: Ref | None
     department: Ref | None
     position: Ref | None
+    coordinator: Contact | None  # who the person contacts about their evaluation: their head of department
 
 
 class ProfileOut(BaseModel):
@@ -61,6 +69,8 @@ class ProfileOut(BaseModel):
     email: str
     biography: dict[str, str]  # {"en": html, "ka": html}
     photo_url: str | None
+    identifiers: Identifiers
+    orcid_verified: bool  # the ORCID iD was proven by signing in to ORCID
     affiliations: list[AffiliationOut]  # one per organization the person is an active member of
     updated_at: datetime | None
 
@@ -71,6 +81,33 @@ class BiographyIn(BaseModel):
 
 def photo_url(file_id: uuid.UUID | None) -> str | None:
     return f"/api/v1/files/{file_id}" if file_id else None
+
+
+def coordinator_of(db: Session, org_id: uuid.UUID, user_id: uuid.UUID,
+                   department_id: uuid.UUID | None) -> Contact | None:
+    """The person's own Coordinator if one is assigned to them, otherwise the head of their department.
+    Nobody is their own coordinator, and only active members of the organization count."""
+    current = (
+        (CoordinatorAssignment.organization_id == org_id)
+        & CoordinatorAssignment.ends_on.is_(None)
+        & (CoordinatorAssignment.coordinator_user_id != user_id)
+    )
+    candidates = [(CoordinatorAssignment.target == "member") & (CoordinatorAssignment.member_user_id == user_id)]
+    if department_id:
+        candidates.append((CoordinatorAssignment.target == "unit") & (CoordinatorAssignment.unit_id == department_id))
+    for target in candidates:
+        coordinator = db.scalar(
+            select(User)
+            .join(CoordinatorAssignment, CoordinatorAssignment.coordinator_user_id == User.id)
+            .join(OrganizationMembership, (OrganizationMembership.user_id == User.id)
+                  & (OrganizationMembership.organization_id == org_id))
+            .where(current, target, OrganizationMembership.status == "active", User.status != "deactivated",
+                   User.deleted_at.is_(None))
+            .order_by(CoordinatorAssignment.starts_on.desc())
+            .limit(1))
+        if coordinator:
+            return Contact(name=coordinator.display_name, email=coordinator.email)
+    return None
 
 
 def build_profile(db: Session, user: User) -> ProfileOut:
@@ -94,11 +131,14 @@ def build_profile(db: Session, user: User) -> ProfileOut:
             faculty=Ref(id=faculty.id, name=faculty.name) if faculty else None,
             department=Ref(id=department.id, name=department.name) if department else None,
             position=Ref(id=position.id, name=position.name) if position else None,
+            coordinator=coordinator_of(db, org.id, user.id, department.id if department else None),
         ))
     return ProfileOut(
         user_id=user.id, display_name=user.display_name, given_name=user.given_name, family_name=user.family_name,
         email=user.email, biography=dict(profile.biography) if profile else {},
         photo_url=photo_url(profile.photo_file_id) if profile else None,
+        identifiers=Identifiers.model_construct(**(profile.identifiers if profile else {})),
+        orcid_verified=bool(profile and profile.orcid_verified_at),
         affiliations=affiliations, updated_at=profile.updated_at if profile else None,
     )
 
@@ -147,6 +187,31 @@ def update_my_profile(body: BiographyIn, request: Request, user: User = Depends(
     audit.record(db, "profile.biography_updated", entity_type="profile", entity_id=user.id, actor_user_id=user.id,
                  after={lang: text_length(html) for lang, html in biography.items()},  # lengths, not the text
                  ip=client_ip(request))
+    db.commit()
+    return build_profile(db, user)
+
+
+@router.put("/api/v1/me/profile/identifiers", response_model=ProfileOut)
+def update_my_identifiers(body: Identifiers, request: Request, user: User = Depends(current_user),
+                          db: Session = Depends(get_db)):
+    """Sets the person's ORCID iD, ResearcherID and Scopus Author ID. Fields left out are unchanged; an empty
+    string or null removes one. Values are checked and stored in their canonical form."""
+    profile = profile_of(db, user.id)
+    identifiers = dict(profile.identifiers)
+    for key in body.model_fields_set:
+        value = getattr(body, key)
+        if value:
+            identifiers[key] = value
+        else:
+            identifiers.pop(key, None)
+    if identifiers.get("orcid") != profile.identifiers.get("orcid"):
+        profile.orcid_verified_at = None
+    if identifiers != profile.identifiers:
+        audit.record(db, "profile.identifiers_updated", entity_type="profile", entity_id=user.id,
+                     actor_user_id=user.id, before=dict(profile.identifiers), after=identifiers,
+                     ip=client_ip(request))
+        profile.identifiers = identifiers
+        profile.updated_at = func.now()
     db.commit()
     return build_profile(db, user)
 
@@ -241,14 +306,23 @@ def person_profile(org_id: uuid.UUID, user_id: uuid.UUID, actor: Actor = Depends
 
 @router.get("/api/v1/files/{file_id}", response_class=FileResponse)
 def get_file(file_id: uuid.UUID, actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
-    """Serves an uploaded file to its owner, Root, and anyone sharing an organization with the owner."""
+    """Serves an uploaded file to its owner and Root. Photos also to anyone sharing an organization with the owner;
+    supporting documents only to those who review the owner: Admins of their organization and their head of
+    department."""
     file = db.get(File, file_id)
     if file is None or file.deleted_at is not None:
         raise problem(status.HTTP_404_NOT_FOUND, "not_found", "File not found.")
     if not (actor.is_root or file.owner_user_id == actor.user.id):
         owner_orgs = set(db.scalars(select(OrganizationMembership.organization_id).where(
             OrganizationMembership.user_id == file.owner_user_id)))
-        if not owner_orgs & set(actor.roles):
+        if file.purpose == "document":
+            allowed = any("admin" in actor.roles_in(org) or (
+                "coordinator" in actor.roles_in(org)
+                and file.owner_user_id in set(db.scalars(coordinated_members(actor.user.id, org))))
+                for org in owner_orgs)
+        else:
+            allowed = bool(owner_orgs & set(actor.roles))
+        if not allowed:
             raise problem(status.HTTP_404_NOT_FOUND, "not_found", "File not found.")  # don't reveal it exists
     return FileResponse(
         storage.path_of(file.storage_key), media_type=file.mime_type,

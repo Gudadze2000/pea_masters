@@ -1,7 +1,8 @@
+import { api } from "@/lib/api"
+
 /**
- * CV builder data model, sample data and browser storage.
- * Everything the researcher types on the CV builder page lives in one `CvData` object,
- * so the back end can later store it as-is (TODO: replace loadCv/saveCv with API calls).
+ * CV builder data model and storage. Everything the researcher types on the CV builder page lives in one `CvData`
+ * object, saved on the server as a whole (app/cv.py). Qualifications, research and teaching come from the profile.
  */
 
 export type Visibility = "private" | "public"
@@ -53,11 +54,11 @@ export type CvData = {
   publicFields: { email: boolean; phone: boolean; metrics: boolean }
   template: Template
   citationStyle: CitationStyle
-  /** Also show qualification entries that are still waiting for review */
-  includeSubmitted: boolean
   sections: { id: SectionId; enabled: boolean }[]
   personal: { headline: string; phone: string; summary: string }
   profiles: ProfileLinks
+  /** Show the research interests from My profile → Research instead of the CV's own list */
+  useProfileInterests: boolean
   interests: string[]
   publications: Publication[]
   talks: Talk[]
@@ -74,11 +75,11 @@ export type SectionMeta = { label: string; source: string }
 /** Where each section's content comes from, shown in "Sections & layout" */
 export const SECTION_META: Record<SectionId, SectionMeta> = {
   summary: { label: "Research statement", source: "CV builder" },
-  interests: { label: "Research interests", source: "CV builder" },
+  interests: { label: "Research interests", source: "My profile → Research, or CV builder" },
   appointments: { label: "Academic appointments", source: "Qualifications → Employment" },
   education: { label: "Education", source: "Qualifications → Education" },
   publications: { label: "Publications", source: "CV builder" },
-  grants: { label: "Grants & research projects", source: "Research overview" },
+  grants: { label: "Grants & research projects", source: "My profile → Research" },
   talks: { label: "Talks & presentations", source: "CV builder" },
   teaching: { label: "Teaching", source: "Teaching" },
   supervision: { label: "Student supervision", source: "Teaching" },
@@ -99,36 +100,27 @@ export const emptyPublication = (): Omit<Publication, "id"> => ({
   type: "Journal article", status: "Published", authors: "", title: "", venue: "", year: "", volume: "", issue: "", pages: "", doi: "", url: "",
 })
 
-/* DOIs use Crossref's 10.5555 test prefix so the sample data never points at a real paper */
+/** A new, empty CV: the researcher fills it in, or imports publications */
 export const initialCv: CvData = {
   version: 1,
   visibility: "private",
   publicFields: { email: true, phone: false, metrics: true },
   template: "classic",
   citationStyle: "APA",
-  includeSubmitted: false,
   sections: DEFAULT_ORDER.map(id => ({ id, enabled: id !== "metrics" && id !== "patents" })),
-  personal: {
-    headline: "Associate Professor of Biology",
-    phone: "",
-    summary: "I study how plants adapt to drought and climate change, combining molecular genetics with field work on Caucasian wheat landraces. My lab maps drought-response genes and works with seed banks to keep local varieties available for breeding.",
-  },
+  personal: { headline: "", phone: "", summary: "" },
   profiles: { orcid: "", scopus: "", researcherId: "", scholar: "", researchGate: "", semanticScholar: "", website: "", github: "" },
-  interests: ["Plant molecular genetics", "Climate adaptation", "Caucasian flora", "Landraces"],
-  publications: [
-    { id: "pub1", type: "Journal article", status: "Published", authors: "Beridze N; Mchedlidze D; Schulz K", title: "Allelic variation in drought-response genes of Caucasian wheat landraces", venue: "Plant Genetic Resources", year: "2024", volume: "22", issue: "3", pages: "145-158", doi: "10.5555/pea.2024.0145", url: "" },
-    { id: "pub2", type: "Conference paper", status: "Published", authors: "Gelashvili A; Beridze N", title: "Root architecture of drought-tolerant wheat accessions under field conditions", venue: "Proceedings of the European Plant Science Conference", year: "2022", volume: "", issue: "", pages: "88-91", doi: "", url: "" },
-    { id: "pub3", type: "Journal article", status: "In press", authors: "Beridze N; Tabatadze I; Kapanadze G", title: "A CRISPR screen for osmotic-stress regulators in Arabidopsis", venue: "Journal of Experimental Botany", year: "2025", volume: "", issue: "", pages: "", doi: "", url: "" },
-    { id: "pub4", type: "Book chapter", status: "Published", authors: "Beridze N", title: "Wheat landraces of Georgia", venue: "Crop Wild Relatives of the Caucasus", year: "2021", volume: "", issue: "", pages: "201-224", doi: "", url: "" },
-  ],
-  talks: [
-    { id: "talk1", title: "Mining landraces for drought tolerance", event: "Gordon Research Conference on Plant Stress", location: "Waterville Valley, USA", date: "2024-07", type: "Invited talk" },
-    { id: "talk2", title: "Seed banks as living genetic archives", event: "Caucasus Biodiversity Forum", location: "Tbilisi, Georgia", date: "2023-10", type: "Keynote" },
-  ],
-  metrics: { hIndex: "", citations: "", source: "Scopus", asOf: "" },
+  useProfileInterests: true,
+  interests: [],
+  publications: [],
+  talks: [],
+  metrics: { hIndex: "", citations: "", source: "Web of Science", asOf: "" },
 }
 
-/* ---------- browser storage ---------- */
+/* ---------- storage ---------- */
+
+/** The sample interests older CVs started with: not something the researcher chose */
+const LEGACY_SAMPLE_INTERESTS = "Plant molecular genetics|Climate adaptation|Caucasian flora|Landraces"
 
 const STORAGE_KEY = "pea.cv-builder.v1"
 
@@ -138,7 +130,8 @@ export function normaliseCv(raw: unknown): CvData | null {
   const data = raw as Partial<CvData>
   if (data.version !== 1) return null
   const known = new Set(DEFAULT_ORDER)
-  const sections = Array.isArray(data.sections) ? data.sections.filter(section => known.has(section?.id)) : []
+  // No section list at all: the default layout. Otherwise the researcher's order, with any new sections added, off.
+  const sections = Array.isArray(data.sections) ? data.sections.filter(section => known.has(section?.id)) : initialCv.sections.map(section => ({ ...section }))
   for (const id of DEFAULT_ORDER) if (!sections.some(section => section.id === id)) sections.push({ id, enabled: false })
   return {
     ...initialCv,
@@ -149,31 +142,49 @@ export function normaliseCv(raw: unknown): CvData | null {
     metrics: { ...initialCv.metrics, ...data.metrics },
     sections,
     interests: Array.isArray(data.interests) ? data.interests.filter(item => typeof item === "string") : [],
+    // CVs saved before this option: keep a list the researcher wrote themselves, otherwise follow the profile
+    useProfileInterests: typeof data.useProfileInterests === "boolean" ? data.useProfileInterests
+      : !(Array.isArray(data.interests) && data.interests.length > 0 && data.interests.join("|") !== LEGACY_SAMPLE_INTERESTS),
     publications: Array.isArray(data.publications) ? data.publications.map(pub => ({ ...emptyPublication(), ...pub, id: pub.id || crypto.randomUUID() })) : [],
     talks: Array.isArray(data.talks) ? data.talks.map(talk => ({ ...talk, id: talk.id || crypto.randomUUID() })) : [],
   }
 }
 
-export function loadCv(): { data: CvData; savedAt: number | null } {
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored) as { data: unknown; savedAt: number }
-      const data = normaliseCv(parsed.data)
-      if (data) return { data, savedAt: parsed.savedAt ?? null }
-    }
-  } catch {
-    // Storage blocked or corrupt: start from the sample data
-  }
-  return { data: initialCv, savedAt: null }
+/** The CV on the server; data is null until the person saves one */
+export const cvApi = {
+  get: () => api<{ data: unknown; updated_at: string | null }>("/me/cv"),
+  save: (data: CvData) => api<{ data: unknown; updated_at: string }>("/me/cv", { method: "PUT", body: { data } }),
 }
 
-/** Returns false when the browser refuses to store data (private mode, quota). */
-export function saveCv(data: CvData, savedAt: number) {
+/* CVs used to be kept in the browser and started from a sample CV. The first time someone opens the CV builder after
+   the move, their browser copy goes to the server, without the sample items. */
+const SAMPLE_PUBLICATIONS = new Set(["pub1", "pub2", "pub3", "pub4"])
+const SAMPLE_TALKS = new Set(["talk1", "talk2"])
+const SAMPLE_HEADLINE = "Associate Professor of Biology"
+const SAMPLE_SUMMARY = "I study how plants adapt to drought and climate change"
+
+/** The CV this browser kept before CVs moved to the server, minus the sample items; null when there is none */
+export function browserCv(): CvData | null {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ data, savedAt }))
-    return true
+    const stored = window.localStorage.getItem(STORAGE_KEY)
+    const data = stored ? normaliseCv((JSON.parse(stored) as { data: unknown }).data) : null
+    if (!data) return null
+    return {
+      ...data,
+      personal: {
+        ...data.personal,
+        headline: data.personal.headline === SAMPLE_HEADLINE ? "" : data.personal.headline,
+        summary: data.personal.summary.startsWith(SAMPLE_SUMMARY) ? "" : data.personal.summary,
+      },
+      publications: data.publications.filter(pub => !SAMPLE_PUBLICATIONS.has(pub.id)),
+      talks: data.talks.filter(talk => !SAMPLE_TALKS.has(talk.id)),
+    }
   } catch {
-    return false
+    return null
   }
+}
+
+/** Removes the browser copy once it's safely on the server */
+export function forgetBrowserCv() {
+  try { window.localStorage.removeItem(STORAGE_KEY) } catch { /* nothing to remove */ }
 }

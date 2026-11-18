@@ -1,4 +1,5 @@
-import { Award, Briefcase, BriefcaseBusiness, Building2, Calendar, FileText, Globe, GraduationCap, Hash, Languages, List, MapPin, Paperclip, Star, UserRound, Users, type LucideIcon } from "lucide-react"
+import { Award, Briefcase, BriefcaseBusiness, Building2, Calendar, FileText, Globe, GraduationCap, Hash, Languages, List, MapPin, MonitorPlay, Paperclip, Star, UserRound, Users, Video, type LucideIcon } from "lucide-react"
+import { PLAYABLE_SITES } from "@/lib/video"
 import type { FieldDef } from "@/components/forms/field-types"
 import { COUNTRIES } from "./countries"
 import { LANGUAGES, LEVELS, levelLabel } from "./languages"
@@ -9,18 +10,15 @@ import { LANGUAGES, LEVELS, levelLabel } from "./languages"
  * so adding a field or a section only means editing this file.
  */
 
-export type EntryStatus = "draft" | "submitted" | "approved" | "rejected"
 export type EntryValues = Record<string, string>
-export type EntryDocument = { id: string; name: string; size: number; type: string }
+/** An uploaded supporting document; url opens it (the owner, their Admins and head of department) */
+export type EntryDocument = { id: string; name: string; size: number; type: string; url?: string }
 
+/** One entry of a profile section. The profile is the person's own: saved entries are on it, with no review. */
 export type Entry = {
   id: string
-  status: EntryStatus
   values: EntryValues
   documents: EntryDocument[]
-  /** Reviewer comment shown when the entry is rejected */
-  adminComment?: string
-  reviewer?: string
 }
 
 export type { FieldDef }
@@ -51,7 +49,8 @@ export type SectionDef = {
   titleOf: (values: EntryValues) => string
   metaOf: (values: EntryValues) => MetaItem[]
   descriptionOf: (values: EntryValues) => string | undefined
-  entries: Entry[]
+  /** Field holding a video link: the entry shows a player (Video lectures) */
+  videoField?: string
 }
 
 /* ---------- formatting helpers ---------- */
@@ -93,22 +92,11 @@ const placeMeta = (...parts: (string | undefined)[]): MetaItem => ({ icon: MapPi
 const country = (label = "Country", required = false): FieldDef => ({ name: "country", label, type: "select", required, span: 2, options: COUNTRIES })
 const startDate: FieldDef = { name: "start", label: "Start date", type: "date", required: true, span: 1 }
 const endDate: FieldDef = { name: "end", label: "End date", type: "date", span: 1, hint: "Leave empty if ongoing." }
-/** Every form ends with a remark for the reviewer and a URL, as in the patents design */
+/** Most forms end with a link to more information */
 const reviewFields: FieldDef[] = [
-  { name: "comment", label: "Comment", type: "textarea", span: 2, rows: 3, placeholder: "Optional remarks for the reviewer" },
   { name: "url", label: "URL", type: "url", span: 2, placeholder: "https://" },
 ]
 
-let seed = 0
-const entry = (status: EntryStatus, values: EntryValues, extra: { documents?: Omit<EntryDocument, "id">[]; comment?: string; reviewer?: string } = {}): Entry => ({
-  id: `seed-${++seed}`,
-  status,
-  values,
-  documents: (extra.documents ?? []).map(doc => ({ ...doc, id: `doc-${seed}-${doc.name}` })),
-  adminComment: extra.comment,
-  reviewer: extra.reviewer,
-})
-const pdf = (name: string, size: number) => ({ name, size, type: "application/pdf" })
 
 /* ---------- sections ---------- */
 
@@ -138,11 +126,6 @@ export const sections: SectionDef[] = [
     titleOf: v => v.title,
     metaOf: v => meta([dateMeta(v.date), { icon: Building2, text: v.body }, urlMeta(v.url)]),
     descriptionOf: v => v.reason,
-    entries: [
-      entry("approved", { title: "Young Scientist Award", date: "2023-06-15", body: "Georgian National Science Foundation", country: "Georgia", url: "https://gnsf.ge/awards/2023", reason: "Awarded for outstanding contribution to plant molecular genetics by an early-career researcher." }, { documents: [pdf("young-scientist-award.pdf", 840_000)] }),
-      entry("submitted", { title: "Best Poster - European Plant Science Conference", date: "2022-09-08", body: "EPSO", country: "Italy", reason: "Poster on drought-response genes in Caucasian wheat landraces." }),
-      entry("rejected", { title: "Faculty Teaching Excellence Prize", date: "2021-03-20", body: "Ilia State University", country: "Georgia", reason: "Recognition for innovative teaching in bioinformatics." }, { comment: "Please add a supporting document or URL.", reviewer: "Giorgi Kapanadze" }),
-    ],
   },
   {
     id: "memberships",
@@ -167,12 +150,6 @@ export const sections: SectionDef[] = [
     titleOf: v => v.organisation,
     metaOf: v => meta([{ icon: UserRound, text: v.role }, periodMeta(v), urlMeta(v.url)]),
     descriptionOf: () => undefined,
-    entries: [
-      entry("approved", { organisation: "Federation of European Societies of Plant Biology", role: "Full member", country: "Belgium", start: "2018-01-10" }),
-      entry("approved", { organisation: "Georgian Society of Geneticists and Breeders", role: "Board member", country: "Georgia", start: "2020-05-04" }),
-      entry("submitted", { organisation: "European Society for Evolutionary Biology", role: "Member", start: "2021-02-01", url: "https://eseb.org" }),
-      entry("draft", { organisation: "International Society for Plant Molecular Biology", role: "Member" }),
-    ],
   },
   {
     id: "patents",
@@ -208,9 +185,6 @@ export const sections: SectionDef[] = [
     titleOf: v => v.title,
     metaOf: v => meta([{ icon: FileText, text: v.kind }, { icon: Hash, text: v.number }, v.grantDate ? dateMeta(v.grantDate) : dateMeta(v.submissionDate), placeMeta(v.country), urlMeta(v.url)]),
     descriptionOf: v => v.abstract,
-    entries: [
-      entry("approved", { kind: "Patent", country: "Georgia", title: "Method for detecting drought-response alleles in cereal landraces", inventors: "N. Beridze, D. Mchedlidze", number: "GE P 2023 7421", submissionDate: "2021-03-12", grantDate: "2023-07-04", expiryDate: "2041-03-12", licence: "Exclusive licence - AgroGen Ltd.", abstract: "The invention relates to a PCR-based method for identifying alleles associated with drought tolerance in Caucasian wheat landraces." }, { documents: [pdf("patent-certificate.pdf", 1_250_000)] }),
-    ],
   },
   {
     id: "committees",
@@ -240,10 +214,6 @@ export const sections: SectionDef[] = [
     titleOf: v => v.name,
     metaOf: v => meta([{ icon: UserRound, text: v.role }, { icon: Building2, text: v.organisation }, periodMeta(v)]),
     descriptionOf: v => v.description,
-    entries: [
-      entry("approved", { name: "Doctoral Programme Committee in Life Sciences", role: "Member", organisation: "Ilia State University", level: "University", country: "Georgia", start: "2021-09-15", description: "Reviews doctoral admissions and thesis proposals." }),
-      entry("submitted", { name: "Editorial board, Caucasian Journal of Biology", role: "Associate editor", organisation: "Caucasian Journal of Biology", level: "International", start: "2023-01-01" }),
-    ],
   },
   {
     id: "employment",
@@ -273,11 +243,6 @@ export const sections: SectionDef[] = [
     titleOf: v => v.position,
     metaOf: v => meta([{ icon: Building2, text: v.employer }, placeMeta(v.city, v.country), periodMeta(v)]),
     descriptionOf: v => v.description,
-    entries: [
-      entry("approved", { position: "Associate Professor of Biology", employer: "Ilia State University", employmentType: "Full-time", city: "Tbilisi", country: "Georgia", start: "2019-09-01", description: "Teaching molecular biology and bioinformatics; leading the plant genetics lab." }),
-      entry("approved", { position: "Assistant Professor", employer: "Ilia State University", employmentType: "Full-time", city: "Tbilisi", country: "Georgia", start: "2014-09-01", end: "2019-08-31" }),
-      entry("approved", { position: "Postdoctoral Researcher", employer: "University of Göttingen", employmentType: "Fixed-term contract", city: "Göttingen", country: "Germany", start: "2012-03-01", end: "2014-07-31" }),
-    ],
   },
   {
     id: "education",
@@ -312,11 +277,6 @@ export const sections: SectionDef[] = [
     titleOf: v => [v.degree, v.field].filter(Boolean).join(" · "),
     metaOf: v => meta([{ icon: Building2, text: v.institution }, placeMeta(v.city, v.country), v.start ? periodMeta(v) : dateMeta(v.end)]),
     descriptionOf: v => v.thesis && `Thesis: ${v.thesis}`,
-    entries: [
-      entry("approved", { degree: "Doctorate (PhD)", field: "Molecular Biology", institution: "Ivane Javakhishvili Tbilisi State University", city: "Tbilisi", country: "Georgia", start: "2008-10-01", end: "2011-12-20", thesis: "Genetic diversity of drought-response genes in Caucasian wheat landraces", supervisor: "Prof. T. Gogoladze" }, { documents: [pdf("phd-diploma.pdf", 1_600_000)] }),
-      entry("approved", { degree: "Master (MA/MSc)", field: "Genetics", institution: "Ivane Javakhishvili Tbilisi State University", city: "Tbilisi", country: "Georgia", start: "2006-09-15", end: "2008-07-01" }),
-      entry("approved", { degree: "Bachelor (BA/BSc)", field: "Biology", institution: "Ivane Javakhishvili Tbilisi State University", city: "Tbilisi", country: "Georgia", start: "2002-09-15", end: "2006-07-01" }),
-    ],
   },
   {
     // Edited in a table on its own page (LanguagesPage), not through the generic form
@@ -338,12 +298,6 @@ export const sections: SectionDef[] = [
     titleOf: v => v.language,
     metaOf: v => meta((["read", "write", "speak"] as const).map(skill => ({ icon: Languages, text: v[skill] ? `${capitalize(skill)}: ${levelLabel(v[skill])}` : "" }))),
     descriptionOf: () => undefined,
-    entries: [
-      entry("approved", { language: "Georgian", read: "Native", write: "Native", speak: "Native" }),
-      entry("approved", { language: "English", read: "C1", write: "C1", speak: "B2" }),
-      entry("approved", { language: "German", read: "B1", write: "A2", speak: "A2" }),
-      entry("approved", { language: "Russian", read: "B2", write: "B1", speak: "B1" }),
-    ],
   },
   {
     id: "consultancy",
@@ -372,9 +326,6 @@ export const sections: SectionDef[] = [
     titleOf: v => v.topic,
     metaOf: v => meta([{ icon: Building2, text: v.client }, periodMeta(v), urlMeta(v.url)]),
     descriptionOf: v => v.description,
-    entries: [
-      entry("approved", { topic: "Expert on crop genetic resources", client: "Ministry of Environmental Protection and Agriculture of Georgia", clientType: "Government", country: "Georgia", start: "2022-02-01", end: "2022-12-31", description: "Advised on the national strategy for conserving local crop varieties." }),
-    ],
   },
   {
     id: "creative",
@@ -407,7 +358,39 @@ export const sections: SectionDef[] = [
     titleOf: v => v.title,
     metaOf: v => meta([{ icon: Star, text: v.kind }, v.end ? periodMeta(v) : dateMeta(v.start), placeMeta(v.venue, v.country), urlMeta(v.url)]),
     descriptionOf: v => v.description,
-    entries: [],
+  },
+  {
+    id: "videos",
+    label: "Video lectures",
+    shortLabel: "Video lectures",
+    icon: MonitorPlay,
+    description: "Recorded lectures, talks and courses from anywhere on the web. They play right on your profile.",
+    formDescription: "A recorded lecture, talk or course",
+    noun: "video lecture",
+    titleField: "title",
+    documentLabel: "Upload slides or materials (optional)",
+    groups: [
+      { title: "Video", fields: [
+        { name: "title", label: "Title", type: "text", required: true },
+        { name: "url", label: "Video link", type: "url", required: true, placeholder: "https://www.youtube.com/watch?v=…", hint: `${PLAYABLE_SITES} play on PEA. Links to other sites open there.` },
+        { name: "kind", label: "Type", type: "select", span: 2, options: ["Lecture", "Course or lecture series", "Conference talk", "Seminar or webinar", "Interview", "Other"] },
+        { name: "language", label: "Language", type: "select", span: 2, options: LANGUAGES },
+        { name: "event", label: "Course, event or channel", type: "text", span: 2 },
+        { name: "date", label: "Date recorded", type: "date", span: 2 },
+      ] },
+      { title: "Description", fields: [
+        { name: "description", label: "Description", type: "textarea", placeholder: "What the video covers and who it is for" },
+      ] },
+    ],
+    titleOf: v => v.title,
+    metaOf: v => meta([
+      { icon: Video, text: v.kind },
+      v.date ? dateMeta(v.date) : undefined,
+      { icon: Users, text: v.event },
+      { icon: Languages, text: v.language },
+    ]),  // the player links to the video itself
+    descriptionOf: v => v.description,
+    videoField: "url",
   },
   {
     id: "other",
@@ -438,10 +421,6 @@ export const sections: SectionDef[] = [
     titleOf: v => v.title,
     metaOf: v => meta([{ icon: List, text: v.category }, { icon: Building2, text: v.organisation }, v.end ? periodMeta(v) : dateMeta(v.start), urlMeta(v.url)]),
     descriptionOf: v => v.description,
-    entries: [
-      entry("approved", { title: "Reviewer for Shota Rustaveli National Science Foundation grant calls", category: "Peer review", organisation: "SRNSF", start: "2023-04-10" }),
-      entry("submitted", { title: "Organiser, Summer School in Plant Genomics", category: "Event organisation", organisation: "Ilia State University", start: "2024-07-08", end: "2024-07-14", description: "Week-long summer school for 30 MSc and PhD students." }),
-    ],
   },
 ]
 
@@ -450,3 +429,7 @@ export const findSection = (id: string | undefined) => sections.find(section => 
 /** Paperclip meta item for cards with attachments */
 export const attachmentMeta = (count: number): MetaItem | undefined =>
   count > 0 ? { icon: Paperclip, text: count === 1 ? "1 document" : `${count} documents` } : undefined
+
+/** Order on the profile: background first, then achievements, then service and other activities */
+const PROFILE_ORDER = ["education", "employment", "languages", "awards", "patents", "memberships", "committees", "consultancy", "creative", "videos", "other"]
+export const profileSections: SectionDef[] = PROFILE_ORDER.map(id => sections.find(section => section.id === id)).filter((s): s is SectionDef => !!s)

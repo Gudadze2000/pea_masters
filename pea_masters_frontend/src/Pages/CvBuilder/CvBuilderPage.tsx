@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { flushSync } from "react-dom"
-import { useLocation, useNavigate } from "react-router"
-import { TriangleAlert, Check, Eye, EyeOff, Globe, Lock, Printer, UserRound } from "lucide-react"
+import { useBlocker, useLocation, useNavigate } from "react-router"
+import { TriangleAlert, Check, Eye, EyeOff, Globe, Lock, Printer, Save, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { useQualifications } from "@/Pages/Profile/qualifications/qualifications-store"
-import { useIdentity } from "@/lib/profile"
+import { saveIdentifiers, useIdentity, useMyProfile } from "@/lib/profile"
+import { SERVER_IDENTIFIERS } from "@/Pages/Profile/sections/IdentifiersCard"
+import { savedResearch, useProfileData } from "@/Pages/Profile/profile-data"
+import { useStore } from "@/lib/store"
 import { buildCvSections, sectionCounts } from "./cv-content"
-import { loadCv, saveCv, type CvData, type Visibility } from "./cv-model"
+import { browserCv, cvApi, forgetBrowserCv, initialCv, normaliseCv, type CvData, type Visibility } from "./cv-model"
 import { ConfirmDialog, Segmented } from "./cv-ui"
 import type { ChangeCv } from "./form-utils"
 import { CvPreview } from "./CvPreview"
@@ -20,7 +23,6 @@ import "@/Pages/Profile/qualifications/QualificationsPage.css"
 import "@/Pages/Profile/research/ResearchPage.css"
 import "./CvBuilderPage.css"
 
-const AUTOSAVE_DELAY = 800
 
 const TABS = [
   { id: "profile", label: "Profile & links" },
@@ -54,57 +56,109 @@ function timeAgo(timestamp: number, now: number) {
 /** /cv-builder */
 export function CvBuilderPage() {
   const person = useIdentity()
+  const { profile } = useMyProfile()
+  useProfileData()
+  const research = useStore(savedResearch)
   const { entries } = useQualifications()
-  const [initial] = useState(loadCv)
-  const [cv, setCv] = useState<CvData>(initial.data)
-  const [savedAt, setSavedAt] = useState<number | null>(initial.savedAt)
-  const [saveState, setSaveState] = useState<"idle" | "pending" | "failed">("idle")
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading")
+  const [cv, setCv] = useState<CvData>(initialCv)
+  const [savedAt, setSavedAt] = useState<number | null>(null)
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "failed">("idle")
+  /** The CV as last saved on the server, to tell whether there are unsaved changes */
+  const [savedCv, setSavedCv] = useState<CvData>(initialCv)
   const [tab, setTab] = useState<TabId>("profile")
   const [previewMode, setPreviewMode] = useState<PreviewMode>("owner")
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit")
   const [confirmPublic, setConfirmPublic] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
-  const latest = useRef(cv)
-  const timer = useRef<number | undefined>(undefined)
   const noticeTimer = useRef<number | undefined>(undefined)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const now = useNow(30000)
 
-  /* ---------- autosave to this browser ---------- */
+  // ORCID, ResearcherID and Scopus ID live on the profile (server); the CV shows those
+  const shown = useMemo<CvData>(() => profile ? {
+    ...cv,
+    profiles: { ...cv.profiles, ...Object.fromEntries(SERVER_IDENTIFIERS.map(({ key, server }) => [key, profile.identifiers[server] ?? ""])) },
+  } : cv, [cv, profile])
 
-  const persist = (data: CvData) => {
-    window.clearTimeout(timer.current)
-    const at = Date.now()
-    if (saveCv(data, at)) {
-      setSavedAt(at)
+  // IDs typed into the CV builder before they moved to the profile: move them over once
+  const moved = useRef(false)
+  useEffect(() => {
+    if (!profile || moved.current) return
+    moved.current = true
+    const local = Object.fromEntries(SERVER_IDENTIFIERS
+      .filter(({ key, server }) => cv.profiles[key] && !profile.identifiers[server])
+      .map(({ key, server }) => [server, cv.profiles[key]]))
+    if (Object.keys(local).length) void saveIdentifiers(local).catch(() => { /* invalid or offline: they stay in the CV builder */ })
+  }, [profile, cv.profiles])
+
+  /* ---------- load, and autosave to the server ---------- */
+
+  const dirty = useMemo(() => JSON.stringify(cv) !== JSON.stringify(savedCv), [cv, savedCv])
+
+  /** Saves the CV as it is now (the Save button, or Ctrl+S) */
+  const save = async () => {
+    if (saveState === "saving") return
+    const snapshot = cv
+    setSaveState("saving")
+    try {
+      const saved = await cvApi.save(snapshot)
+      setSavedCv(snapshot)
+      setSavedAt(Date.parse(saved.updated_at))
       setSaveState("idle")
-    } else {
+    } catch {
       setSaveState("failed")
     }
   }
 
-  const change: ChangeCv = update => {
-    setCv(current => {
-      const next = update(current)
-      latest.current = next
-      return next
-    })
-    setSaveState("pending")
-    window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => persist(latest.current), AUTOSAVE_DELAY)
+  const load = async () => {
+    setLoadState("loading")
+    try {
+      const stored = await cvApi.get()
+      const fromServer = stored.data ? normaliseCv(stored.data) : null
+      const fromBrowser = fromServer ? null : browserCv()
+      const data = fromServer ?? fromBrowser ?? initialCv
+      setCv(data)
+      setSavedCv(fromBrowser ? initialCv : data)  // a browser copy counts as unsaved until it reaches the server
+      setSavedAt(stored.updated_at ? Date.parse(stored.updated_at) : null)
+      setLoadState("ready")
+      if (fromBrowser) {
+        // A CV this browser kept before CVs moved to the server: move it over once, then forget the browser copy
+        await cvApi.save(fromBrowser).then(saved => { setSavedCv(fromBrowser); setSavedAt(Date.parse(saved.updated_at)); forgetBrowserCv(); flash("Your CV from this browser is now saved on the server.") })
+          .catch(() => setSaveState("failed"))
+      }
+    } catch {
+      setLoadState("error")
+    }
   }
 
-  // Save straight away when the page is closed or left, so the last keystrokes aren't lost
+  useEffect(() => { void load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const change: ChangeCv = update => {
+    setCv(update)
+    if (saveState === "failed") setSaveState("idle")
+  }
+
+  // Unsaved changes: the browser asks before closing the tab or reloading...
   useEffect(() => {
-    const flush = () => { if (timer.current !== undefined) saveCv(latest.current, Date.now()) }
-    window.addEventListener("pagehide", flush)
-    return () => {
-      window.removeEventListener("pagehide", flush)
-      flush()
-      window.clearTimeout(timer.current)
-      window.clearTimeout(noticeTimer.current)
+    if (!dirty) return
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault()
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [dirty])
+  // ...and PEA asks before going to another page
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname)
+
+  // Ctrl+S / ⌘S saves the CV instead of opening the browser's "save page" dialog
+  useEffect(() => {
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); void save() }
     }
-  }, [])
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  })
+
+  useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
 
   const flash = (message: string) => {
     setNotice(message)
@@ -122,8 +176,8 @@ export function CvBuilderPage() {
   /* ---------- preview ---------- */
 
   const asVisitor = previewMode === "visitor"
-  const sections = useMemo(() => buildCvSections(cv, entries, { asVisitor, ownFamilyName: person.familyName }), [cv, entries, asVisitor, person.familyName])
-  const counts = useMemo(() => sectionCounts(cv, entries), [cv, entries])
+  const sections = useMemo(() => buildCvSections(cv, entries, { asVisitor, ownFamilyName: person.familyName, research }), [cv, entries, asVisitor, person.familyName, research])
+  const counts = useMemo(() => sectionCounts(cv, entries, research), [cv, entries, research])
 
   // The PDF is always the full CV, whatever preview mode is selected
   const downloadPdf = () => {
@@ -154,14 +208,21 @@ export function CvBuilderPage() {
     tabRefs.current[target]?.focus()
   }
 
-  const saveText = saveState === "failed"
-    ? "Couldn't save in this browser"
-    : saveState === "pending" ? "Saving…"
-      : savedAt ? `Saved in this browser · ${timeAgo(savedAt, now)}` : "Changes are saved in this browser"
+  const saveText = saveState === "saving" ? "Saving…"
+    : saveState === "failed" ? "Not saved"
+      : dirty ? "Unsaved changes"
+        : savedAt ? `Saved · ${timeAgo(savedAt, now)}` : "Not saved yet"
 
   return (
     <WorkspaceLayout breadcrumb={[{ label: "CV builder" }]}>
-      {() => (
+      {() => loadState !== "ready" ? (
+        <div className="dashboard-content">
+          <div className="page-heading"><div><h1>CV builder</h1></div></div>
+          <div className="dashboard-card" role={loadState === "error" ? "alert" : "status"}>
+            {loadState === "error" ? <>Your CV couldn't be loaded. <Button variant="link" onClick={() => void load()}>Try again</Button></> : "Loading your CV…"}
+          </div>
+        </div>
+      ) : (
         <div className="dashboard-content cv-builder" data-view={mobileView}>
           <div className="page-heading cv-no-print">
             <div>
@@ -169,18 +230,22 @@ export function CvBuilderPage() {
               <p>Build an academic CV from your profile, publications and research links.</p>
             </div>
             <div className="page-actions">
-              <span className={`cv-save-status ${saveState === "failed" ? "failed" : ""}`} role="status">
-                {saveState === "failed" ? <TriangleAlert aria-hidden="true" /> : saveState === "idle" && savedAt ? <Check aria-hidden="true" /> : null}
+              <span className={`cv-save-status ${saveState === "failed" ? "failed" : dirty ? "unsaved" : ""}`} role="status">
+                {saveState === "failed" ? <TriangleAlert aria-hidden="true" /> : !dirty && saveState === "idle" && savedAt ? <Check aria-hidden="true" /> : null}
                 {saveText}
               </span>
-              <Button className="dashboard-button" onClick={downloadPdf}><Printer />Download PDF</Button>
+              <Button className="dashboard-button" disabled={!dirty || saveState === "saving"} onClick={() => void save()} title="Save (Ctrl+S)">
+                <Save />{saveState === "saving" ? "Saving…" : "Save"}
+              </Button>
+              <Button variant="outline" className="dashboard-button" onClick={downloadPdf}><Printer />Download PDF</Button>
             </div>
           </div>
 
           {saveState === "failed" && (
             <div className="cv-warning cv-no-print" role="alert">
               <TriangleAlert aria-hidden="true" />
-              <div><p>Your browser isn't letting this page save</p><small>This happens in private windows or when site data is blocked. Use “Export backup” in Sections &amp; layout before you leave the page.</small></div>
+              <div><p>Your latest changes couldn't be saved</p><small>Check your connection and try again. Until then, “Export backup” in Sections &amp; layout keeps a copy on your computer.</small></div>
+              <Button variant="outline" className="dashboard-button compact" onClick={() => void save()}>Try again</Button>
             </div>
           )}
 
@@ -285,12 +350,22 @@ export function CvBuilderPage() {
                 </div>
               ) : (
                 <div className="cv-paper-scroll">
-                  <CvPreview cv={cv} sections={sections} person={person} asVisitor={asVisitor} />
+                  <CvPreview cv={shown} sections={sections} person={person} asVisitor={asVisitor} />
                 </div>
               )}
             </aside>
           </div>
 
+          <ConfirmDialog
+            open={blocker.state === "blocked"}
+            title="Leave without saving?"
+            description="Your CV has changes that aren't saved yet. If you leave now, they're lost."
+            confirmLabel="Leave without saving"
+            cancelLabel="Stay on this page"
+            danger
+            onConfirm={() => blocker.proceed?.()}
+            onCancel={() => blocker.reset?.()}
+          />
           <ConfirmDialog
             open={confirmPublic}
             title="Make your CV public?"

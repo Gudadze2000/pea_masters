@@ -17,6 +17,18 @@ class Settings(BaseSettings):
     session_hours: int = 12
     # Uploaded files (photos, documents). A folder for now; object storage (S3-compatible) on a server later.
     storage_dir: str = "storage"
+    # Clarivate Web of Science Starter API (app/wos.py). Empty: article checks are switched off.
+    clarivate_api_key: str = ""
+    wos_starter_url: str = "https://api.clarivate.com/apis/wos-starter/v1"
+    # Optional project contact address for Crossref's "polite" pool (app/crossref.py). Never a person's own address.
+    crossref_mailto: str = ""
+    crossref_url: str = "https://api.crossref.org"
+    # ORCID Public API (app/orcid.py). Empty client: "Connect ORCID" and the works import are switched off.
+    orcid_client_id: str = ""
+    orcid_client_secret: str = ""
+    orcid_base_url: str = "https://orcid.org"  # https://sandbox.orcid.org for testing
+    orcid_api_url: str = ""  # default: the public API next to orcid_base_url (pub.orcid.org/v3.0)
+    orcid_redirect_uri: str = ""  # default: PUBLIC_URL + /api/v1/orcid/callback
 
     @property
     def google_redirect_uri(self) -> str:

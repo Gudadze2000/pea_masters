@@ -1,6 +1,6 @@
 import type { Entry } from "@/Pages/Profile/qualifications/sections"
-import { initialResearch } from "@/Pages/Profile/research/researchMock"
-import { programmes, students } from "@/Pages/Profile/teaching/teachingMock"
+import type { ResearchOverview } from "@/lib/profile-entries"
+import { programmes, students } from "@/Pages/Profile/teaching/argus"
 import { formatCitation, type CitationPart } from "./citations"
 import { SECTION_META, type CvData, type PublicationType, type SectionId } from "./cv-model"
 
@@ -32,6 +32,8 @@ export type ViewOptions = {
   /** Visitor view: applies the public field settings */
   asVisitor: boolean
   ownFamilyName: string
+  /** Research overview as saved on My profile: projects, and interests when the CV uses the profile's */
+  research: ResearchOverview
 }
 
 const year = (date: string | undefined) => date?.slice(0, 4) ?? ""
@@ -64,7 +66,6 @@ const PUBLICATION_GROUPS: { label: string; types: PublicationType[] }[] = [
 export function buildCvSections(cv: CvData, qualifications: Record<string, Entry[]>, options: ViewOptions): CvSection[] {
   const visible = (sectionId: string) =>
     (qualifications[sectionId] ?? [])
-      .filter(entry => entry.status === "approved" || (cv.includeSubmitted && entry.status === "submitted"))
       .map(entry => entry.values)
 
   const build = (id: SectionId): CvSection | null => {
@@ -72,8 +73,10 @@ export function buildCvSections(cv: CvData, qualifications: Record<string, Entry
     switch (id) {
       case "summary":
         return cv.personal.summary.trim() ? { id, label, kind: "text", text: cv.personal.summary.trim() } : null
-      case "interests":
-        return cv.interests.length ? { id, label, kind: "chips", chips: cv.interests } : null
+      case "interests": {
+        const interests = cv.useProfileInterests ? options.research.interests : cv.interests
+        return interests.length ? { id, label, kind: "chips", chips: interests } : null
+      }
       case "appointments":
         return list(id, label, visible("employment").sort(byDateDesc(v => v.start)).map((v, i) => ({
           key: `emp-${i}`, title: v.position, subtitle: joined(v.employer, v.city, v.country), when: yearRange(v.start, v.end),
@@ -99,7 +102,7 @@ export function buildCvSections(cv: CvData, qualifications: Record<string, Entry
         return groups.length ? { id, label, kind: "publications", groups } : null
       }
       case "grants":
-        return list(id, label, [...initialResearch.projects].sort(byDateDesc(p => p.startYear)).map(p => ({
+        return list(id, label, [...options.research.projects].sort(byDateDesc(p => p.startYear)).map(p => ({
           key: p.id, title: p.title, subtitle: joined(p.donor, `${p.role}`, p.type === "International" ? "international" : undefined),
           when: p.endYear ? (p.startYear === p.endYear ? p.startYear : `${p.startYear} - ${p.endYear}`) : `${p.startYear} - present`,
         })))
@@ -166,8 +169,8 @@ function list(id: SectionId, label: string, items: CvItem[]): CvSection | null {
 }
 
 /** How many entries each section would show, for the "Sections & layout" list */
-export function sectionCounts(cv: CvData, qualifications: Record<string, Entry[]>) {
-  const all = buildCvSections({ ...cv, sections: cv.sections.map(section => ({ ...section, enabled: true })) }, qualifications, { asVisitor: false, ownFamilyName: "" })
+export function sectionCounts(cv: CvData, qualifications: Record<string, Entry[]>, research: ResearchOverview) {
+  const all = buildCvSections({ ...cv, sections: cv.sections.map(section => ({ ...section, enabled: true })) }, qualifications, { asVisitor: false, ownFamilyName: "", research })
   const counts: Partial<Record<SectionId, number>> = {}
   for (const section of all) {
     counts[section.id] =
