@@ -1,3 +1,7 @@
+import asyncio
+from urllib.parse import parse_qs, urlparse
+
+import httpx
 import pytest
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select, text
@@ -39,6 +43,32 @@ def test_email_from_organization_domain_goes_to_google_with_hints(client, org, m
     assert response.headers["location"].startswith("https://accounts.google.com/")
     assert seen == {"prompt": "select_account", "login_hint": "nino.beridze@iliauni.edu.ge",
                     "hd": "iliauni.edu.ge", "redirect_uri": "http://localhost:5173/api/v1/auth/google/callback"}
+
+
+@pytest.fixture
+def no_network(monkeypatch):
+    """Any outgoing HTTP request from the sign-in library fails the test"""
+    async def refuse(self, request, *args, **kwargs):
+        raise AssertionError(f"tried to contact {request.url}")
+    monkeypatch.setattr(httpx.AsyncClient, "send", refuse)
+
+
+def test_sending_people_to_google_needs_no_request_from_the_server(client, org, no_network):
+    """The server may not reach accounts.google.com (ISU's firewall): Google's settings are built in."""
+    response = client.get("/api/v1/auth/google/login?email=nino.beridze@iliauni.edu.ge", follow_redirects=False)
+    assert response.status_code == 302
+    url = urlparse(response.headers["location"])
+    query = parse_qs(url.query)
+    assert f"{url.scheme}://{url.netloc}{url.path}" == "https://accounts.google.com/o/oauth2/v2/auth"
+    assert query["response_type"] == ["code"] and query["scope"] == ["openid email profile"]
+    assert query["code_challenge_method"] == ["S256"] and query["code_challenge"] and query["nonce"] and query["state"]
+
+
+def test_id_tokens_are_checked_against_googles_issuer_and_keys(no_network):
+    metadata = asyncio.run(google.oauth.google.load_server_metadata())  # nothing is downloaded
+    assert metadata["issuer"] == "https://accounts.google.com"
+    assert metadata["jwks_uri"] == "https://www.googleapis.com/oauth2/v3/certs"
+    assert metadata["token_endpoint"] == "https://oauth2.googleapis.com/token"
 
 
 # --- who may sign in ----------------------------------------------------------------------------

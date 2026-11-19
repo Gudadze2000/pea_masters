@@ -29,10 +29,21 @@ from app.names import official_name
 
 router = APIRouter(prefix="/api/v1/auth/google", tags=["auth"])
 
+# Google's sign-in settings, as published at https://accounts.google.com/.well-known/openid-configuration (checked
+# 2026-11-19). They're given here instead of downloaded, so the server never needs to reach accounts.google.com: only
+# the person's browser goes there to sign in. The server uses the code exchange and the signature keys, and checks the
+# issuer of every ID token against the value below. If Google ever moves one of these, update them here.
+GOOGLE_OPENID = {
+    "issuer": "https://accounts.google.com",
+    "authorization_endpoint": "https://accounts.google.com/o/oauth2/v2/auth",
+    "token_endpoint": "https://oauth2.googleapis.com/token",
+    "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
+}
+
 oauth = OAuth()
 oauth.register(
     name="google",
-    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    **GOOGLE_OPENID,
     client_id=settings.google_client_id,
     client_secret=settings.google_client_secret,
     # Authlib adds state and nonce itself; S256 turns on PKCE
