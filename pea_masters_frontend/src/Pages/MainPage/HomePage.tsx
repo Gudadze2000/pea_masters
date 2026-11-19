@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import { useSession } from "@/lib/auth"
 import { useIdentity } from "@/lib/profile"
 import { notifications, openNotifications, timeAgo, useReadNotifications } from "@/lib/notifications"
-import { findEntryNeedingAttention, readDraft, type EvaluationLinkState } from "@/Pages/EvaluationForm/evaluation-model"
+import { entryNeedingAttention } from "@/lib/evaluations"
+import type { EvaluationLinkState } from "@/Pages/EvaluationForm/evaluation-model"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import "./HomePage.css"
 
@@ -42,13 +43,9 @@ export function HomePage() {
   const session = useSession()
   const identity = useIdentity()
   const firstName = session?.name.split(/\s+/)[0] ?? ""
-  // Entries the attention rows point at, read from the saved evaluation draft (so a fixed entry isn't linked again)
-  const [attention] = useState(() => {
-    const draft = readDraft()
-    return { rejected: findEntryNeedingAttention(draft, "rejected", "article"), missingFile: findEntryNeedingAttention(draft, "missing-file", "conference") }
-  })
-  /** Opens the evaluation form, with that entry's edit dialog open when there is one */
-  const openEntry = (target: { recordId: string; entryId: string } | null) => {
+  /** Opens the evaluation form, with the edit dialog of the first entry that needs this fix, if there is one */
+  const openEntry = async (kind: "rejected" | "missing-file") => {
+    const target = await entryNeedingAttention(kind)
     const state: EvaluationLinkState | undefined = target ? { edit: target } : undefined
     navigate("/evaluation-form", { state })
   }
@@ -73,8 +70,8 @@ export function HomePage() {
                 <div className="progress-list">{progress.map(item => <div key={item.label}><div className="progress-label"><span>{item.label}</span><small>{item.done} / {item.total}</small></div><Progress value={item.done / item.total * 100} label={item.label} /></div>)}</div>
               </Card>
               <Card title="Needs your attention">
-                <div className="attention-list"><div className="attention-row danger"><Icon name="imgIconAlert1" /><div><p>Article (Scopus) - entry #2 was rejected</p><small>“DOI does not match the attached PDF. Please upload the correct file.” - Giorgi Kapanadze</small></div><Button variant="outline" className="danger-button" onClick={() => openEntry(attention.rejected)}>Fix</Button></div>
-                <div className="attention-row warning"><Icon name="imgIconClock1" /><div><p>Conference presentation - missing attachment</p><small>Attach a certificate or programme page (PDF or image).</small></div><Button variant="outline" onClick={() => openEntry(attention.missingFile)}>Add file</Button></div></div>
+                <div className="attention-list"><div className="attention-row danger"><Icon name="imgIconAlert1" /><div><p>Article (Scopus) - entry #2 was rejected</p><small>“DOI does not match the attached PDF. Please upload the correct file.” - Giorgi Kapanadze</small></div><Button variant="outline" className="danger-button" onClick={() => void openEntry("rejected")}>Fix</Button></div>
+                <div className="attention-row warning"><Icon name="imgIconClock1" /><div><p>Conference presentation - missing attachment</p><small>Attach a certificate or programme page (PDF or image).</small></div><Button variant="outline" onClick={() => void openEntry("missing-file")}>Add file</Button></div></div>
               </Card>
             </div>
             <div className="dashboard-stack">

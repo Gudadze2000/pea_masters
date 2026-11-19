@@ -4,7 +4,7 @@ import { ChevronDown, LoaderCircle, Plus, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api'
 import { fetchMyDocuments, findDoi, titleKey, type WosArticle } from '@/lib/wos'
-import { PUBLICATION_YEARS, type EvaluationEntries } from './evaluation-model'
+import type { EvaluationEntry } from './evaluation-model'
 
 const DISMISSED_KEY = 'pea-evaluation-dismissed-wos-v1'
 const SHOWN = 5
@@ -16,9 +16,9 @@ function readDismissed(): Set<string> {
 }
 
 /** Whether an article is already somewhere in the form: by DOI, or its title inside an entry's citation */
-function inForm(article: WosArticle, entries: EvaluationEntries) {
+function inForm(article: WosArticle, entries: EvaluationEntry[]) {
   const title = titleKey(article.title ?? '')
-  return Object.values(entries).flat().some(entry => {
+  return entries.some(entry => {
     const doi = entry.wos?.doi ?? findDoi(entry.detail) ?? findDoi(entry.description)
     if (article.doi && doi === article.doi) return true
     return title.length > 12 && titleKey(entry.description).includes(title)
@@ -29,16 +29,21 @@ type State = { status: 'loading' } | { status: 'ready'; documents: WosArticle[] 
 
 /**
  * "Missing from your form": the researcher's Web of Science documents from the evaluation years that aren't in any
- * entry yet, found by the ResearcherID / ORCID iD on their profile. Adding one opens a filled-in article entry.
+ * entry yet, found by the ResearcherID / ORCID iD on their profile. Adding one opens a filled-in entry.
  */
-export function MissingFromForm({ entries, locked, onAdd }: { entries: EvaluationEntries; locked: boolean; onAdd: (article: WosArticle) => void }) {
+export function MissingFromForm({ entries, years: { from, to }, locked, onAdd }: {
+  entries: EvaluationEntry[]
+  /** The publication years that count for the evaluation period */
+  years: { from: number; to: number }
+  locked: boolean; onAdd: (article: WosArticle) => void
+}) {
   const [state, setState] = useState<State>({ status: 'loading' })
   const [dismissed, setDismissed] = useState(readDismissed)
   const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    fetchMyDocuments(PUBLICATION_YEARS)
+    fetchMyDocuments({ from, to })
       .then(result => { if (!cancelled) setState({ status: 'ready', documents: result.documents }) })
       .catch((cause: unknown) => {
         if (cancelled) return
@@ -47,7 +52,7 @@ export function MissingFromForm({ entries, locked, onAdd }: { entries: Evaluatio
         else setState({ status: 'error', message: cause instanceof ApiError ? cause.message : "Web of Science couldn't be reached." })
       })
     return () => { cancelled = true }
-  }, [])
+  }, [from, to])
 
   const dismiss = (article: WosArticle) => {
     const next = new Set(dismissed).add(articleKey(article))
@@ -55,7 +60,7 @@ export function MissingFromForm({ entries, locked, onAdd }: { entries: Evaluatio
     try { localStorage.setItem(DISMISSED_KEY, JSON.stringify([...next])) } catch { /* only for this visit */ }
   }
 
-  const years = `${PUBLICATION_YEARS.from}–${PUBLICATION_YEARS.to}`
+  const years = from === to ? String(from) : `${from}–${to}`
   if (state.status === 'off') return null
   if (state.status === 'loading') return <p className="missing-card missing-quiet" role="status"><LoaderCircle className="wos-spin" aria-hidden="true" />Looking for your {years} articles in Web of Science…</p>
   if (state.status === 'error') return <p className="missing-card missing-quiet" role="status"><Search aria-hidden="true" />Couldn't look for your articles in Web of Science: {state.message}</p>

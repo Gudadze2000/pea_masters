@@ -96,7 +96,15 @@ years count) under People → Evaluation periods; deadlines are whole days, Tbil
 points and limits; the ISU self-assessment is built in (`app/evaluation_forms/isu_self_assessment.json`) and can only
 be viewed and copied. Coordinators make their own forms under Administration → Evaluation forms, usually as a copy of
 the ISU form (`evaluation_forms`); a form can be seen and changed by the person who made it and by the organization's
-Admins, and two of one person's forms can't share a name. Sending forms, filling them in and reviewing come next.
+Admins, and two of one person's forms can't share a name.
+
+Sending and filling in (`app/sent_evaluations.py`): under Administration → Evaluations a coordinator picks a period and
+sends a form to their researchers (Admins: anyone in the organization). Each researcher gets one evaluation per period
+(`evaluations`), holding a copy of the form as it was sent; until they add an entry it can be replaced by another form
+or withdrawn. While the period is open the researcher adds entries (`evaluation_entries`, never deleted, only hidden)
+with evidence uploaded through `POST /api/v1/me/documents` (`evaluation_entry_files`), then submits. Until the deadline
+they can reopen the form ("Update submission"), change it and resubmit, or discard the changes; the coordinator keeps
+seeing the last submission (`evaluations.submission`). Reviewing entries comes next.
 The Administration pages (People, Evaluation forms) open only for Admins and Coordinators; anyone else is sent to the
 dashboard, and the API refuses them anyway.
 

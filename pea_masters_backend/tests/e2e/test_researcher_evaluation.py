@@ -1,15 +1,21 @@
-"""Evaluation form end to end, as a Researcher whose department has a head: entries are hidden instead of deleted,
-a rejected entry leads to an email to the coordinator, and a submitted form can be updated and resubmitted before the
-deadline. The form itself still lives in the browser (no evaluation API yet); the coordinator comes from the server.
+"""The evaluation form end to end. A head of department sends the form for the open period from Administration →
+Evaluations; the researcher fills it in on the server (entries with uploaded evidence, hidden instead of deleted),
+submits, asks the coordinator about a rejected entry, and updates and resubmits before the deadline. Then Web of
+Science checks, "Missing from your form" and the CV builder's imports, as the Admin.
 
 The browser tests share one database and units can't be deleted, so this file must sort after test_people_page.py,
 which expects to find a single faculty."""
 
 import re
+from datetime import date, timedelta
 from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import Page, expect
+from sqlalchemy import select
 
+from app.db import SessionLocal
+from app.evaluations import BUILT_IN_FORMS, built_in_structure
+from app.models import Evaluation, EvaluationEntry
 from tests.e2e import fake_clarivate
 from tests.e2e.conftest import APP_URL
 
@@ -17,6 +23,9 @@ FACULTY = "School of Life Sciences"
 DEPARTMENT = "Plant Genetics"
 HEAD = ("Nino Head", "nino.head.e2e@iliauni.edu.ge")
 RESEARCHER = ("Eka Researcher", "eka.researcher.e2e@iliauni.edu.ge")
+PERIOD = "Annual evaluation (browser tests)"
+ARTICLE = "isu-2-1"  # 2.1 Article in an indexed journal
+PDF = b"%PDF-1.7\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF\n"
 
 
 def api(page: Page, method: str, path: str, data=None):
@@ -25,12 +34,41 @@ def api(page: Page, method: str, path: str, data=None):
     return response.json()
 
 
+def open_period(admin_page: Page, org) -> str:
+    """The period these tests use: open now, publications from 2024 to 2026"""
+    for period in api(admin_page, "GET", f"/orgs/{org}/evaluation-periods"):
+        if period["name"] == PERIOD:
+            return period["id"]
+    today = date.today()
+    return api(admin_page, "POST", f"/orgs/{org}/evaluation-periods", {
+        "name": PERIOD, "starts_on": str(today - timedelta(days=30)), "ends_on": str(today + timedelta(days=30)),
+        "publication_from": 2024, "publication_to": 2026})["id"]
+
+
+def give_form(organization, period_id: str) -> None:
+    """Sends the ISU form to the Admin. Nobody sends themselves a form in the app, so this goes straight to the
+    database, as the head of their department would."""
+    with SessionLocal() as db:
+        if db.scalar(select(Evaluation.id).where(Evaluation.user_id == organization["admin_id"])):
+            return
+        isu = BUILT_IN_FORMS["isu-self-assessment"]
+        db.add(Evaluation(organization_id=organization["org_id"], period_id=period_id,
+                          user_id=organization["admin_id"], form_ref="isu-self-assessment", form_name=isu.name.en,
+                          form_structure=built_in_structure(isu).model_dump(mode="json"),
+                          sent_by=organization["admin_id"]))
+        db.commit()
+
+
+def record_card(page: Page, item_id: str):
+    return page.locator(".evaluation-record").filter(has=page.locator(f"#record-{item_id}"))
+
+
 def banner(page: Page):
     """Heading of the status banner at the top of the form"""
     return page.locator(".evaluation-banner-info p").first
 
 
-def test_hide_contact_and_resubmit(admin_page: Page, organization, google_sign_in, shot):
+def test_send_fill_in_submit_and_resubmit(admin_page: Page, organization, google_sign_in, shot):
     org = organization["org_id"]
     faculty = api(admin_page, "POST", f"/orgs/{org}/units", {"kind": "faculty", "name_en": FACULTY})["id"]
     department = api(admin_page, "POST", f"/orgs/{org}/units",
@@ -39,41 +77,71 @@ def test_hide_contact_and_resubmit(admin_page: Page, organization, google_sign_i
         "roles": ["coordinator", "member"], "department_id": department, "coordinates_unit_id": department})
     api(admin_page, "POST", f"/orgs/{org}/people", {"email": RESEARCHER[1], "display_name": RESEARCHER[0],
         "roles": ["member"], "department_id": department})
+    open_period(admin_page, org)
 
+    # 1. Before anything is sent, the researcher's page says so
     page = google_sign_in(RESEARCHER[1], RESEARCHER[0])
     errors: list[str] = []
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.goto("/evaluation-form")
-    expect(page.get_by_role("heading", name="Evaluation form", level=1)).to_be_visible()
+    expect(page.get_by_role("heading", name="No evaluation form yet")).to_be_visible()
 
-    # 1. Entries can only be hidden, not deleted; a hidden entry stays listed, isn't sent, and can be shown again
+    # 2. The head of department sends the ISU form for the open period
+    head = google_sign_in(HEAD[1], HEAD[0])
+    head.goto("/home")
+    head.locator(".dashboard-sidebar").get_by_role("button", name="Evaluations", exact=True).click()
+    row = head.locator(".send-table tbody tr", has_text=RESEARCHER[0])
+    expect(row).to_contain_text("Not sent")
+    expect(head.locator(".send-table tbody tr")).to_have_count(1)  # only their department, not themselves
+    row.get_by_label(f"Select {RESEARCHER[0]}").check()
+    head.get_by_role("button", name="Send form to 1").click()
+    sheet = head.get_by_role("dialog")
+    expect(sheet.get_by_label("Form")).to_have_value("isu-self-assessment")
+    sheet.get_by_role("button", name="Send form").click()
+    expect(head.get_by_role("status").filter(has_text="Sent to")).to_have_text("Sent to 1 person.")
+    expect(row).to_contain_text("Not started")
+    shot(head, "evaluation-00-sent")
+
+    # 3. The researcher fills it in: an article with its evidence, and one saved without
+    page.reload()
+    expect(page.get_by_role("heading", name="Evaluation form", level=1)).to_be_visible()
+    expect(page.get_by_text(f"{PERIOD} · ISU academic staff self-assessment")).to_be_visible()
+    page.get_by_role("tab", name=re.compile("II · Research")).click()
+    record_card(page, ARTICLE).get_by_role("button", name="Add entry").click()
+    dialog = page.get_by_role("dialog")
+    dialog.get_by_label(re.compile("^Performance indicator")).fill("Allelic diversity of Caucasian landraces")
+    dialog.locator("#evaluation-evidence").set_input_files(
+        files=[{"name": "landraces.pdf", "mimeType": "application/pdf", "buffer": PDF}])
+    expect(dialog.get_by_role("link", name="landraces.pdf")).to_be_visible()
+    dialog.get_by_role("button", name="Save entry").click()
+    article = page.locator(".evaluation-entry", has_text="Allelic diversity of Caucasian landraces")
+    expect(article.get_by_role("link", name="landraces.pdf")).to_be_visible()
+
+    record_card(page, ARTICLE).get_by_role("button", name="Add entry").click()
+    dialog = page.get_by_role("dialog")
+    dialog.get_by_label(re.compile("^Performance indicator")).fill("Transcriptomics of heat stress response")
+    dialog.get_by_role("button", name="Save entry").click()
+    expect(dialog.get_by_role("alert")).to_contain_text("Attach an evidence file, or save this entry as a draft.")
+    dialog.get_by_role("button", name="Save as draft").click()
+
+    # Entries can only be hidden, not deleted; a hidden one stays listed, isn't sent, and can be shown again
     expect(page.get_by_role("button", name=re.compile("^Delete"))).to_have_count(0)
     page.get_by_role("button", name="Hide Transcriptomics of heat stress response").click()
-    row = page.locator(".evaluation-entry", has_text="Transcriptomics of heat stress response")
-    expect(row.locator(".evaluation-badge")).to_have_text("Hidden")
-    expect(page.get_by_role("status")).to_contain_text("won't be sent with your form")
+    hidden = page.locator(".evaluation-entry", has_text="Transcriptomics of heat stress response")
+    expect(hidden.locator(".evaluation-badge")).to_have_text("Hidden")
+    expect(page.get_by_role("status").filter(has_text="won't be sent")).to_be_visible()
     page.get_by_role("button", name="Preview").click()
     preview = page.get_by_role("dialog")
     expect(preview).to_contain_text("1 hidden entry is left out")
     expect(preview).not_to_contain_text("Transcriptomics of heat stress response")
     preview.get_by_role("button", name="Close preview").click()
+    # Saved on the server: still there after a reload
+    page.reload()
+    page.get_by_role("tab", name=re.compile("II · Research")).click()
+    expect(hidden.locator(".evaluation-badge")).to_have_text("Hidden")
     shot(page, "evaluation-01-hidden-entry")
 
-    # 2. A rejected entry offers to ask the coordinator: an email to the head of department, filled in
-    page.get_by_role("button", name="Ask coordinator").click()
-    dialog = page.get_by_role("dialog")
-    expect(dialog).to_contain_text(HEAD[0])
-    expect(dialog).to_contain_text(HEAD[1])
-    expect(dialog.get_by_label("Subject")).to_have_value(re.compile("Article - Scopus / WoS indexed"))
-    expect(dialog.get_by_label("Message")).to_have_value(re.compile("Allelic diversity of Caucasian landraces"))
-    gmail = parse_qs(urlparse(dialog.get_by_role("link", name="Open in Gmail").get_attribute("href")).query)
-    assert gmail["to"] == [HEAD[1]] and gmail["authuser"] == [RESEARCHER[1]]
-    assert "Article" in gmail["su"][0]
-    assert dialog.get_by_role("link", name="Default email app").get_attribute("href").startswith(f"mailto:{HEAD[1]}?")
-    shot(page, "evaluation-02-contact-coordinator")
-    dialog.get_by_role("button", name="Close dialog").click()
-
-    # 3. Submitting locks the form, and that survives a reload
+    # 4. Submitting locks the form, and the head of department sees it
     page.get_by_role("button", name="Review & submit").click()
     dialog = page.get_by_role("dialog")
     expect(dialog).to_contain_text("Hidden (not sent)")
@@ -81,18 +149,38 @@ def test_hide_contact_and_resubmit(admin_page: Page, organization, google_sign_i
     dialog.get_by_role("button", name="Submit for review").click()
     expect(banner(page)).to_have_text(re.compile("^Submitted on"))
     expect(page.get_by_role("button", name="Add entry")).to_have_count(0)
-    page.reload()
-    expect(banner(page)).to_have_text(re.compile("^Submitted on"))
+    head.reload()
+    expect(head.locator(".send-table tbody tr", has_text=RESEARCHER[0])).to_contain_text("Submitted")
 
-    # 4. Before the deadline it can be updated: nothing to resubmit until something changes...
+    # 5. A rejected entry offers to ask the coordinator: an email to the head of department, filled in.
+    # (Reviewing comes next; until then the database plays the coordinator.)
+    with SessionLocal() as db:
+        entry = db.scalar(select(EvaluationEntry).where(EvaluationEntry.description.like("Allelic%")))
+        entry.status, entry.review_comment = "rejected", "DOI does not match the attached PDF."
+        db.commit()
+    page.reload()
+    page.get_by_role("tab", name=re.compile("II · Research")).click()
+    page.get_by_role("button", name="Ask coordinator").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_contain_text(HEAD[0])
+    expect(dialog).to_contain_text(HEAD[1])
+    expect(dialog.get_by_label("Subject")).to_have_value(re.compile("2.1 Article in an indexed journal"))
+    expect(dialog.get_by_label("Message")).to_have_value(re.compile("Allelic diversity of Caucasian landraces"))
+    gmail = parse_qs(urlparse(dialog.get_by_role("link", name="Open in Gmail").get_attribute("href")).query)
+    assert gmail["to"] == [HEAD[1]] and gmail["authuser"] == [RESEARCHER[1]]
+    assert dialog.get_by_role("link", name="Default email app").get_attribute("href").startswith(f"mailto:{HEAD[1]}?")
+    shot(page, "evaluation-02-contact-coordinator")
+    dialog.get_by_role("button", name="Close dialog").click()
+
+    # 6. Before the deadline it can be updated: nothing to resubmit until something changes...
     page.get_by_role("button", name="Update submission").first.click()
     expect(page.get_by_text("Updating your submitted form")).to_be_visible()
     expect(page.get_by_role("button", name="Review & resubmit")).to_be_disabled()
 
     # ...then a new article is added and the form resubmitted
-    page.get_by_role("button", name="Add entry").first.click()
+    record_card(page, ARTICLE).get_by_role("button", name="Add entry").click()
     dialog = page.get_by_role("dialog")
-    dialog.get_by_label(re.compile("^Description")).fill("Heat-shock proteins in Caucasian wheat (2026)")
+    dialog.get_by_label(re.compile("^Performance indicator")).fill("Heat-shock proteins in Caucasian wheat (2026)")
     dialog.get_by_role("button", name="Save as draft").click()
     expect(page.get_by_text("Changes so far: 1 new or changed entry")).to_be_visible()
     page.get_by_role("button", name="Review & resubmit").click()
@@ -108,15 +196,21 @@ def test_hide_contact_and_resubmit(admin_page: Page, organization, google_sign_i
     assert not errors, errors
 
 
-def test_articles_are_checked_in_web_of_science(admin_page: Page, shot):
+def open_article_item(page: Page) -> None:
+    page.goto("/evaluation-form")
+    page.get_by_role("tab", name=re.compile("II · Research")).click()
+
+
+def test_articles_are_checked_in_web_of_science(admin_page: Page, organization, shot):
     """The DOI of an article entry is looked up (in the fake Clarivate, tests/e2e/fake_clarivate.py) as it's typed."""
     page = admin_page
+    give_form(organization, open_period(page, organization["org_id"]))
     errors: list[str] = []
     page.on("pageerror", lambda error: errors.append(str(error)))
-    page.goto("/evaluation-form")
+    open_article_item(page)
 
     # An indexed article by the person signed in: details shown, citation offered, the check saved with the entry
-    page.get_by_role("button", name="Add entry").first.click()
+    record_card(page, ARTICLE).get_by_role("button", name="Add entry").click()
     dialog = page.get_by_role("dialog")
     dialog.get_by_label(re.compile("^DOI")).fill(f"https://doi.org/{fake_clarivate.INDEXED}")
     expect(dialog).to_contain_text("Indexed in Web of Science")
@@ -124,7 +218,7 @@ def test_articles_are_checked_in_web_of_science(admin_page: Page, shot):
     expect(dialog).to_contain_text("PLANTA, 2025 · cited 14 times")
     expect(dialog).not_to_contain_text("among the")
     dialog.get_by_role("button", name="Use this citation").click()
-    expect(dialog.get_by_label(re.compile("^Description"))).to_have_value(
+    expect(dialog.get_by_label(re.compile("^Performance indicator"))).to_have_value(
         "Schulz, Karin; Admin, Test (2025). Heat-shock proteins in Caucasian wheat. PLANTA, 261(2), 12-25.")
     shot(page, "evaluation-04-wos-indexed")
     dialog.get_by_role("button", name="Save as draft").click()
@@ -132,21 +226,21 @@ def test_articles_are_checked_in_web_of_science(admin_page: Page, shot):
     expect(row.locator(".wos-badge")).to_have_text("WoS ✓ · cited 14 times")
 
     # Someone else's article: indexed, but the person isn't among its authors
-    page.get_by_role("button", name="Add entry").first.click()
+    record_card(page, ARTICLE).get_by_role("button", name="Add entry").click()
     dialog = page.get_by_role("dialog")
     dialog.get_by_label(re.compile("^DOI")).fill(fake_clarivate.SOMEONE_ELSES)
     expect(dialog).to_contain_text("Admin isn't among the 1 author")
     dialog.get_by_role("button", name="Cancel").click()
 
     # Not indexed, and not registered anywhere: a typo
-    page.get_by_role("button", name="Add entry").first.click()
+    record_card(page, ARTICLE).get_by_role("button", name="Add entry").click()
     dialog = page.get_by_role("dialog")
     dialog.get_by_label(re.compile("^DOI")).fill("10.5555/pea.e2e.typo")
     expect(dialog).to_contain_text("This DOI isn't registered")
     dialog.get_by_role("button", name="Cancel").click()
 
     # Not indexed yet, but registered (Crossref) and in a journal Web of Science indexes
-    page.get_by_role("button", name="Add entry").first.click()
+    record_card(page, ARTICLE).get_by_role("button", name="Add entry").click()
     dialog = page.get_by_role("dialog")
     dialog.get_by_label(re.compile("^DOI")).fill(fake_clarivate.NOT_YET_INDEXED)
     expect(dialog).to_contain_text("Not found in Web of Science")
@@ -155,7 +249,7 @@ def test_articles_are_checked_in_web_of_science(admin_page: Page, shot):
     expect(dialog).to_contain_text("The journal Planta is in Web of Science's journal list")
     expect(dialog.get_by_role("link", name="Journal in JCR")).to_have_attribute("href", "https://www.webofscience.com/jcr/planta")
     dialog.get_by_role("button", name="Use this citation").click()
-    expect(dialog.get_by_label(re.compile("^Description"))).to_have_value(
+    expect(dialog.get_by_label(re.compile("^Performance indicator"))).to_have_value(
         "Admin, Test (2026). Cold tolerance of Svanetian barley. Planta.")
     shot(page, "evaluation-05-not-yet-indexed")
     dialog.get_by_role("button", name="Save as draft").click()
@@ -173,7 +267,7 @@ def test_articles_are_checked_in_web_of_science(admin_page: Page, shot):
     assert not errors, errors
 
 
-def test_publications_are_found_by_researcher_id(admin_page: Page, shot):
+def test_publications_are_found_by_researcher_id(admin_page: Page, organization, shot):
     """With a ResearcherID on the profile, PEA finds the person's Web of Science documents: missing ones are offered
     on the evaluation form, and the CV builder imports them and fills in the metrics."""
     page = admin_page
@@ -181,6 +275,7 @@ def test_publications_are_found_by_researcher_id(admin_page: Page, shot):
     page.on("pageerror", lambda error: errors.append(str(error)))
 
     # Without an identifier the form explains how to switch this on
+    give_form(organization, open_period(page, organization["org_id"]))
     page.goto("/evaluation-form")
     expect(page.get_by_text("Let PEA find your Web of Science articles")).to_be_visible()
 
@@ -192,36 +287,42 @@ def test_publications_are_found_by_researcher_id(admin_page: Page, shot):
     expect(card.get_by_role("status")).to_have_text("Saved")
     expect(card.get_by_role("textbox", name="Web of Science ResearcherID")).to_have_value(fake_clarivate.RESEARCHER_ID)
 
-    # 2. The evaluation form lists the 2024-2026 documents that aren't in it (the 2019 one doesn't count)
-    page.goto("/evaluation-form")
+    # 2. The evaluation form lists the period's 2024-2026 documents that aren't in it: not the 2019 one, and not
+    # Heat-shock proteins, which test_articles_are_checked_in_web_of_science added (the form is on the server)
+    open_article_item(page)
     missing = page.locator(".missing-card")
-    expect(missing.get_by_role("heading")).to_have_text("2 Web of Science articles from 2024–2026 aren't in your form")
+    expect(missing.get_by_role("heading")).to_have_text("1 Web of Science article from 2024–2026 isn't in your form")
+    expect(missing).to_contain_text("Root architecture of drought-tolerant wheat")
     expect(missing).not_to_contain_text("Seed bank digitisation")
+    expect(missing).not_to_contain_text("Heat-shock proteins")
     shot(page, "evaluation-06-missing-from-form")
 
-    # Adding one opens a filled-in article entry, already checked
-    missing.locator("li", has_text="Heat-shock proteins").get_by_role("button", name="Add").click()
-    dialog = page.get_by_role("dialog")
-    expect(dialog.get_by_label(re.compile("^DOI"))).to_have_value(fake_clarivate.INDEXED)
-    expect(dialog.get_by_label(re.compile("^Description"))).to_have_value(
-        re.compile("Heat-shock proteins in Caucasian wheat"))
-    expect(dialog).to_contain_text("Indexed in Web of Science")
-    dialog.get_by_role("button", name="Save as draft").click()
-    expect(missing.get_by_role("heading")).to_have_text("1 Web of Science article from 2024–2026 isn't in your form")
+    # "Not mine" hides it, and the card goes away (remembered in this browser only)
+    missing.get_by_role("button", name=re.compile("^Not mine")).click()
+    expect(missing).to_have_count(0)
+    page.evaluate("localStorage.removeItem('pea-evaluation-dismissed-wos-v1')")
+    open_article_item(page)
 
-    # The same article can't be added to the same section twice
-    page.get_by_role("button", name="Add entry").first.click()
+    # Adding it opens a filled-in entry in the form's article item
+    missing.locator("li", has_text="Root architecture").get_by_role("button", name="Add").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog.get_by_label(re.compile("^DOI"))).to_have_value(fake_clarivate.SECOND)
+    expect(dialog.get_by_label(re.compile("^Performance indicator"))).to_have_value(
+        re.compile("Root architecture of drought-tolerant wheat"))
+    expect(dialog.get_by_label("Form item")).to_have_value(ARTICLE)
+    dialog.get_by_role("button", name="Save as draft").click()
+    expect(missing).to_have_count(0)
+    expect(record_card(page, ARTICLE)).to_contain_text("Root architecture of drought-tolerant wheat")
+
+    # The same article can't be added to the same item twice
+    record_card(page, ARTICLE).get_by_role("button", name="Add entry").click()
     dialog = page.get_by_role("dialog")
     dialog.get_by_label(re.compile("^DOI")).fill(fake_clarivate.INDEXED)
-    expect(dialog).to_contain_text("This DOI is already in this section")
-    dialog.get_by_label(re.compile("^Description")).fill("Same article again")
+    expect(dialog).to_contain_text("This DOI is already in this item")
+    dialog.get_by_label(re.compile("^Performance indicator")).fill("Same article again")
     dialog.get_by_role("button", name="Save as draft").click()
     expect(dialog.get_by_role("alert")).to_contain_text("An article counts once")
     dialog.get_by_role("button", name="Cancel").click()
-
-    # "Not mine" hides the other one, and the card goes away
-    missing.get_by_role("button", name=re.compile("^Not mine")).click()
-    expect(missing).to_have_count(0)
 
     # 3. The CV builder shows the ResearcherID from the profile, imports all three documents and fills the metrics
     page.goto("/cv-builder")
