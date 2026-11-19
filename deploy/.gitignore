@@ -1,0 +1,4 @@
+# Server settings and secrets
+.env
+.env.*
+!.env.example

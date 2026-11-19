@@ -146,6 +146,11 @@ tests hand verified Google claims to the same code the real callback uses.
 
 Refusals come back as `/login?error=<code>`; the login page shows a message for each code.
 
+## On the server
+
+See [DEPLOY.md](../DEPLOY.md): Docker Compose (`deploy/`) runs the database, this API (`Dockerfile`) and Caddy, which
+serves the app over https.
+
 ## Notes
 
 - Use `127.0.0.1`, not `localhost`, in `DATABASE_URL`: on Windows `localhost` tries IPv6 first and the
