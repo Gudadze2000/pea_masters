@@ -2,7 +2,8 @@
 
     Period (Admins)   e.g. "Annual evaluation 2025-2026": start, deadline, which publication years count
     Form              parts → items → points and limits. The ISU self-assessment is built in
-                      (app/evaluation_forms/isu_self_assessment.json); coordinators will create their own.
+                      (app/evaluation_forms/isu_self_assessment.json); coordinators make their own (often a copy of
+                      it), which they and the organization's Admins can see and change.
 
 Coordinators send a form to their researchers for a period, researchers fill it in and submit it, and coordinators
 review it (next steps). Deadlines are whole days, Tbilisi time: a period is open from the start of `starts_on` to the
@@ -24,7 +25,7 @@ from app import audit
 from app.authz import Action, Actor, authorize, get_actor, get_organization
 from app.db import get_db
 from app.errors import problem
-from app.models import EvaluationPeriod
+from app.models import EvaluationForm, EvaluationPeriod, User
 
 router = APIRouter(prefix="/api/v1/orgs/{org_id}", tags=["evaluations"])
 
@@ -94,6 +95,11 @@ def _load_built_in() -> dict[str, BuiltInForm]:
 BUILT_IN_FORMS = _load_built_in()
 
 
+class Owner(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
 class FormSummary(BaseModel):
     id: str  # the key of a built-in form, or a custom form's uuid
     built_in: bool
@@ -101,35 +107,166 @@ class FormSummary(BaseModel):
     description: str
     parts: int
     items: int
+    owner: Owner | None = None  # who made it (custom forms)
+    updated_at: datetime | None = None
+    can_edit: bool = False  # built-in forms never; custom ones by their owner and the organization's Admins
 
 
 class FormOut(FormSummary):
     structure: FormStructure
 
 
+class FormIn(BaseModel):
+    name: Localized
+    description: str = Field("", max_length=2000)
+    structure: FormStructure
+
+
 def summary_of(form_id: str, built_in: bool, name: Localized, description: str,
-               structure: FormStructure) -> FormSummary:
+               structure: FormStructure, **extra) -> FormSummary:
     return FormSummary(id=form_id, built_in=built_in, name=name, description=description, parts=len(structure.parts),
-                       items=sum(len(part.items) for part in structure.parts))
+                       items=sum(len(part.items) for part in structure.parts), **extra)
+
+
+def built_in_structure(form: BuiltInForm) -> FormStructure:
+    return FormStructure.model_validate(form.model_dump(include={"version", "total_minimum", "parts"}))
+
+
+def sees_every_form(role: str) -> bool:
+    """Admins (and Root) see and change every form in the organization; coordinators only their own."""
+    return role in ("root", "admin")
+
+
+def custom_summary(form: EvaluationForm, owner: User, role: str, actor: Actor) -> FormSummary:
+    structure = FormStructure.model_validate(form.structure)
+    return summary_of(str(form.id), False, Localized(en=form.name, ka=form.name_ka), form.description, structure,
+                      owner=Owner(id=owner.id, name=owner.display_name), updated_at=form.updated_at,
+                      can_edit=sees_every_form(role) or form.owner_user_id == actor.user.id)
+
+
+def find_form(db: Session, org_id: uuid.UUID, form_id: str, actor: Actor, role: str) -> EvaluationForm:
+    """A custom form this person may see. Someone else's form is "not found" rather than "forbidden", so its
+    existence isn't revealed."""
+    try:
+        key = uuid.UUID(form_id)
+    except ValueError:
+        key = None
+    form = db.get(EvaluationForm, key) if key else None
+    if (form is None or form.organization_id != org_id or form.archived_at is not None
+            or not (sees_every_form(role) or form.owner_user_id == actor.user.id)):
+        raise problem(status.HTTP_404_NOT_FOUND, "not_found", "Form not found.")
+    return form
+
+
+def refuse_built_in(form_id: str) -> None:
+    if form_id in BUILT_IN_FORMS:
+        raise problem(status.HTTP_409_CONFLICT, "built_in_form",
+                      "The built-in form can't be changed. Make a copy of it and change the copy.")
+
+
+def unique_form_name(db: Session, org_id: uuid.UUID, owner_id: uuid.UUID, name: str,
+                     except_id: uuid.UUID | None = None) -> str:
+    """Two of one person's forms can't share a name, so they can tell them apart when sending one."""
+    name = " ".join(name.split())
+    clash = db.scalar(select(EvaluationForm.id).where(
+        EvaluationForm.organization_id == org_id, EvaluationForm.owner_user_id == owner_id,
+        EvaluationForm.archived_at.is_(None), func.lower(EvaluationForm.name) == name.lower(),
+        EvaluationForm.id != except_id))
+    if clash:
+        raise problem(status.HTTP_409_CONFLICT, "form_exists", f"You already have a form called “{name}”.")
+    return name
+
+
+def form_snapshot(form: EvaluationForm) -> dict:
+    """What the audit log keeps about a form: enough to recognise it, not its whole structure."""
+    parts = form.structure.get("parts", [])
+    return {"name": form.name, "name_ka": form.name_ka, "parts": len(parts),
+            "items": sum(len(part.get("items", [])) for part in parts)}
 
 
 @router.get("/evaluation-forms", response_model=list[FormSummary])
 def list_forms(org_id: uuid.UUID, actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
-    """The forms a coordinator can send. For now the built-in ones; coordinators' own forms come next."""
+    """The forms a coordinator can send: the built-in ones, then their own (Admins: everyone's), newest first."""
     get_organization(db, org_id)
-    authorize(db, actor, Action.VIEW_EVALUATION_FORMS, org_id)
-    return [summary_of(key, True, form.name, form.description, form) for key, form in BUILT_IN_FORMS.items()]
+    role = authorize(db, actor, Action.VIEW_EVALUATION_FORMS, org_id)
+    built_in = [summary_of(key, True, form.name, form.description, form) for key, form in BUILT_IN_FORMS.items()]
+    query = (select(EvaluationForm, User).join(User, User.id == EvaluationForm.owner_user_id)
+             .where(EvaluationForm.organization_id == org_id, EvaluationForm.archived_at.is_(None))
+             .order_by(EvaluationForm.updated_at.desc()))
+    if not sees_every_form(role):
+        query = query.where(EvaluationForm.owner_user_id == actor.user.id)
+    return built_in + [custom_summary(form, owner, role, actor) for form, owner in db.execute(query).all()]
 
 
 @router.get("/evaluation-forms/{form_id}", response_model=FormOut)
 def get_form(org_id: uuid.UUID, form_id: str, actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
     get_organization(db, org_id)
-    authorize(db, actor, Action.VIEW_EVALUATION_FORMS, org_id)
-    form = BUILT_IN_FORMS.get(form_id)
-    if form is None:
-        raise problem(status.HTTP_404_NOT_FOUND, "not_found", "Form not found.")
-    structure = FormStructure.model_validate(form.model_dump(include={"version", "total_minimum", "parts"}))
-    return FormOut(**summary_of(form_id, True, form.name, form.description, form).model_dump(), structure=structure)
+    role = authorize(db, actor, Action.VIEW_EVALUATION_FORMS, org_id)
+    built_in = BUILT_IN_FORMS.get(form_id)
+    if built_in is not None:
+        structure = built_in_structure(built_in)
+        summary = summary_of(form_id, True, built_in.name, built_in.description, structure)
+    else:
+        form = find_form(db, org_id, form_id, actor, role)
+        structure = FormStructure.model_validate(form.structure)
+        summary = custom_summary(form, db.get(User, form.owner_user_id), role, actor)
+    return FormOut(**summary.model_dump(), structure=structure)
+
+
+@router.post("/evaluation-forms", response_model=FormOut, status_code=status.HTTP_201_CREATED)
+def create_form(org_id: uuid.UUID, body: FormIn, actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
+    """A new form, made from scratch or as a copy of another (the app sends the copy's structure)."""
+    get_organization(db, org_id)
+    role = authorize(db, actor, Action.MANAGE_EVALUATION_FORMS, org_id)
+    form = EvaluationForm(organization_id=org_id, owner_user_id=actor.user.id,
+                          name=unique_form_name(db, org_id, actor.user.id, body.name.en), name_ka=body.name.ka.strip(),
+                          description=body.description.strip(), structure=body.structure.model_dump(mode="json"))
+    db.add(form)
+    db.flush()
+    audit.record(db, "evaluation_form.created", entity_type="evaluation_form", entity_id=form.id,
+                 actor_user_id=actor.user.id, acting_role=role, organization_id=org_id, after=form_snapshot(form),
+                 ip=actor.ip)
+    db.commit()
+    db.refresh(form)
+    return FormOut(**custom_summary(form, actor.user, role, actor).model_dump(), structure=body.structure)
+
+
+@router.put("/evaluation-forms/{form_id}", response_model=FormOut)
+def update_form(org_id: uuid.UUID, form_id: str, body: FormIn, actor: Actor = Depends(get_actor),
+                db: Session = Depends(get_db)):
+    """Changes a form. Forms already sent to researchers keep the version they were sent with."""
+    get_organization(db, org_id)
+    role = authorize(db, actor, Action.MANAGE_EVALUATION_FORMS, org_id)
+    refuse_built_in(form_id)
+    form = find_form(db, org_id, form_id, actor, role)
+    before = form_snapshot(form)
+    form.name = unique_form_name(db, org_id, form.owner_user_id, body.name.en, except_id=form.id)
+    form.name_ka = body.name.ka.strip()
+    form.description = body.description.strip()
+    form.structure = body.structure.model_dump(mode="json")
+    form.updated_at = func.now()
+    audit.record(db, "evaluation_form.updated", entity_type="evaluation_form", entity_id=form.id,
+                 actor_user_id=actor.user.id, acting_role=role, organization_id=org_id, before=before,
+                 after=form_snapshot(form), ip=actor.ip)
+    db.commit()
+    db.refresh(form)
+    owner = db.get(User, form.owner_user_id)
+    return FormOut(**custom_summary(form, owner, role, actor).model_dump(), structure=body.structure)
+
+
+@router.delete("/evaluation-forms/{form_id}", status_code=status.HTTP_204_NO_CONTENT)
+def archive_form(org_id: uuid.UUID, form_id: str, actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
+    """Removes a form from the list; it's kept (archived), so evaluations sent with it are unaffected."""
+    get_organization(db, org_id)
+    role = authorize(db, actor, Action.MANAGE_EVALUATION_FORMS, org_id)
+    refuse_built_in(form_id)
+    form = find_form(db, org_id, form_id, actor, role)
+    form.archived_at = func.now()
+    audit.record(db, "evaluation_form.archived", entity_type="evaluation_form", entity_id=form.id,
+                 actor_user_id=actor.user.id, acting_role=role, organization_id=org_id, before=form_snapshot(form),
+                 ip=actor.ip)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --- periods ---------------------------------------------------------------------------------------

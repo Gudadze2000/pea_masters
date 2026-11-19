@@ -8,6 +8,9 @@ import { CvBuilderPage } from "./Pages/CvBuilder/CvBuilderPage"
 import { EvaluationForm } from "./Pages/EvaluationForm/EvaluationForm"
 import { SettingsPage } from "./Pages/Settings/SettingsPage"
 import { PeoplePage } from "./Pages/People/PeoplePage"
+import { RequireStaff } from "./components/RequireStaff"
+import { EvaluationFormsPage } from "./Pages/EvaluationForms/EvaluationFormsPage"
+import { FormEditorPage } from "./Pages/EvaluationForms/FormEditorPage"
 
 
 function App() {
@@ -36,7 +39,13 @@ function App() {
         <Route path="/cv-builder" element={<CvBuilderPage />} />
         <Route path="/evaluation-form" element={<EvaluationForm />} />
         <Route path="/settings/:sectionId?" element={<SettingsPage />} />
+        {/* Administration: Admins and Coordinators only */}
+        <Route element={<RequireStaff />}>
         <Route path="/admin/people" element={<PeoplePage />} />
+        <Route path="/admin/evaluation-forms" element={<EvaluationFormsPage />} />
+        {/* "new" for a new form; ?copy=<id> starts it as a copy of another */}
+        <Route path="/admin/evaluation-forms/:formId" element={<FormEditorPage />} />
+        </Route>
         </Route>
       </Routes>
     </QualificationsProvider>

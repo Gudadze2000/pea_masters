@@ -93,8 +93,12 @@ Making a CV public or private is recorded in the audit log; ordinary saves aren'
 
 Evaluations (`app/evaluations.py`): Admins set up evaluation periods (name, opening day, deadline, which publication
 years count) under People → Evaluation periods; deadlines are whole days, Tbilisi time. Forms have parts → items →
-points and limits; the ISU self-assessment is built in (`app/evaluation_forms/isu_self_assessment.json`), and
-coordinators will create their own (`evaluation_forms`). Sending forms, filling them in and reviewing come next.
+points and limits; the ISU self-assessment is built in (`app/evaluation_forms/isu_self_assessment.json`) and can only
+be viewed and copied. Coordinators make their own forms under Administration → Evaluation forms, usually as a copy of
+the ISU form (`evaluation_forms`); a form can be seen and changed by the person who made it and by the organization's
+Admins, and two of one person's forms can't share a name. Sending forms, filling them in and reviewing come next.
+The Administration pages (People, Evaluation forms) open only for Admins and Coordinators; anyone else is sent to the
+dashboard, and the API refuses them anyway.
 
 Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
 written to the audit log.

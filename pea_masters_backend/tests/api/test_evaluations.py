@@ -115,3 +115,100 @@ def test_a_period_cant_be_reached_through_another_organization(as_admin, base):
     period = as_admin.post(f"{base}/evaluation-periods", json=PERIOD).json()
     other = "/api/v1/orgs/00000000-0000-0000-0000-000000000000"
     assert as_admin.put(f"{other}/evaluation-periods/{period['id']}", json=PERIOD).status_code == 404
+
+
+# --- coordinators' own forms ---------------------------------------------------------------------
+
+def a_form(name="Department evaluation", points=10):
+    return {"name": {"en": name, "ka": "კათედრის შეფასება"}, "description": "For our department",
+            "structure": {"version": 1, "total_minimum": 30, "parts": [
+                {"id": "teaching", "name": {"en": "Teaching"}, "min": 10, "items": [
+                    {"id": "course", "code": "1.1", "name": {"en": "A new course"}, "points": points,
+                     "max_points": 40, "max_entries": 4, "hint": "Course name and semester."}]}]}}
+
+
+@pytest.fixture
+def heads(as_admin, signed_in, base, db, people):
+    """A second head of department, to check that coordinators don't see each other's forms."""
+    math = add_department(as_admin, base, "Mathematics")
+    other = register(as_admin, base, "other.head@iliauni.edu.ge", roles=["coordinator", "member"], coordinates=math,
+                     department_id=math).json()
+    return {**people, "other": as_person(signed_in, db, other)}
+
+
+def test_coordinators_make_their_own_forms(base, heads, db):
+    head = heads["head"]
+    created = head.post(f"{base}/evaluation-forms", json=a_form())
+    assert created.status_code == 201
+    form = created.json()
+    assert (form["built_in"], form["can_edit"], form["parts"], form["items"]) == (False, True, 1, 1)
+    assert form["name"] == {"en": "Department evaluation", "ka": "კათედრის შეფასება"}
+    assert form["structure"]["parts"][0]["items"][0]["max_points"] == 40
+
+    listed = head.get(f"{base}/evaluation-forms").json()
+    assert [f["id"] for f in listed] == ["isu-self-assessment", form["id"]]  # built-in first
+    assert listed[1]["owner"]["name"]
+
+    changed = head.put(f"{base}/evaluation-forms/{form['id']}", json=a_form("Department evaluation 2026", points=15))
+    assert changed.status_code == 200
+    again = head.get(f"{base}/evaluation-forms/{form['id']}").json()
+    assert again["name"]["en"] == "Department evaluation 2026"
+    assert again["structure"]["parts"][0]["items"][0]["points"] == 15
+
+    assert head.delete(f"{base}/evaluation-forms/{form['id']}").status_code == 204
+    assert [f["id"] for f in head.get(f"{base}/evaluation-forms").json()] == ["isu-self-assessment"]
+    assert head.get(f"{base}/evaluation-forms/{form['id']}").status_code == 404
+    actions = [a.action for a in db.query(AuditLog).filter(AuditLog.entity_type == "evaluation_form")
+               .order_by(AuditLog.id)]
+    assert actions == ["evaluation_form.created", "evaluation_form.updated", "evaluation_form.archived"]
+
+
+def test_a_copy_of_the_isu_form_can_be_saved_and_changed(base, heads):
+    head = heads["head"]
+    isu = head.get(f"{base}/evaluation-forms/isu-self-assessment").json()
+    isu["structure"]["parts"][0]["min"] = 60
+    copy = head.post(f"{base}/evaluation-forms", json={
+        "name": {"en": "ISU self-assessment (copy)", "ka": ""}, "description": isu["description"],
+        "structure": isu["structure"]})
+    assert copy.status_code == 201
+    assert (copy.json()["items"], copy.json()["structure"]["parts"][0]["min"]) == (60, 60)
+    # The built-in form itself is unchanged and can't be changed or removed
+    assert head.get(f"{base}/evaluation-forms/isu-self-assessment").json()["structure"]["parts"][0]["min"] == 80
+    for response in (head.put(f"{base}/evaluation-forms/isu-self-assessment", json=a_form()),
+                     head.delete(f"{base}/evaluation-forms/isu-self-assessment")):
+        assert response.status_code == 409 and error_code(response) == "built_in_form"
+
+
+def test_coordinators_only_see_their_own_forms_and_admins_see_all(as_admin, base, heads):
+    form = heads["head"].post(f"{base}/evaluation-forms", json=a_form()).json()
+    other = heads["other"]
+    assert [f["id"] for f in other.get(f"{base}/evaluation-forms").json()] == ["isu-self-assessment"]
+    assert other.get(f"{base}/evaluation-forms/{form['id']}").status_code == 404
+    assert other.put(f"{base}/evaluation-forms/{form['id']}", json=a_form()).status_code == 404
+    assert other.delete(f"{base}/evaluation-forms/{form['id']}").status_code == 404
+    # The same name is fine for someone else
+    assert other.post(f"{base}/evaluation-forms", json=a_form()).status_code == 201
+
+    listed = as_admin.get(f"{base}/evaluation-forms").json()
+    assert len(listed) == 3 and all(f["can_edit"] for f in listed[1:])
+    assert as_admin.put(f"{base}/evaluation-forms/{form['id']}", json=a_form("Fixed by the Admin")).status_code == 200
+    # The Admin's change keeps the head as the owner, and the head still sees it
+    mine = heads["head"].get(f"{base}/evaluation-forms/{form['id']}").json()
+    assert mine["name"]["en"] == "Fixed by the Admin" and mine["owner"] == form["owner"]
+
+
+def test_researchers_cant_see_or_make_forms(base, heads):
+    researcher = heads["researcher"]
+    assert researcher.post(f"{base}/evaluation-forms", json=a_form()).status_code == 403
+    assert researcher.get(f"{base}/evaluation-forms/isu-self-assessment").status_code == 403
+
+
+def test_form_names_are_unique_per_person_and_forms_are_checked(base, heads):
+    head = heads["head"]
+    assert head.post(f"{base}/evaluation-forms", json=a_form()).status_code == 201
+    clash = head.post(f"{base}/evaluation-forms", json=a_form("  department  EVALUATION "))
+    assert clash.status_code == 409 and error_code(clash) == "form_exists"
+    empty = {**a_form("Another"), "structure": {"version": 1, "parts": []}}
+    assert head.post(f"{base}/evaluation-forms", json=empty).status_code == 422
+    nameless = {**a_form(), "name": {"en": "", "ka": ""}}
+    assert head.post(f"{base}/evaluation-forms", json=nameless).status_code == 422

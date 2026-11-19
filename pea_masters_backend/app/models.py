@@ -309,7 +309,8 @@ class EvaluationForm(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
     organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"))
     owner_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    name: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)  # English
+    name_ka: Mapped[str] = mapped_column(Text, server_default="")
     description: Mapped[str] = mapped_column(Text, server_default="")
     structure: Mapped[dict[str, Any]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
