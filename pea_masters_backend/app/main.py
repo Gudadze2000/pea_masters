@@ -5,7 +5,19 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import crossref, cv, orcid, people, positions, profile_entries, profiles, research_output, units, wos
+from app import (
+    crossref,
+    cv,
+    evaluations,
+    orcid,
+    people,
+    positions,
+    profile_entries,
+    profiles,
+    research_output,
+    units,
+    wos,
+)
 from app.auth import google, sessions
 from app.config import settings
 from app.db import get_db
@@ -43,6 +55,7 @@ app.include_router(positions.router)
 app.include_router(profiles.router)
 app.include_router(profile_entries.router)
 app.include_router(cv.router)
+app.include_router(evaluations.router)
 app.include_router(wos.router)
 app.include_router(crossref.router)
 app.include_router(research_output.router)

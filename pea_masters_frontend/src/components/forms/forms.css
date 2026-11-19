@@ -85,3 +85,5 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator { cursor: poi
 .cv-link-open:hover { background: var(--muted); color: var(--primary); }
 .cv-link-open svg { width: 14px; height: 14px; }
 .cv-link-open .cv-link-ok { color: var(--success); }
+
+.record-sheet-error { margin: 0 24px 12px; }

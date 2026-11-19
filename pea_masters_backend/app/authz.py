@@ -40,6 +40,9 @@ class Action(StrEnum):
     VIEW_UNITS = "units.view"
     MANAGE_UNITS = "units.manage"  # faculties and departments
     VIEW_RESEARCH_OUTPUT = "research.view"  # Web of Science output of the people one manages
+    VIEW_EVALUATION_PERIODS = "evaluation_periods.view"
+    MANAGE_EVALUATION_PERIODS = "evaluation_periods.manage"  # create, change dates, archive
+    VIEW_EVALUATION_FORMS = "evaluation_forms.view"  # the forms that can be sent to researchers
 
 
 # Which organization roles may perform each action. Root (the developers) may do everything, everywhere.
@@ -53,6 +56,9 @@ POLICY: dict[Action, frozenset[str]] = {
     Action.VIEW_UNITS: frozenset({"admin", "coordinator", "member"}),
     Action.MANAGE_UNITS: frozenset({"admin"}),
     Action.VIEW_RESEARCH_OUTPUT: frozenset({"admin", "coordinator"}),
+    Action.VIEW_EVALUATION_PERIODS: frozenset({"admin", "coordinator", "member"}),
+    Action.MANAGE_EVALUATION_PERIODS: frozenset({"admin"}),
+    Action.VIEW_EVALUATION_FORMS: frozenset({"admin", "coordinator"}),
 }
 
 # Strongest first; the strongest role that allows an action is the one acted under
