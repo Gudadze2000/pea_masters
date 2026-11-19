@@ -45,6 +45,7 @@ router = APIRouter(tags=["evaluations"])
 
 State = Literal["draft", "submitted", "updating"]
 EntryStatus = Literal["draft", "submitted", "approved", "rejected"]
+ReviewState = Literal["approved", "returned"]  # the coordinator's decision on the whole form; None: waiting
 
 
 # --- shapes ---------------------------------------------------------------------------------------
@@ -58,6 +59,8 @@ class EvaluationBrief(BaseModel):
     sent_at: datetime
     submitted_at: datetime | None
     entries: int  # entries that will be sent (not hidden)
+    review_state: ReviewState | None
+    final_score: float | None
 
 
 class RosterRow(BaseModel):
@@ -135,6 +138,8 @@ class MyEvaluationBrief(BaseModel):
     form_name: Localized
     state: State
     submitted_at: datetime | None
+    review_state: ReviewState | None
+    final_score: float | None
     entries: int
     rejected: int
     missing_files: int
@@ -148,9 +153,13 @@ class MyEvaluation(BaseModel):
     form_name: Localized
     structure: FormStructure
     state: State
-    can_edit: bool  # the period is open and the form isn't submitted (or is being updated)
+    can_edit: bool  # the period is open, the form isn't submitted (or is being updated) and isn't approved
     sent_at: datetime
     submitted_at: datetime | None
+    review_state: ReviewState | None
+    review_comment: str | None  # why the form was returned, or a note with the approval
+    reviewed_at: datetime | None
+    final_score: float | None  # set when approved: points from approved entries, with the form's limits applied
     entries: list[EntryOut]
     submission: list[dict[str, Any]] | None  # the entries as last submitted, to show what an update changes
 
@@ -241,7 +250,14 @@ def require_open(period: EvaluationPeriod) -> None:
                       f"This evaluation opens on {day_label(period.starts_on)}.")
 
 
+def require_not_approved(evaluation: Evaluation) -> None:
+    if evaluation.review_state == "approved":
+        raise problem(status.HTTP_409_CONFLICT, "approved",
+                      "Your evaluation has been approved, so it can't be changed any more.")
+
+
 def require_editable(db: Session, evaluation: Evaluation) -> None:
+    require_not_approved(evaluation)
     require_open(period_of(db, evaluation))
     if evaluation.state == "submitted":
         raise problem(status.HTTP_409_CONFLICT, "submitted",
@@ -297,8 +313,10 @@ def my_evaluation_out(db: Session, evaluation: Evaluation) -> MyEvaluation:
         id=evaluation.id, period=to_out(period), form_name=name_of(evaluation),
         structure=FormStructure.model_validate(evaluation.form_structure),
         state=evaluation.state,  # type: ignore[arg-type]
-        can_edit=is_open(period) and evaluation.state != "submitted", sent_at=evaluation.sent_at,
-        submitted_at=evaluation.submitted_at, entries=[entry_out(e, files.get(e.id, [])) for e in entries],
+        can_edit=is_open(period) and evaluation.state != "submitted" and evaluation.review_state != "approved",
+        sent_at=evaluation.sent_at, submitted_at=evaluation.submitted_at, review_state=evaluation.review_state,
+        review_comment=evaluation.review_comment, reviewed_at=evaluation.reviewed_at,
+        final_score=number(evaluation.final_score), entries=[entry_out(e, files.get(e.id, [])) for e in entries],
         submission=evaluation.submission)
 
 
@@ -325,6 +343,7 @@ def my_evaluations(user: User = Depends(current_user), db: Session = Depends(get
         briefs.append(MyEvaluationBrief(
             id=evaluation.id, period=to_out(period), form_name=name_of(evaluation),
             state=evaluation.state, submitted_at=evaluation.submitted_at,  # type: ignore[arg-type]
+            review_state=evaluation.review_state, final_score=number(evaluation.final_score),  # type: ignore[arg-type]
             entries=len(entries), rejected=len(rejected), missing_files=len(missing),
             first_rejected=ref(rejected), first_missing_file=ref(missing)))
     return briefs
@@ -433,6 +452,8 @@ def submit(evaluation_id: uuid.UUID, body: SubmitIn, request: Request, user: Use
     evaluation.submission = current_snapshots(db, evaluation)
     evaluation.state = "submitted"
     evaluation.submitted_at = func.now()
+    # The new version waits for review; entries keep their own decisions unless they were changed
+    evaluation.review_state = evaluation.review_comment = evaluation.reviewed_by = evaluation.reviewed_at = None
     touch(db, evaluation)
     record(db, request, user, "evaluation.resubmitted" if resubmitting else "evaluation.submitted", evaluation,
            after={"entries": sent})
@@ -447,6 +468,7 @@ def reopen(evaluation_id: uuid.UUID, request: Request, user: User = Depends(curr
     """"Update submission": the form can be changed again; the coordinator keeps seeing the submission until the
     researcher resubmits."""
     evaluation = my_evaluation(db, user, evaluation_id)
+    require_not_approved(evaluation)
     require_open(period_of(db, evaluation))
     if evaluation.state != "submitted":
         raise problem(status.HTTP_409_CONFLICT, "not_submitted", "The form isn't submitted.")
@@ -498,7 +520,9 @@ def brief(evaluation: Evaluation, entries: int) -> EvaluationBrief:
     return EvaluationBrief(id=evaluation.id, form_ref=evaluation.form_ref,
                            form_name=name_of(evaluation),
                            state=evaluation.state, started=evaluation.started_at is not None,  # type: ignore[arg-type]
-                           sent_at=evaluation.sent_at, submitted_at=evaluation.submitted_at, entries=entries)
+                           sent_at=evaluation.sent_at, submitted_at=evaluation.submitted_at, entries=entries,
+                           review_state=evaluation.review_state,  # type: ignore[arg-type]
+                           final_score=number(evaluation.final_score))
 
 
 def active_evaluations(db: Session, period_id: uuid.UUID, user_ids: list[uuid.UUID]) -> dict[uuid.UUID, Evaluation]:

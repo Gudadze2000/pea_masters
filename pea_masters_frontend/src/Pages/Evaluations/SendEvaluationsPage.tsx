@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router"
-import { Check, Send, Undo2, Users, X } from "lucide-react"
+import { Check, ClipboardCheck, Send, Undo2, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
@@ -19,7 +19,9 @@ const formatDate = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:0
 /** Where someone is with the period's form, for the status column */
 function progress(evaluation: EvaluationBrief | null): { label: string; tone: string } {
   if (!evaluation) return { label: "Not sent", tone: "status-draft" }
-  if (evaluation.state === "submitted") return { label: "Submitted", tone: "status-active" }
+  if (evaluation.review_state === "approved") return { label: "Approved", tone: "status-active" }
+  if (evaluation.review_state === "returned" && evaluation.state === "submitted") return { label: "Returned", tone: "status-rejected" }
+  if (evaluation.state === "submitted") return { label: "To review", tone: "status-submitted" }
   if (evaluation.state === "updating") return { label: "Updating", tone: "status-submitted" }
   return evaluation.started ? { label: "In progress", tone: "status-submitted" } : { label: "Not started", tone: "status-draft" }
 }
@@ -103,7 +105,8 @@ export function SendEvaluationsPage() {
   const allChosen = choosable.length > 0 && choosable.every(row => selected.has(row.person.id))
   const counts = {
     notSent: rows.filter(row => !row.evaluation).length,
-    submitted: rows.filter(row => row.evaluation?.state === "submitted").length,
+    submitted: rows.filter(row => row.evaluation?.submitted_at).length,
+    toReview: rows.filter(row => row.evaluation?.state === "submitted" && !row.evaluation.review_state).length,
   }
 
   const toggle = (id: string) => setSelected(current => {
@@ -154,7 +157,7 @@ export function SendEvaluationsPage() {
                 </div>
                 <p id="send-heading" className="send-muted">
                   {formatDate(period.starts_on)} – {formatDate(period.ends_on)}
-                  {roster && ` · ${rows.length} ${rows.length === 1 ? "researcher" : "researchers"} · ${counts.submitted} submitted · ${counts.notSent} without a form`}
+                  {roster && ` · ${rows.length} ${rows.length === 1 ? "researcher" : "researchers"} · ${counts.submitted} submitted · ${counts.toReview} to review · ${counts.notSent} without a form`}
                 </p>
                 <Button className="dashboard-button" disabled={closed || selected.size === 0} onClick={() => setSending(true)}>
                   <Send />{selected.size ? `Send form to ${selected.size}` : "Send form"}
@@ -192,11 +195,19 @@ export function SendEvaluationsPage() {
                               <td>{row.evaluation ? row.evaluation.form_name.en : <span className="muted">—</span>}</td>
                               <td>
                                 <span className={`status-badge ${state.tone}`}>{state.label}</span>
-                                {row.evaluation?.submitted_at && <small className="send-when">{formatDate(row.evaluation.submitted_at)}</small>}
+                                {row.evaluation?.final_score !== null && row.evaluation?.final_score !== undefined
+                                  ? <small className="send-when">Final score {row.evaluation.final_score}</small>
+                                  : row.evaluation?.submitted_at && <small className="send-when">Submitted {formatDate(row.evaluation.submitted_at)}</small>}
                               </td>
                               <td>{row.evaluation ? row.evaluation.entries : ""}</td>
                               <td>
                                 <div className="row-actions">
+                                  {row.evaluation?.submitted_at && (
+                                    <Button variant="outline" size="sm" className="send-review" aria-label={`Review ${name}'s form`}
+                                      onClick={() => navigate(`/admin/evaluations/${row.evaluation!.id}?org=${org.id}`)}>
+                                      <ClipboardCheck />{row.evaluation.review_state === "approved" ? "View" : "Review"}
+                                    </Button>
+                                  )}
                                   {row.evaluation && !row.evaluation.started && (
                                     <Button variant="outline" size="icon" className="icon-button" aria-label={`Withdraw ${name}'s form`} title="Withdraw the form" onClick={() => setWithdrawing(row)}><Undo2 /></Button>
                                   )}

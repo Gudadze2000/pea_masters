@@ -1,6 +1,7 @@
 import { api } from "./api"
 import type { Person } from "./people"
 import type { ServerDocument } from "./profile-entries"
+import type { WosArticle } from "./wos"
 
 /*
  * Evaluations (app/evaluations.py): periods set up by an organization's Admins, and the forms coordinators send to
@@ -98,6 +99,9 @@ export const formsApi = {
 
 export type EvaluationState = "draft" | "submitted" | "updating"
 
+/** The coordinator's decision on a submitted form: approved is final; returned means fix and resubmit. Null: waiting */
+export type ReviewState = "approved" | "returned"
+
 export type EvaluationBrief = {
   id: string
   form_ref: string
@@ -109,6 +113,8 @@ export type EvaluationBrief = {
   submitted_at: string | null
   /** Entries that will be sent (not hidden) */
   entries: number
+  review_state: ReviewState | null
+  final_score: number | null
 }
 
 export type RosterRow = { person: Person; evaluation: EvaluationBrief | null }
@@ -183,6 +189,8 @@ export type MyEvaluationBrief = {
   form_name: Localized
   state: EvaluationState
   submitted_at: string | null
+  review_state: ReviewState | null
+  final_score: number | null
   entries: number
   rejected: number
   missing_files: number
@@ -200,6 +208,12 @@ export type MyEvaluation = {
   can_edit: boolean
   sent_at: string
   submitted_at: string | null
+  review_state: ReviewState | null
+  /** Why the form was returned, or a note with the approval */
+  review_comment: string | null
+  reviewed_at: string | null
+  /** Set when approved: points from approved entries, with the form's limits applied */
+  final_score: number | null
   entries: EvaluationEntry[]
   submission: SubmittedEntry[] | null
 }
@@ -230,4 +244,57 @@ export async function entryNeedingAttention(kind: "rejected" | "missing-file"): 
   } catch {
     return null
   }
+}
+
+/* ---------- reviewing (coordinators and Admins) ---------- */
+
+export type ReviewEntry = {
+  id: string
+  item_id: string
+  description: string
+  detail: string
+  points: number | null
+  status: "submitted" | "approved" | "rejected"
+  review_comment: string | null
+  /** The check saved by the researcher's browser; reviewApi.checkDoi checks again on the server */
+  wos: WosCheck | null
+  doi: string | null
+  files: ServerDocument[]
+}
+
+export type EvaluationReview = {
+  id: string
+  person: Person
+  period: EvaluationPeriod
+  form_name: Localized
+  structure: FormStructure
+  /** updating: the researcher is changing it; this is what they last sent */
+  state: "submitted" | "updating"
+  submitted_at: string
+  review_state: ReviewState | null
+  review_comment: string | null
+  reviewed_at: string | null
+  reviewed_by: string | null
+  final_score: number | null
+  /** From the entries approved so far, with the form's limits applied */
+  score: number
+  /** Entries can be decided until the form is approved */
+  can_review: boolean
+  /** The form can be approved or returned: submitted, not being changed, not yet approved */
+  can_finish: boolean
+  /** As submitted; hidden ones weren't sent */
+  entries: ReviewEntry[]
+}
+
+const review = (orgId: string, id: string) => `/orgs/${orgId}/evaluations/${id}`
+
+export const reviewApi = {
+  get: (orgId: string, id: string) => api<EvaluationReview>(review(orgId, id)),
+  /** "submitted" undoes a decision */
+  decide: (orgId: string, id: string, entryId: string, decision: "approved" | "rejected" | "submitted", comment?: string) =>
+    api<EvaluationReview>(`${review(orgId, id)}/entries/${entryId}/review`, { method: "PUT", body: { decision, comment: comment ?? null } }),
+  finish: (orgId: string, id: string, decision: ReviewState, comment: string) =>
+    api<EvaluationReview>(`${review(orgId, id)}/review`, { method: "POST", body: { decision, comment: comment || null } }),
+  /** Looks the entry's DOI up in Web of Science on the server; includes_you is about the researcher */
+  checkDoi: (orgId: string, id: string, entryId: string) => api<WosArticle>(`${review(orgId, id)}/entries/${entryId}/wos`),
 }

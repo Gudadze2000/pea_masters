@@ -1,4 +1,4 @@
-import type { EvaluationEntry, FormStructure, SubmittedEntry } from '@/lib/evaluations'
+import type { EntryStatus, EvaluationEntry, FormStructure, SubmittedEntry } from '@/lib/evaluations'
 
 /*
  * The evaluation page works on the form the coordinator sent (a copy of it, kept with the evaluation on the server)
@@ -58,33 +58,36 @@ export function toForm(structure: FormStructure): Form {
 }
 
 /** Entries that are part of the form; hidden ones are kept but never sent or scored */
-export const isSent = (entry: Pick<EvaluationEntry, 'hidden'>) => !entry.hidden
+export const isSent = (entry: { hidden?: boolean }) => !entry.hidden
 
 /** Router state for linking to one entry: navigate("/evaluation-form", { state: { edit: { recordId, entryId } } }) */
 export type EvaluationLinkState = { edit?: { recordId: string; entryId: string } }
 
-/** Entries by item */
-export type EvaluationEntries = Record<string, EvaluationEntry[]>
+/** What scoring needs from an entry: the researcher's own entries, or a submission being reviewed */
+export type ScoredEntry = { item_id: string; status: EntryStatus; points: number | null; hidden?: boolean }
 
-export function byItem(entries: EvaluationEntry[]): EvaluationEntries {
-  const grouped: EvaluationEntries = {}
+/** Entries by item */
+export type EvaluationEntries<T extends ScoredEntry = EvaluationEntry> = Record<string, T[]>
+
+export function byItem<T extends ScoredEntry>(entries: T[]): EvaluationEntries<T> {
+  const grouped: EvaluationEntries<T> = {}
   for (const entry of entries) (grouped[entry.item_id] ??= []).push(entry)
   return grouped
 }
 
 /** Entries that count: everything sent except rejected ones (the final score counts approved ones only) */
-export function recordScore(record: RecordDef, entries: EvaluationEntry[] = []) {
+export function recordScore(record: RecordDef, entries: ScoredEntry[] = []) {
   const sum = entries.filter(entry => isSent(entry) && entry.status !== 'rejected').reduce((total, entry) => total + (record.variablePoints ? entry.points ?? 0 : record.points), 0)
   return record.maxPoints === undefined ? sum : Math.min(sum, record.maxPoints)
 }
 
 /** A part's score as entered, and the amount that counts towards the total (some parts are capped) */
-export function partScore(part: Part, entries: EvaluationEntries) {
+export function partScore(part: Part, entries: EvaluationEntries<ScoredEntry>) {
   const raw = part.items.reduce((total, record) => total + recordScore(record, entries[record.id]), 0)
   return { raw, counted: part.cap === undefined ? raw : Math.min(raw, part.cap) }
 }
 
-export function formScore(form: Form, entries: EvaluationEntries) {
+export function formScore(form: Form, entries: EvaluationEntries<ScoredEntry>) {
   const scores = form.parts.map(part => ({ part, ...partScore(part, entries) }))
   return { scores, total: scores.reduce((sum, score) => sum + score.counted, 0) }
 }

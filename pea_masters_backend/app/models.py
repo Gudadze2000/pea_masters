@@ -338,6 +338,11 @@ class Evaluation(Base):
     submission: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)  # the entries as last submitted
     withdrawn_at: Mapped[datetime | None]
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    review_state: Mapped[str | None] = mapped_column(Text)  # approved (final) | returned | None: waiting
+    review_comment: Mapped[str | None] = mapped_column(Text)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    reviewed_at: Mapped[datetime | None]
+    final_score: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))  # set when approved
 
 
 class EvaluationEntry(Base):
@@ -353,6 +358,8 @@ class EvaluationEntry(Base):
     status: Mapped[str] = mapped_column(Text, server_default="draft")  # draft | submitted | approved | rejected
     review_comment: Mapped[str | None] = mapped_column(Text)
     wos: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    reviewed_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
 

@@ -12,6 +12,7 @@ import { RequireStaff } from "./components/RequireStaff"
 import { EvaluationFormsPage } from "./Pages/EvaluationForms/EvaluationFormsPage"
 import { FormEditorPage } from "./Pages/EvaluationForms/FormEditorPage"
 import { SendEvaluationsPage } from "./Pages/Evaluations/SendEvaluationsPage"
+import { ReviewEvaluationPage } from "./Pages/Evaluations/ReviewEvaluationPage"
 
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
         <Route element={<RequireStaff />}>
         <Route path="/admin/people" element={<PeoplePage />} />
         <Route path="/admin/evaluations" element={<SendEvaluationsPage />} />
+        <Route path="/admin/evaluations/:evaluationId" element={<ReviewEvaluationPage />} />
         <Route path="/admin/evaluation-forms" element={<EvaluationFormsPage />} />
         {/* "new" for a new form; ?copy=<id> starts it as a copy of another */}
         <Route path="/admin/evaluation-forms/:formId" element={<FormEditorPage />} />

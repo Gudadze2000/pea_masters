@@ -1,6 +1,7 @@
 """The evaluation form end to end. A head of department sends the form for the open period from Administration →
 Evaluations; the researcher fills it in on the server (entries with uploaded evidence, hidden instead of deleted),
-submits, asks the coordinator about a rejected entry, and updates and resubmits before the deadline. Then Web of
+submits; the head reviews it (rejects an entry, returns the form); the researcher asks about the rejected entry,
+updates and resubmits; the head approves it with its final score. Then Web of
 Science checks, "Missing from your form" and the CV builder's imports, as the Admin.
 
 The browser tests share one database and units can't be deleted, so this file must sort after test_people_page.py,
@@ -15,7 +16,7 @@ from sqlalchemy import select
 
 from app.db import SessionLocal
 from app.evaluations import BUILT_IN_FORMS, built_in_structure
-from app.models import Evaluation, EvaluationEntry
+from app.models import Evaluation
 from tests.e2e import fake_clarivate
 from tests.e2e.conftest import APP_URL
 
@@ -150,15 +151,31 @@ def test_send_fill_in_submit_and_resubmit(admin_page: Page, organization, google
     expect(banner(page)).to_have_text(re.compile("^Submitted on"))
     expect(page.get_by_role("button", name="Add entry")).to_have_count(0)
     head.reload()
-    expect(head.locator(".send-table tbody tr", has_text=RESEARCHER[0])).to_contain_text("Submitted")
+    expect(head.locator(".send-table tbody tr", has_text=RESEARCHER[0])).to_contain_text("To review")
 
-    # 5. A rejected entry offers to ask the coordinator: an email to the head of department, filled in.
-    # (Reviewing comes next; until then the database plays the coordinator.)
-    with SessionLocal() as db:
-        entry = db.scalar(select(EvaluationEntry).where(EvaluationEntry.description.like("Allelic%")))
-        entry.status, entry.review_comment = "rejected", "DOI does not match the attached PDF."
-        db.commit()
+    # 5. The head of department reviews it: rejecting needs a reason; then the form goes back to the researcher
+    row = head.locator(".send-table tbody tr", has_text=RESEARCHER[0])
+    row.get_by_role("button", name=re.compile("^Review")).click()
+    expect(head.get_by_role("heading", name=RESEARCHER[0], level=1)).to_be_visible()
+    entry = head.locator(".review-entry", has_text="Allelic diversity of Caucasian landraces")
+    expect(entry.get_by_role("link", name="landraces.pdf")).to_be_visible()
+    expect(head.locator(".review-entry", has_text="Transcriptomics")).to_have_count(0)  # hidden: not sent
+    entry.get_by_role("button", name="Reject Allelic diversity of Caucasian landraces").click()
+    entry.get_by_role("button", name="Reject entry").click()
+    expect(entry.get_by_role("alert")).to_contain_text("Say why it's rejected")
+    entry.get_by_label(re.compile("^Why is it rejected")).fill("DOI does not match the attached PDF.")
+    entry.get_by_role("button", name="Reject entry").click()
+    expect(entry.locator(".status-badge")).to_have_text("Rejected")
+    expect(head.get_by_role("button", name="Return to researcher")).to_be_disabled()  # needs a comment
+    head.get_by_label(f"Comment for {RESEARCHER[0]}").fill("Please attach the right PDF and resubmit.")
+    head.get_by_role("button", name="Return to researcher").click()
+    expect(head.get_by_text(f"Returned to {RESEARCHER[0]}")).to_be_visible()
+    shot(head, "evaluation-review-01-returned")
+
+    # 6. The researcher sees why, and can ask the coordinator: an email to the head of department, filled in
     page.reload()
+    expect(page.get_by_text("Your coordinator returned your form")).to_be_visible()
+    expect(page.get_by_text("Please attach the right PDF and resubmit.")).to_be_visible()
     page.get_by_role("tab", name=re.compile("II · Research")).click()
     page.get_by_role("button", name="Ask coordinator").click()
     dialog = page.get_by_role("dialog")
@@ -172,7 +189,7 @@ def test_send_fill_in_submit_and_resubmit(admin_page: Page, organization, google
     shot(page, "evaluation-02-contact-coordinator")
     dialog.get_by_role("button", name="Close dialog").click()
 
-    # 6. Before the deadline it can be updated: nothing to resubmit until something changes...
+    # 7. Before the deadline it can be updated: nothing to resubmit until something changes...
     page.get_by_role("button", name="Update submission").first.click()
     expect(page.get_by_text("Updating your submitted form")).to_be_visible()
     expect(page.get_by_role("button", name="Review & resubmit")).to_be_disabled()
@@ -192,6 +209,31 @@ def test_send_fill_in_submit_and_resubmit(admin_page: Page, organization, google
     new_row = page.locator(".evaluation-entry", has_text="Heat-shock proteins in Caucasian wheat (2026)")
     expect(new_row.locator(".evaluation-badge")).to_have_text("Submitted")
     shot(page, "evaluation-03-resubmitted")
+
+    # 8. The head approves the new article and then the evaluation: final, with its score
+    head.reload()
+    expect(head.locator(".review-entry", has_text="Allelic").locator(".status-badge")).to_have_text("Rejected")
+    added = head.locator(".review-entry", has_text="Heat-shock proteins in Caucasian wheat (2026)")
+    added.get_by_role("button", name=re.compile("^Approve Heat-shock")).click()
+    expect(added.locator(".status-badge")).to_have_text("Approved")
+    head.get_by_role("button", name="Approve evaluation").click()
+    confirm = head.get_by_role("alertdialog")
+    expect(confirm).to_contain_text("The final score is 50 pts")
+    confirm.get_by_role("button", name="Approve evaluation").click()
+    expect(head.get_by_text("Approved: final score 50 pts")).to_be_visible()
+    expect(head.get_by_role("button", name="Approve evaluation")).to_have_count(0)
+    shot(head, "evaluation-review-02-approved")
+    head.locator(".dashboard-sidebar").get_by_role("button", name="Evaluations", exact=True).click()
+    approved_row = head.locator(".send-table tbody tr", has_text=RESEARCHER[0])
+    expect(approved_row).to_contain_text("Approved")
+    expect(approved_row).to_contain_text("Final score 50")
+
+    # 9. The researcher sees the final score, and the form is locked for good
+    page.reload()
+    expect(page.get_by_text("Your evaluation was approved: final score 50 pts")).to_be_visible()
+    expect(page.get_by_role("button", name="Update submission")).to_have_count(0)
+    expect(page.get_by_role("button", name="Add entry")).to_have_count(0)
+    shot(page, "evaluation-04-approved")
 
     assert not errors, errors
 

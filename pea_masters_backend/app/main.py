@@ -8,6 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app import (
     crossref,
     cv,
+    evaluation_reviews,
     evaluations,
     orcid,
     people,
@@ -58,6 +59,7 @@ app.include_router(profile_entries.router)
 app.include_router(cv.router)
 app.include_router(evaluations.router)
 app.include_router(sent_evaluations.router)
+app.include_router(evaluation_reviews.router)
 app.include_router(wos.router)
 app.include_router(crossref.router)
 app.include_router(research_output.router)

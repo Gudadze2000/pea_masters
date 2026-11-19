@@ -227,3 +227,7 @@ a.wos-badge:hover { text-decoration: underline; }
 /* The page is a flex column: without this, the tab bar (overflow hidden) shrinks to nothing when the content above
    it grows, e.g. with "Missing from your form" */
 .evaluation-page > * { flex-shrink: 0; }
+
+/* Reviewed: the form was returned, or approved with a final score */
+.evaluation-badge-returned { background: var(--danger-soft); color: var(--destructive); }
+.evaluation-banner-approved { background: var(--success-soft); }

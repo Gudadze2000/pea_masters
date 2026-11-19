@@ -22,7 +22,7 @@ import './EvaluationForm.css'
 const statusLabels = { draft: 'Draft', submitted: 'Submitted', approved: 'Approved', rejected: 'Rejected' } as const
 
 function Badge({ status }: { status: string }) {
-  return <span className={`evaluation-badge evaluation-badge-${status.toLowerCase().replace(' ', '-')}`}><Icon name={status === 'Approved' ? 'imgDot1' : status === 'Rejected' ? 'imgDot2' : status === 'Submitted' || status === 'In review' ? 'imgDot3' : 'imgDot'} />{status}</span>
+  return <span className={`evaluation-badge evaluation-badge-${status.toLowerCase().replace(' ', '-')}`}><Icon name={status === 'Approved' ? 'imgDot1' : status === 'Rejected' || status === 'Returned' ? 'imgDot2' : status === 'Submitted' || status === 'In review' ? 'imgDot3' : 'imgDot'} />{status}</span>
 }
 
 const pts = (value: number) => `${Number.isInteger(value) ? value : value.toFixed(1)} pts`
@@ -141,6 +141,8 @@ export function EvaluationForm() {
   const closed = period.status === 'closed'
   const upcoming = period.status === 'upcoming'
   const updating = evaluation.state === 'updating'
+  const approved = evaluation.review_state === 'approved'
+  const returned = evaluation.review_state === 'returned' && !updating
   const submittedAt = evaluation.submitted_at
   const deadline = dayLabel(period.ends_on)
   const daysLeft = daysUntil(period.ends_on)
@@ -238,24 +240,28 @@ export function EvaluationForm() {
         {list && list.length > 1 && <select className="form-control evaluation-period-select" aria-label="Evaluation period" value={evaluation.id} onChange={event => { setEvaluation(null); setTab(''); setNotice(''); setSelectedId(event.target.value) }}>
           {list.map(item => <option key={item.id} value={item.id}>{item.period.name}</option>)}
         </select>}
-        <Badge status={submittedAt && !updating ? 'Submitted' : 'Draft'} />
+        <Badge status={approved ? 'Approved' : returned ? 'Returned' : submittedAt && !updating ? 'Submitted' : 'Draft'} />
         <Button variant="outline" className="dashboard-button" onClick={() => setContact({})}><Mail aria-hidden="true" />Contact coordinator</Button>
         <Button variant="outline" className="dashboard-button" onClick={() => setPreview(true)}><Icon name="imgIconEye" />Preview</Button>
       </div>
     </div>
     {notice && <p className="evaluation-notice" role="status">{notice}</p>}
     {actionError && <p className="form-error-summary" role="alert">{actionError}</p>}
-    {upcoming
+    {approved
+      ? <div className="evaluation-banner evaluation-banner-info evaluation-banner-approved"><Icon name="imgIconCheck" /><div><p>Your evaluation was approved: final score {pts(evaluation.final_score ?? 0)}</p><small>Approved on {formatWhen(evaluation.reviewed_at!)}.{evaluation.review_comment ? ` “${evaluation.review_comment}”` : ''} Only approved entries count; the form can't be changed any more.</small></div></div>
+      : upcoming
       ? <div className="evaluation-banner evaluation-banner-info"><Icon name="imgIconClock" /><div><p>This evaluation opens on {dayLabel(period.starts_on)}</p><small>You can fill in and submit your form from then until {deadline}.</small></div></div>
       : closed
         ? <div className="evaluation-banner evaluation-banner-info"><Icon name="imgIconLock" /><div><p>The evaluation period has ended</p><small>{submittedAt ? `You submitted your form on ${formatWhen(submittedAt)}.` : "Your form wasn't submitted before the deadline."} Contact your coordinator if something needs to change.</small></div></div>
+        : returned
+          ? <div className="evaluation-banner"><Icon name="imgIconAlert" /><div><p>Your coordinator returned your form</p><small>“{evaluation.review_comment}” Use “Update submission” to fix it, then resubmit before {deadline}.</small></div><Button variant="outline" className="dashboard-button evaluation-banner-action" disabled={busy} onClick={() => void startUpdate()}><Icon name="imgIconUnlock" />Update submission</Button></div>
         : submittedAt && !updating
           ? <div className="evaluation-banner evaluation-banner-info"><Icon name="imgIconLock" /><div><p>Submitted on {formatWhen(submittedAt)}</p><small>Got a new article or something to fix? You can update and resubmit your form until {deadline}. Approved entries stay approved unless you change them.</small></div><Button variant="outline" className="dashboard-button evaluation-banner-action" disabled={busy} onClick={() => void startUpdate()}><Icon name="imgIconUnlock" />Update submission</Button></div>
           : updating && submittedAt
             ? <div className="evaluation-banner evaluation-banner-info"><Icon name="imgIconUnlock" /><div><p>Updating your submitted form</p><small>Your coordinator keeps seeing the version you sent on {formatWhen(submittedAt)} until you resubmit.{changeSummary ? ` Changes so far: ${changeSummary}.` : ''}</small></div><Button variant="outline" className="dashboard-button evaluation-banner-action" disabled={busy} onClick={() => void discardUpdate()}>Discard changes</Button></div>
             : null}
     {!locked && rejected > 0 && <div className="evaluation-banner"><Icon name="imgIconAlert" /><div><p>{rejected} {rejected === 1 ? 'entry was' : 'entries were'} rejected</p><small>Fix the {rejected === 1 ? 'entry' : 'entries'} and {submittedAt ? 'resubmit' : 'submit'}, or hide {rejected === 1 ? 'it' : 'them'} if you'd rather not send {rejected === 1 ? 'it' : 'them'}. Not sure what's wrong? Use “Ask coordinator” on the entry.</small></div></div>}
-    {period.status === 'open' && <MissingFromForm entries={entries} years={{ from: period.publication_from, to: period.publication_to }} locked={locked} onAdd={addArticle} />}
+    {period.status === 'open' && !approved && <MissingFromForm entries={entries} years={{ from: period.publication_from, to: period.publication_to }} locked={locked} onAdd={addArticle} />}
     <div className="evaluation-tabs" role="tablist" aria-label="Evaluation sections">
       {form.parts.map(part => <button key={part.id} type="button" role="tab" id={`evaluation-tab-${part.id}`} aria-selected={activePart.id === part.id} aria-controls="evaluation-tabpanel" onClick={() => setTab(part.id)}>{[part.numeral, part.name].filter(Boolean).join(' · ')}<span className="evaluation-tab-score">{pts(score.scores.find(item => item.part.id === part.id)?.raw ?? 0)}</span></button>)}
     </div>
@@ -270,19 +276,19 @@ export function EvaluationForm() {
           onToggleHidden={entry => void toggleHidden(entry)} onAsk={entry => ask(record, entry)} />)}
       </div>
       <aside className="evaluation-summary" aria-label="Evaluation summary">
-        <section className="dashboard-card"><h2>Your score</h2>
-          <div className="evaluation-score"><strong>{Number.isInteger(score.total) ? score.total : score.total.toFixed(1)}</strong><span>{form.totalMinimum !== undefined ? `pts of at least ${form.totalMinimum}` : 'pts'}</span></div>
+        <section className="dashboard-card"><h2>{approved ? 'Final score' : 'Your score'}</h2>
+          <div className="evaluation-score"><strong>{approved ? evaluation.final_score : Number.isInteger(score.total) ? score.total : score.total.toFixed(1)}</strong><span>{form.totalMinimum !== undefined ? `pts of at least ${form.totalMinimum}` : 'pts'}</span></div>
           {form.totalMinimum !== undefined && <progress value={Math.min(score.total, form.totalMinimum)} max={form.totalMinimum} aria-label={`Total towards the ${form.totalMinimum}-point minimum`} />}
           <dl className="evaluation-parts">{score.scores.map(({ part, raw, counted }) => {
             const ok = part.min === undefined || counted >= part.min
             return <div key={part.id}><dt><button type="button" className="text-action" onClick={() => setTab(part.id)}>{[part.numeral, part.name].filter(Boolean).join('. ')}</button></dt><dd><span className={ok ? undefined : 'evaluation-short'}>{pts(part.cap !== undefined ? counted : raw)}</span><small>{part.min !== undefined ? `min ${part.min}` : part.cap !== undefined ? `max ${part.cap}` : ''}</small></dd></div>
           })}</dl>
-          <small>Only approved entries count towards your final score. This total includes entries waiting for review; rejected and hidden entries don't count.</small>
+          <small>{approved ? 'Points from your approved entries, within the form\'s limits.' : 'Only approved entries count towards your final score. This total includes entries waiting for review; rejected and hidden entries don\'t count.'}</small>
         </section>
         <section className="dashboard-card">{locked
           ? <><h2>Review status</h2>
-            {submittedAt ? <><div className="evaluation-check"><span>Status</span><Badge status="In review" /></div><small>Submitted on {formatWhen(submittedAt)}</small></> : <p className="evaluation-check"><Icon name="imgIconAlert2" />Not submitted</p>}
-            {period.status === 'open' && submittedAt && <><Button variant="outline" className="dashboard-button" disabled={busy} onClick={() => void startUpdate()}><Icon name="imgIconUnlock" />Update submission</Button><small>Add a new entry or fix one, then resubmit before {deadline}.</small></>}
+            {submittedAt ? <><div className="evaluation-check"><span>Status</span><Badge status={approved ? 'Approved' : returned ? 'Returned' : 'In review'} /></div><small>Submitted on {formatWhen(submittedAt)}</small></> : <p className="evaluation-check"><Icon name="imgIconAlert2" />Not submitted</p>}
+            {period.status === 'open' && submittedAt && !approved && <><Button variant="outline" className="dashboard-button" disabled={busy} onClick={() => void startUpdate()}><Icon name="imgIconUnlock" />Update submission</Button><small>Add a new entry or fix one, then resubmit before {deadline}.</small></>}
           </>
           : <><h2>{updating ? 'Before you resubmit' : 'Before you submit'}</h2>
             {sent.length === 0 && <p className="evaluation-check"><Icon name="imgIconAlert2" />Add at least one entry</p>}
