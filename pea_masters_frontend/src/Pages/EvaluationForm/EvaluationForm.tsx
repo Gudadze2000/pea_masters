@@ -86,7 +86,8 @@ export function EvaluationForm() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [actionError, setActionError] = useState('')
-  const linkHandled = useRef(false)
+  /** The link (router location) whose entry was last opened, so each new link opens its entry once */
+  const linkHandled = useRef('')
 
   useEffect(() => {
     let cancelled = false
@@ -109,8 +110,8 @@ export function EvaluationForm() {
 
   // Other pages can link straight to one entry (e.g. the dashboard's "Fix"): open its part and its edit dialog
   useEffect(() => {
-    if (!evaluation || !form || linkHandled.current) return
-    linkHandled.current = true
+    if (!evaluation || !form || linkHandled.current === location.key) return
+    linkHandled.current = location.key
     const target = (location.state as EvaluationLinkState | null)?.edit
     if (!target) return
     navigate(location.pathname, { replace: true, state: null }) // a reload doesn't reopen the dialog
@@ -119,7 +120,7 @@ export function EvaluationForm() {
     const part = form.parts.find(item => item.items.some(other => other.id === target.recordId))
     if (part) setTab(part.id)
     if (entry && record && evaluation.can_edit) setEditing({ record, entry })
-  }, [evaluation, form, location.pathname, location.state, navigate])
+  }, [evaluation, form, location.key, location.pathname, location.state, navigate])
 
   const breadcrumb = [{ label: 'Evaluation form' }]
   if (!evaluation || !form) {

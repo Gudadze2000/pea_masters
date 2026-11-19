@@ -118,6 +118,14 @@ Exceptions for one person (Admins only, from Evaluations): a later deadline (`ev
 person can fill in and submit until the end of that day even after the period has closed for everyone else), and
 reopening an approved evaluation (the approval and final score are taken back; entries keep their decisions). Both go
 to the audit log with an optional reason. Extending the deadline for everyone is editing the period itself.
+
+Notifications (`app/notifications.py`, `notifications`): shown under the bell, written by the action that causes them,
+in its transaction. Researchers hear about a form sent or changed, a rejected entry, their form returned, approved or
+reopened, and their deadline extended; a reminder is added when the deadline is a week away and the form isn't
+submitted (when they next look, once per deadline). Coordinators hear when one of their researchers submits. Nobody
+is told about their own actions, and there's no email yet. The dashboard reads the person's evaluation summary
+(`GET /api/v1/me/evaluations`: status, score so far per part, entries needing attention) and, for Admins and
+Coordinators, `GET /api/v1/me/review-queue`.
 The Administration pages (People, Evaluation forms) open only for Admins and Coordinators; anyone else is sent to the
 dashboard, and the API refuses them anyway.
 

@@ -39,6 +39,7 @@ from app.evaluations import (
     today,
 )
 from app.models import Evaluation, EvaluationEntry, EvaluationEntryFile, EvaluationPeriod, File, User
+from app.notifications import REMINDER_DAYS, notify, reviewers_of
 from app.people import PersonOut, load_people
 from app.profile_entries import DocumentOut, own_documents
 
@@ -134,14 +135,28 @@ class EntryRef(BaseModel):
     entry_id: uuid.UUID
 
 
+class PartScore(BaseModel):
+    id: str
+    numeral: str
+    name: str
+    score: float  # entries not rejected, within the item's and the part's limits
+    min: float | None
+    cap: float | None
+
+
 class MyEvaluationBrief(BaseModel):
     id: uuid.UUID
-    period: PeriodOut
+    period: PeriodOut  # as it is for this person (a deadline extended for them included)
+    deadline_extended: bool
     form_name: Localized
     state: State
     submitted_at: datetime | None
     review_state: ReviewState | None
+    review_comment: str | None
     final_score: float | None
+    score: float  # so far: entries sent and not rejected; the final score counts approved ones only
+    total_minimum: float | None
+    parts: list[PartScore]
     entries: int
     rejected: int
     missing_files: int
@@ -312,6 +327,33 @@ def check_room(db: Session, evaluation: Evaluation, item: dict[str, Any], except
         raise problem(status.HTTP_409_CONFLICT, "item_full", f"This item counts at most {limit} entries.")
 
 
+def scores_of(structure: dict[str, Any], entries: list[dict[str, Any]],
+              statuses: set[str]) -> tuple[Decimal, list[tuple[dict[str, Any], Decimal]]]:
+    """Points from the entries with these statuses (hidden ones never count): each item counts at most its
+    max_points, each part at most its cap. The total and each part's points."""
+    counted = [e for e in entries if e["status"] in statuses and not e["hidden"]]
+    total, parts = Decimal(0), []
+    for part in structure["parts"]:
+        part_total = Decimal(0)
+        for item in part["items"]:
+            mine = [e for e in counted if e["item_id"] == item["id"]]
+            if item.get("variable_points"):
+                points = sum((Decimal(str(e["points"] or 0)) for e in mine), Decimal(0))
+            else:
+                points = Decimal(str(item["points"])) * len(mine)
+            if item.get("max_points") is not None:
+                points = min(points, Decimal(str(item["max_points"])))
+            part_total += points
+        if part.get("cap") is not None:
+            part_total = min(part_total, Decimal(str(part["cap"])))
+        parts.append((part, part_total))
+        total += part_total
+    return total, parts
+
+
+PROVISIONAL = {"draft", "submitted", "approved"}  # what the researcher's "score so far" counts
+
+
 def touch(db: Session, evaluation: Evaluation) -> None:
     if evaluation.started_at is None:
         evaluation.started_at = func.now()
@@ -360,14 +402,22 @@ def my_evaluations(user: User = Depends(current_user), db: Session = Depends(get
                       .order_by(EvaluationPeriod.starts_on.desc())).all()
     briefs = []
     for evaluation, period in rows:
-        entries = [e for e in entries_of(db, evaluation) if not e.hidden]
-        files = files_of(db, [e.id for e in entries])
+        all_entries = entries_of(db, evaluation)
+        files = files_of(db, [e.id for e in all_entries])
+        total, parts = scores_of(evaluation.form_structure,
+                                 [snapshot_of(e, files.get(e.id, [])) for e in all_entries], PROVISIONAL)
+        entries = [e for e in all_entries if not e.hidden]
         rejected = [e for e in entries if e.status == "rejected"]
         missing = [e for e in entries if not files.get(e.id) and e.status != "rejected"]
         briefs.append(MyEvaluationBrief(
-            id=evaluation.id, period=period_for(evaluation, period), form_name=name_of(evaluation),
+            id=evaluation.id, period=period_for(evaluation, period),
+            deadline_extended=deadline_of(evaluation, period) > period.ends_on, form_name=name_of(evaluation),
             state=evaluation.state, submitted_at=evaluation.submitted_at,  # type: ignore[arg-type]
             review_state=evaluation.review_state, final_score=number(evaluation.final_score),  # type: ignore[arg-type]
+            review_comment=evaluation.review_comment, score=float(total),
+            total_minimum=evaluation.form_structure.get("total_minimum"),
+            parts=[PartScore(id=p["id"], numeral=p.get("numeral", ""), name=p["name"]["en"], score=float(points),
+                             min=p.get("min"), cap=p.get("cap")) for p, points in parts],
             entries=len(entries), rejected=len(rejected), missing_files=len(missing),
             first_rejected=ref(rejected), first_missing_file=ref(missing)))
     return briefs
@@ -481,6 +531,12 @@ def submit(evaluation_id: uuid.UUID, body: SubmitIn, request: Request, user: Use
     touch(db, evaluation)
     record(db, request, user, "evaluation.resubmitted" if resubmitting else "evaluation.submitted", evaluation,
            after={"entries": sent})
+    period = period_of(db, evaluation)
+    for reviewer in reviewers_of(db, evaluation.organization_id, user.id):
+        notify(db, reviewer, evaluation.organization_id, "form_submitted",
+               f"{user.display_name} {'resubmitted' if resubmitting else 'submitted'} their form",
+               f"{period.name}: {sent} {'entry' if sent == 1 else 'entries'} to review.",
+               link=f"/admin/evaluations/{evaluation.id}?org={evaluation.organization_id}")
     db.commit()
     db.refresh(evaluation)
     return my_evaluation_out(db, evaluation)
@@ -626,6 +682,11 @@ def send(org_id: uuid.UUID, period_id: uuid.UUID, body: SendIn, request: Request
         audit.record(db, action, entity_type="evaluation", entity_id=evaluation.id, actor_user_id=actor.user.id,
                      acting_role=role, organization_id=org_id, ip=actor.ip,
                      after={"user_id": str(user_id), "period": period.name, "form": name.en})
+        when = (f"from {day_label(period.starts_on)} " if period.starts_on > today() else "") + \
+            f"until the end of {day_label(period.ends_on)}"
+        notify(db, user_id, org_id, "form_sent" if action == "evaluation.sent" else "form_changed",
+               "Your evaluation form is here" if action == "evaluation.sent" else "Your evaluation form was changed",
+               f"{period.name}: {name.en}. You can fill it in {when}.", link="/evaluation-form")
     db.commit()
     return result
 
@@ -648,3 +709,24 @@ def withdraw(org_id: uuid.UUID, evaluation_id: uuid.UUID, actor: Actor = Depends
                  before={"user_id": str(evaluation.user_id), "form": evaluation.form_name})
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def add_deadline_reminders(db: Session, user: User) -> bool:
+    """A reminder when a deadline is a week away (or less) and the form isn't submitted: made when the person next
+    looks at their notifications, once per evaluation and deadline (a later extension gets its own)."""
+    rows = db.execute(select(Evaluation, EvaluationPeriod).join(EvaluationPeriod).where(
+        Evaluation.user_id == user.id, Evaluation.withdrawn_at.is_(None), EvaluationPeriod.archived_at.is_(None),
+        Evaluation.state != "submitted", Evaluation.review_state.is_distinct_from("approved"))).all()
+    added = False
+    for evaluation, period in rows:
+        deadline = deadline_of(evaluation, period)
+        if status_for(evaluation, period) != "open" or (deadline - today()).days > REMINDER_DAYS:
+            continue
+        updating = evaluation.state == "updating"
+        notify(db, user.id, evaluation.organization_id, "deadline_soon", f"Deadline: {day_label(deadline)}",
+               (f"Your changes to the {period.name} form aren't resubmitted yet. Resubmit them"
+                if updating else f"Your {period.name} form isn't submitted yet. Submit it")
+               + f" by the end of {day_label(deadline)}.",
+               link="/evaluation-form", dedupe_key=f"deadline:{evaluation.id}:{deadline.isoformat()}")
+        added = True
+    return added

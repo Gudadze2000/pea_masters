@@ -185,14 +185,31 @@ export type EntryInput = {
 
 export type EntryRef = { item_id: string; entry_id: string }
 
+export type PartScore = {
+  id: string
+  numeral: string
+  name: string
+  /** Entries not rejected, within the item's and the part's limits */
+  score: number
+  min: number | null
+  cap: number | null
+}
+
 export type MyEvaluationBrief = {
   id: string
+  /** As it is for this person (a deadline extended for them included) */
   period: EvaluationPeriod
+  deadline_extended: boolean
   form_name: Localized
   state: EvaluationState
   submitted_at: string | null
   review_state: ReviewState | null
+  review_comment: string | null
   final_score: number | null
+  /** So far: entries sent and not rejected; the final score counts approved ones only */
+  score: number
+  total_minimum: number | null
+  parts: PartScore[]
   entries: number
   rejected: number
   missing_files: number

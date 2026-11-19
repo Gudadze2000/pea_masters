@@ -8,7 +8,7 @@ import "@/components/forms/forms.css"
 import { useLanguage } from "@/lib/language-context"
 import { signOut, useSession } from "@/lib/auth"
 import { useIdentity, useProfile } from "@/lib/profile"
-import { applyDisplaySettings, loadSettings, saveSettings, type NotificationChannel, type NotificationEvent, type Settings } from "@/lib/settings"
+import { applyDisplaySettings, loadSettings, saveSettings, type Settings } from "@/lib/settings"
 import { themes, type ThemeId } from "@/lib/themes"
 import { timeZones } from "./settingsMock"
 import "./SettingsPage.css"
@@ -16,7 +16,7 @@ import "./SettingsPage.css"
 const sections = [
   { id: "account", label: "Account", icon: UserRound, description: "Your university account details." },
   { id: "security", label: "Sign-in & security", icon: ShieldCheck, description: "How you sign in to PEA." },
-  { id: "notifications", label: "Notifications", icon: Bell, description: "Choose what you hear about and where." },
+  { id: "notifications", label: "Notifications", icon: Bell, description: "What PEA tells you about." },
   { id: "language", label: "Language & accessibility", icon: Globe, description: "Interface language, date format, time zone and motion." },
   { id: "customization", label: "Customization", icon: Palette, description: "Colour theme of the app." },
   { id: "privacy", label: "Privacy", icon: Lock, description: "Control who can see your public profile." },
@@ -26,19 +26,14 @@ const sections = [
 type SectionId = (typeof sections)[number]["id"]
 
 /** Sections whose fields are saved with the "Save changes" button in the page heading */
-const preferenceSections: SectionId[] = ["notifications", "language", "customization", "privacy"]
+const preferenceSections: SectionId[] = ["language", "customization", "privacy"]
 
-const notificationEvents: { id: NotificationEvent; label: string; hint: string }[] = [
-  { id: "deadlines", label: "Evaluation deadlines", hint: "Reminders before a submission period closes" },
-  { id: "statusChanges", label: "Entry status changes", hint: "When an entry is approved, rejected or returned" },
-  { id: "adminComments", label: "Comments from admins", hint: "When a faculty admin comments on your profile" },
-  { id: "evaluationResults", label: "Evaluation results", hint: "When your evaluation result is published" },
-  { id: "systemUpdates", label: "System announcements", hint: "Maintenance and new features" },
-]
-
-const channels: { id: NotificationChannel; label: string }[] = [
-  { id: "email", label: "Email" },
-  { id: "inApp", label: "In-app" },
+const notificationEvents: { label: string; hint: string }[] = [
+  { label: "An evaluation form is sent to you", hint: "Or changed before you start filling it in" },
+  { label: "Your coordinator decides", hint: "An entry is rejected, or your form is returned or approved" },
+  { label: "Your deadline is near", hint: "A week before it, if your form isn't submitted yet" },
+  { label: "An Admin makes an exception", hint: "Your deadline is extended, or an approval is reopened" },
+  { label: "Coordinators: a form is submitted", hint: "When one of your researchers submits or resubmits" },
 ]
 
 const dateFormats: Settings["dateFormat"][] = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"]
@@ -131,11 +126,6 @@ export function SettingsPage() {
     setNotice(false)
   }
 
-  const toggleNotification = (event: NotificationEvent, channel: NotificationChannel, value: boolean) => {
-    setDraft(current => ({ ...current, notifications: { ...current.notifications, [event]: { ...current.notifications[event], [channel]: value } } }))
-    setNotice(false)
-  }
-
   const cancel = () => { setDraft(saved); setNotice(false) }
 
   const save = () => {
@@ -196,7 +186,7 @@ export function SettingsPage() {
               {section.id === "account" && <AccountSection onEditProfile={() => navigate("/profile/general")} />}
               {section.id === "security" && <SecuritySection />}
               {section.id === "notifications" && (
-                <NotificationsSection settings={draft} onToggle={toggleNotification} onChange={update} />
+                <NotificationsSection />
               )}
               {section.id === "language" && <LanguageSection settings={draft} onChange={update} />}
               {section.id === "customization" && <CustomizationSection theme={draft.theme} onChange={theme => update("theme", theme)} />}
@@ -272,71 +262,20 @@ function SecuritySection() {
 
 /* ---------- Notifications ---------- */
 
-function NotificationsSection({ settings, onToggle, onChange }: {
-  settings: Settings
-  onToggle: (event: NotificationEvent, channel: NotificationChannel, value: boolean) => void
-  onChange: <K extends keyof Settings>(key: K, value: Settings[K]) => void
-}) {
-  const account = useIdentity()
+/** What PEA notifies people about. Only in the app for now: there's nothing to switch on or off yet. */
+function NotificationsSection() {
   return (
-    <>
-      <section className="dashboard-card settings-card" aria-labelledby="notify-heading">
-        <div className="card-heading">
-          <h2 id="notify-heading">Notifications</h2>
-          <span className="card-meta">Email goes to {account.email}</span>
-        </div>
-        <div className="data-table-wrap">
-          <table className="data-table settings-notify-table">
-            <thead>
-              <tr>
-                <th scope="col">Notify me about</th>
-                {channels.map(channel => <th key={channel.id} scope="col" className="settings-check-col">{channel.label}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {notificationEvents.map(event => (
-                <tr key={event.id}>
-                  <td>
-                    <p className="settings-event-label">{event.label}</p>
-                    <small className="settings-event-hint">{event.hint}</small>
-                  </td>
-                  {channels.map(channel => (
-                    <td key={channel.id} className="settings-check-col">
-                      <input
-                        type="checkbox"
-                        className="form-checkbox"
-                        checked={settings.notifications[event.id][channel.id]}
-                        aria-label={`${event.label}: ${channel.label}`}
-                        onChange={e => onToggle(event.id, channel.id, e.target.checked)}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="dashboard-card settings-card" aria-labelledby="timing-heading">
-        <div className="card-heading"><h2 id="timing-heading">Timing</h2></div>
-        <SettingRow id="lead" label="Deadline reminders" hint="How early to remind you before a deadline.">
-          <select className="form-control settings-select" aria-labelledby="lead-label" aria-describedby="lead-hint" value={settings.reminderLeadDays} onChange={e => onChange("reminderLeadDays", e.target.value as Settings["reminderLeadDays"])}>
-            <option value="1">1 day before</option>
-            <option value="3">3 days before</option>
-            <option value="7">1 week before</option>
-            <option value="14">2 weeks before</option>
-          </select>
-        </SettingRow>
-        <SettingRow id="digest" label="Email summary" hint="One email that collects everything you missed.">
-          <select className="form-control settings-select" aria-labelledby="digest-label" aria-describedby="digest-hint" value={settings.digest} onChange={e => onChange("digest", e.target.value as Settings["digest"])}>
-            <option value="off">Off</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-          </select>
-        </SettingRow>
-      </section>
-    </>
+    <section className="dashboard-card settings-card" aria-labelledby="notify-heading">
+      <div className="card-heading"><h2 id="notify-heading">Notifications</h2></div>
+      <p className="settings-notify-intro">PEA tells you under the bell in the top bar when:</p>
+      <ul className="settings-notify-list">
+        {notificationEvents.map(event => <li key={event.label}><p className="settings-event-label">{event.label}</p><small className="settings-event-hint">{event.hint}</small></li>)}
+      </ul>
+      <InfoBanner title="Email comes later">
+        For now notifications are only shown in PEA itself. Once PEA can send email, you'll be able to choose here which
+        of them also reach your inbox.
+      </InfoBanner>
+    </section>
   )
 }
 

@@ -23,12 +23,14 @@ from app import audit, wos
 from app.authz import Action, Actor, authorize, get_actor, get_organization
 from app.db import get_db
 from app.errors import problem
-from app.evaluations import FormStructure, Localized, PeriodOut
-from app.models import Evaluation, EvaluationEntry, File, User
+from app.evaluations import FormStructure, Localized, PeriodOut, status_of, to_out, today
+from app.models import Evaluation, EvaluationEntry, EvaluationPeriod, File, User
+from app.notifications import notify
 from app.people import PersonOut, one_person
 from app.profile_entries import DocumentOut
 from app.sent_evaluations import (
     ReviewState,
+    active_evaluations,
     content,
     day_label,
     document,
@@ -37,6 +39,8 @@ from app.sent_evaluations import (
     number,
     period_for,
     period_of,
+    roster,
+    scores_of,
     snapshot_of,
 )
 
@@ -97,23 +101,7 @@ def doi_of(snapshot: dict[str, Any]) -> str | None:
 
 def score_of(structure: dict[str, Any], entries: list[dict[str, Any]]) -> Decimal:
     """Points from approved entries: each item counts at most its max_points, each part at most its cap"""
-    approved = [e for e in entries if e["status"] == "approved" and not e["hidden"]]
-    total = Decimal(0)
-    for part in structure["parts"]:
-        part_total = Decimal(0)
-        for item in part["items"]:
-            mine = [e for e in approved if e["item_id"] == item["id"]]
-            if item.get("variable_points"):
-                points = sum((Decimal(str(e["points"] or 0)) for e in mine), Decimal(0))
-            else:
-                points = Decimal(str(item["points"])) * len(mine)
-            if item.get("max_points") is not None:
-                points = min(points, Decimal(str(item["max_points"])))
-            part_total += points
-        if part.get("cap") is not None:
-            part_total = min(part_total, Decimal(str(part["cap"])))
-        total += part_total
-    return total
+    return scores_of(structure, entries, {"approved"})[0]
 
 
 def sent_entries(evaluation: Evaluation) -> list[dict[str, Any]]:
@@ -204,6 +192,10 @@ def review_entry(org_id: uuid.UUID, evaluation_id: uuid.UUID, entry_id: uuid.UUI
             entry.reviewed_at = func.now() if body.decision != "submitted" else None
     evaluation.updated_at = func.now()
     action = {"approved": "approved", "rejected": "rejected", "submitted": "decision_undone"}[body.decision]
+    if body.decision == "rejected":
+        notify(db, evaluation.user_id, org_id, "entry_rejected", "An entry was rejected",
+               f"“{target['description'][:200]}”: {comment}", link="/evaluation-form",
+               entry_ref={"recordId": target["item_id"], "entryId": target["id"]})
     audit.record(db, f"evaluation_entry.{action}", entity_type="evaluation_entry", entity_id=entry_id,
                  actor_user_id=actor.user.id, acting_role=role, organization_id=org_id, ip=actor.ip,
                  before={"status": before}, after={"status": status_now, "comment": comment_now})
@@ -239,6 +231,13 @@ def review_form(org_id: uuid.UUID, evaluation_id: uuid.UUID, body: FormReviewIn,
     evaluation.reviewed_by = actor.user.id
     evaluation.reviewed_at = func.now()
     evaluation.updated_at = func.now()
+    if body.decision == "approved":
+        notify(db, evaluation.user_id, org_id, "form_approved", "Your evaluation was approved",
+               f"Final score: {number(evaluation.final_score):g} points." + (f" “{comment}”" if comment else ""),
+               link="/evaluation-form")
+    else:
+        notify(db, evaluation.user_id, org_id, "form_returned", "Your form was returned",
+               f"“{comment}” Fix it and resubmit it.", link="/evaluation-form")
     audit.record(db, f"evaluation.{body.decision}", entity_type="evaluation", entity_id=evaluation.id,
                  actor_user_id=actor.user.id, acting_role=role, organization_id=org_id, ip=actor.ip,
                  after={"comment": comment, "final_score": number(evaluation.final_score)})
@@ -299,6 +298,12 @@ def set_deadline(org_id: uuid.UUID, evaluation_id: uuid.UUID, body: DeadlineIn, 
     before = evaluation.deadline_override
     evaluation.deadline_override = body.ends_on
     evaluation.updated_at = func.now()
+    if body.ends_on:
+        notify(db, evaluation.user_id, org_id, "deadline_extended", "Your deadline was extended",
+               f"You have until the end of {day_label(body.ends_on)} for {period.name}.", link="/evaluation-form")
+    elif before:
+        notify(db, evaluation.user_id, org_id, "deadline_extended", "Your deadline extension was removed",
+               f"{period.name} ends on {day_label(period.ends_on)}, like for everyone else.", link="/evaluation-form")
     audit.record(db, "evaluation.deadline_extended" if body.ends_on else "evaluation.deadline_extension_removed",
                  entity_type="evaluation", entity_id=evaluation.id, actor_user_id=actor.user.id, acting_role=role,
                  organization_id=org_id, ip=actor.ip, reason=(body.reason or "").strip() or None,
@@ -322,6 +327,8 @@ def reopen_approved(org_id: uuid.UUID, evaluation_id: uuid.UUID, body: ReasonIn,
     evaluation.review_state = evaluation.review_comment = evaluation.reviewed_by = evaluation.reviewed_at = None
     evaluation.final_score = None
     evaluation.updated_at = func.now()
+    notify(db, evaluation.user_id, org_id, "form_reopened", "Your evaluation was reopened",
+           "The approval was taken back and your form will be reviewed again.", link="/evaluation-form")
     audit.record(db, "evaluation.reopened_by_admin", entity_type="evaluation", entity_id=evaluation.id,
                  actor_user_id=actor.user.id, acting_role=role, organization_id=org_id, ip=actor.ip,
                  reason=(body.reason or "").strip() or None, before=before,
@@ -329,3 +336,36 @@ def reopen_approved(org_id: uuid.UUID, evaluation_id: uuid.UUID, body: ReasonIn,
     db.commit()
     return ExceptionOut(deadline_override=evaluation.deadline_override,
                            period=period_for(evaluation, period_of(db, evaluation)))
+
+
+# --- coordinators' dashboard: what's waiting for review ------------------------------------------------------
+
+class QueueRow(BaseModel):
+    organization_id: uuid.UUID
+    period: PeriodOut
+    sent: int  # forms sent to the people this person reviews
+    submitted: int
+    to_review: int  # submitted, waiting for a decision on the form
+
+
+@router.get("/api/v1/me/review-queue", response_model=list[QueueRow])
+def review_queue(actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
+    """For Admins and Coordinators: per period (not closed, or closed with forms still to review), how many forms
+    they sent, how many came back, and how many wait for review."""
+    rows = []
+    for org_id, roles in actor.roles.items():
+        role = "admin" if "admin" in roles else "coordinator" if "coordinator" in roles else None
+        if role is None:
+            continue
+        people = [p.id for p in roster(db, org_id, actor, role)]
+        periods = db.scalars(select(EvaluationPeriod).where(
+            EvaluationPeriod.organization_id == org_id, EvaluationPeriod.archived_at.is_(None))
+            .order_by(EvaluationPeriod.starts_on.desc())).all()
+        for period in periods:
+            evaluations = list(active_evaluations(db, period.id, people).values())
+            to_review = sum(1 for e in evaluations if e.state == "submitted" and e.review_state is None)
+            if not evaluations or (status_of(period, today()) == "closed" and to_review == 0):
+                continue
+            rows.append(QueueRow(organization_id=org_id, period=to_out(period), sent=len(evaluations),
+                                 submitted=sum(1 for e in evaluations if e.submitted_at), to_review=to_review))
+    return rows

@@ -372,3 +372,19 @@ class EvaluationEntryFile(Base):
                                                 primary_key=True)
     file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("files.id"), primary_key=True)
     position: Mapped[int] = mapped_column(server_default="0")
+
+
+class Notification(Base):
+    """Something that happened that concerns this person, shown under the bell (app/notifications.py)"""
+    __tablename__ = "notifications"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    detail: Mapped[str] = mapped_column(Text, server_default="")
+    link: Mapped[str | None] = mapped_column(Text)  # the page it opens
+    entry_ref: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # {"recordId", "entryId"}: an entry to open
+    dedupe_key: Mapped[str | None] = mapped_column(Text)  # reminders: sent once
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    read_at: Mapped[datetime | None]
