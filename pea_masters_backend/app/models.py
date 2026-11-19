@@ -285,3 +285,33 @@ class Cv(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)
     data: Mapped[dict[str, Any]] = mapped_column(JSONB)
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class EvaluationPeriod(Base):
+    """An evaluation round set up by an organization's Admins (app/evaluations.py)"""
+    __tablename__ = "evaluation_periods"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"))
+    name: Mapped[str] = mapped_column(Text)
+    starts_on: Mapped[date]
+    ends_on: Mapped[date]  # the deadline, inclusive (Tbilisi time)
+    publication_from: Mapped[int]
+    publication_to: Mapped[int]
+    created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    archived_at: Mapped[datetime | None]
+
+
+class EvaluationForm(Base):
+    """A form a coordinator created (the built-in ISU form isn't stored: app/evaluation_forms/)"""
+    __tablename__ = "evaluation_forms"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"))
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    name: Mapped[str] = mapped_column(Text)
+    description: Mapped[str] = mapped_column(Text, server_default="")
+    structure: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    archived_at: Mapped[datetime | None]

@@ -1,0 +1,70 @@
+# PEA on the server: database, API and website. Settings come from deploy/.env (copy .env.example). See DEPLOY.md.
+#   docker compose up -d --build      (or ./deploy.sh, which also pulls the latest code)
+name: pea
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" } # keeps logs from filling the disk
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pea
+      POSTGRES_DB: pea
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in deploy/.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # No ports: only the API reaches the database, inside Docker's own network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pea -d pea"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    logging: *logging
+
+  api:
+    build: ../pea_masters_backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://pea:${DB_PASSWORD}@db:5432/pea
+      PUBLIC_URL: https://${PEA_DOMAIN:?set PEA_DOMAIN in deploy/.env}
+      SECURE_COOKIES: "true"
+      STORAGE_DIR: /data/storage
+    volumes:
+      - storage:/data/storage
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    logging: *logging
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    environment:
+      PEA_DOMAIN: ${PEA_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - caddy_data:/data # the certificate: keep this volume, or Caddy has to ask Let's Encrypt again
+      - caddy_config:/config
+    depends_on:
+      api: { condition: service_healthy }
+    logging: *logging
+
+volumes:
+  pgdata:
+  storage:
+  caddy_data:
+  caddy_config:

@@ -16,7 +16,8 @@ type Props = {
   fields: FieldDef[]
   initialValues: Values
   submitLabel: string
-  onSave: (values: Values) => void
+  /** Saving on the server: return a promise; a message it resolves to is shown and the sheet stays open */
+  onSave: (values: Values) => void | Promise<string | null | void>
   /** Extra checks on top of "required"; return field name → message */
   validate?: (values: Values) => Record<string, string>
   /** Changes every time the sheet is opened, so the form starts fresh */
@@ -45,9 +46,11 @@ export function RecordSheet({ open, onOpenChange, title, description, ...formPro
 function RecordForm({ fields, initialValues, submitLabel, onSave, validate, idPrefix, onCancel }: Omit<Props, "open" | "onOpenChange" | "title" | "description" | "formKey"> & { onCancel: () => void }) {
   const [values, setValues] = useState<Values>(initialValues)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault()
     const trimmed = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value.trim()]))
     const found: Record<string, string> = {}
@@ -59,11 +62,18 @@ function RecordForm({ fields, initialValues, submitLabel, onSave, validate, idPr
       formRef.current?.querySelector<HTMLElement>(`#${idPrefix}-${firstInvalid.name}`)?.focus()
       return
     }
-    onSave(trimmed)
+    const result = onSave(trimmed)
+    if (result instanceof Promise) {
+      setSaving(true)
+      setSaveError(null)
+      const message = await result
+      setSaving(false)
+      if (message) setSaveError(message)
+    }
   }
 
   return (
-    <form ref={formRef} className="flex min-h-0 flex-1 flex-col" noValidate onSubmit={submit}>
+    <form ref={formRef} className="flex min-h-0 flex-1 flex-col" noValidate onSubmit={event => void submit(event)}>
       <div className="form-sheet-body">
         <div className="form-grid">
           {fields.map(field => (
@@ -81,9 +91,10 @@ function RecordForm({ fields, initialValues, submitLabel, onSave, validate, idPr
           ))}
         </div>
       </div>
+      {saveError && <p className="form-error-summary record-sheet-error" role="alert">{saveError}</p>}
       <div className="form-sheet-footer">
         <Button type="button" variant="outline" className="dashboard-button" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" className="dashboard-button">{submitLabel}</Button>
+        <Button type="submit" className="dashboard-button" disabled={saving}>{saving ? "Saving…" : submitLabel}</Button>
       </div>
     </form>
   )

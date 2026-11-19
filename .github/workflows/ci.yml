@@ -1,0 +1,97 @@
+# Checks every pull request and every push to the shared branches: backend lint and API tests, the frontend build,
+# and the browser tests. Same versions and database port as on a developer's computer (see README).
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, backup_test_branch]
+
+# A newer push to the same branch replaces a run that's still going
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.13.7"
+  BUN_VERSION: "1.4.4"
+
+jobs:
+  backend:
+    name: Backend (lint, API tests)
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: pea, POSTGRES_PASSWORD: pea, POSTGRES_DB: pea }
+        ports: ["5434:5432"]
+        options: --health-cmd "pg_isready -U pea -d pea" --health-interval 2s --health-timeout 3s --health-retries 30
+    defaults:
+      run:
+        working-directory: pea_masters_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { version: "${{ env.UV_VERSION }}", enable-cache: true }
+      - name: Install Python and packages
+        run: uv sync --locked
+      - name: Create the test database
+        run: PGPASSWORD=pea psql -h 127.0.0.1 -p 5434 -U pea -d pea -c "create database pea_test owner pea"
+      - name: Lint
+        run: uv run ruff check .
+      - name: API tests
+        run: uv run pytest
+
+  frontend:
+    name: Frontend (type check, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pea_masters_frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: "${{ env.BUN_VERSION }}" }
+      - name: Install packages
+        run: bun install --frozen-lockfile
+      - name: Type check and build
+        run: bun run build
+
+  browser:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    services:
+      db:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: pea, POSTGRES_PASSWORD: pea, POSTGRES_DB: pea }
+        ports: ["5434:5432"]
+        options: --health-cmd "pg_isready -U pea -d pea" --health-interval 2s --health-timeout 3s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { version: "${{ env.UV_VERSION }}", enable-cache: true }
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: "${{ env.BUN_VERSION }}" }
+      - name: Install packages
+        run: |
+          (cd pea_masters_backend && uv sync --locked)
+          (cd pea_masters_frontend && bun install --frozen-lockfile)
+      - name: Install the browser
+        working-directory: pea_masters_backend
+        run: uv run playwright install --with-deps chromium
+      - name: Browser tests
+        working-directory: pea_masters_backend
+        run: uv run pytest tests/e2e
+      - name: Keep screenshots and server logs when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          path: |
+            pea_masters_backend/tests/e2e/screenshots/
+            pea_masters_backend/tests/e2e/logs/
+          retention-days: 7

@@ -11,10 +11,11 @@ import { ConfirmSheet } from "./ConfirmSheet"
 import { PersonSheet } from "./PersonSheet"
 import { PositionsPanel } from "./PositionsPanel"
 import { ResearchOutputPanel } from "./ResearchOutputPanel"
+import { EvaluationPeriodsPanel } from "./EvaluationPeriodsPanel"
 import { StructurePanel } from "./StructurePanel"
 import "./PeoplePage.css"
 
-type Tab = "people" | "structure" | "output"
+type Tab = "people" | "structure" | "periods" | "output"
 type Dialog = { kind: "add" } | { kind: "edit"; person: Person } | { kind: "deactivate"; person: Person } | { kind: "reactivate"; person: Person }
 
 const statusClass: Record<PersonStatus, string> = { active: "status-active", invited: "status-submitted", deactivated: "status-draft" }
@@ -143,6 +144,7 @@ export function PeoplePage() {
           <div className="segmented people-tabs" role="tablist" aria-label="People sections">
             <button type="button" role="tab" aria-selected={tab === "people"} aria-checked={tab === "people"} onClick={() => setTab("people")}>{isHead ? "Researchers" : "People"} ({people.length})</button>
             {canManageRoles && <button type="button" role="tab" aria-selected={tab === "structure"} aria-checked={tab === "structure"} onClick={() => setTab("structure")}>Structure</button>}
+            {canManageRoles && <button type="button" role="tab" aria-selected={tab === "periods"} aria-checked={tab === "periods"} onClick={() => setTab("periods")}>Evaluation periods</button>}
             <button type="button" role="tab" aria-selected={tab === "output"} aria-checked={tab === "output"} onClick={() => setTab("output")}>Research output</button>
           </div>
 
@@ -152,7 +154,9 @@ export function PeoplePage() {
             </div>
           )}
 
-          {tab === "output" ? (
+          {tab === "periods" && canManageRoles ? (
+            <EvaluationPeriodsPanel key={org.id} orgId={org.id} onChanged={finish} />
+          ) : tab === "output" ? (
             <ResearchOutputPanel key={org.id} orgId={org.id} units={units} canPickUnit={canManageRoles} />
           ) : tab === "structure" && canManageRoles ? (
             <>

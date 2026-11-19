@@ -1,0 +1,30 @@
+# Caddy gets and renews the Let's Encrypt certificate for PEA_DOMAIN by itself, and sends http:// to https://.
+
+{$PEA_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		-Server
+	}
+
+	# The API (it sets its own Cache-Control: no-store)
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	# The app. Files in /assets have a hash in their name, so browsers may keep them; index.html is checked each time,
+	# so a new version reaches everyone on their next visit. Any other path is a page of the app: send index.html.
+	handle {
+		root * /srv
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /assets/*
+		header @pages Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

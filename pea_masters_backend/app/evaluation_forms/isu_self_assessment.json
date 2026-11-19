@@ -1,0 +1,891 @@
+{
+  "version": 1,
+  "key": "isu-self-assessment",
+  "name": {
+    "en": "ISU academic staff self-assessment",
+    "ka": "ილიაუნის აკადემიური პერსონალის თვითშეფასება"
+  },
+  "description": "ISU School of Technology self-assessment form (based on the 2023 form). Two academic years: at least 200 points in total, with at least 80 in teaching and 60 in research; social impact counts up to 20.",
+  "total_minimum": 200,
+  "parts": [
+    {
+      "id": "teaching",
+      "numeral": "I",
+      "name": {
+        "en": "Teaching",
+        "ka": "სწავლების კომპონენტი"
+      },
+      "rule": "Required · at least 80 points",
+      "min": 80,
+      "cap": null,
+      "items": [
+        {
+          "id": "isu-1-1",
+          "code": "1.1",
+          "name": {
+            "en": "Teaching a course at ISU with the minimum contract hours",
+            "ka": "სასწავლო კურსის წაკითხვა შრომითი ხელშეკრულებით გათვალისწინებული მინიმალური საათობრივი დატვირთვით"
+          },
+          "points": 20,
+          "max_points": null,
+          "max_entries": null,
+          "variable_points": "20 points per semester at the contract minimum. Below the minimum: −2 points per missing hour; above it: +4 points per extra hour (per semester). Add one entry per semester.",
+          "hint": "Course name(s) and number of groups for the semester. You can check past semesters in Argus.",
+          "icon": "imgIconBook1"
+        },
+        {
+          "id": "isu-1-2",
+          "code": "1.2",
+          "name": {
+            "en": "Lecture at a partner university (San Diego State University - Georgia)",
+            "ka": "პარტნიორ უნივერსიტეტებში (სან-დიეგოს სახელმწიფო უნივერსიტეტი- საქართველო) ჩატარებული ლექცია"
+          },
+          "points": 2.5,
+          "max_points": null,
+          "max_entries": null,
+          "variable_points": null,
+          "hint": "Lecture name(s) for the semester.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-1-3",
+          "code": "1.3",
+          "name": {
+            "en": "Leading an academic programme (per academic year)",
+            "ka": "ერთი აკადემიური პროგრამის ხელმძღვანელობა"
+          },
+          "points": 15,
+          "max_points": 60,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Programme name(s).",
+          "icon": "imgIconGrad"
+        },
+        {
+          "id": "isu-1-4",
+          "code": "1.4",
+          "name": {
+            "en": "Supervising a bachelor’s thesis (per semester)",
+            "ka": "ერთი საბაკალავრო ნაშრომის ხელმძღვანელობა"
+          },
+          "points": 10,
+          "max_points": null,
+          "max_entries": null,
+          "variable_points": null,
+          "hint": "Student name(s) by semester.",
+          "icon": "imgIconGrad"
+        },
+        {
+          "id": "isu-1-5",
+          "code": "1.5",
+          "name": {
+            "en": "Developing the core documents of a new study programme (not a new course)",
+            "ka": "ახალი სასწავლო პროგრამის ძირითადი დოკუმენტების შემუშავებაში მონაწილეობა (გარდა ახალი სასწავლო კურსის შემუშავებისა)"
+          },
+          "points": 5,
+          "max_points": 30,
+          "max_entries": 6,
+          "variable_points": null,
+          "hint": "Programme name.",
+          "icon": "imgIconEdit"
+        },
+        {
+          "id": "isu-1-6",
+          "code": "1.6",
+          "name": {
+            "en": "Developing a new course",
+            "ka": "ახალი სასწავლო კურსის შემუშავება"
+          },
+          "points": 5,
+          "max_points": 40,
+          "max_entries": 8,
+          "variable_points": null,
+          "hint": "Course name(s) and year.",
+          "icon": "imgIconEdit"
+        },
+        {
+          "id": "isu-1-7",
+          "code": "1.7",
+          "name": {
+            "en": "Initiating or creating an international / joint study programme",
+            "ka": "საერთაშორისო/ერთობლივი საგანმანათლებლო პროგრამის ინიციატორობა/შექმნა"
+          },
+          "points": 10,
+          "max_points": 40,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Programme name and year.",
+          "icon": "imgIconBuilding"
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "numeral": "II",
+      "name": {
+        "en": "Research",
+        "ka": "კვლევის კომპონენტი"
+      },
+      "rule": "Required · at least 60 points",
+      "min": 60,
+      "cap": null,
+      "items": [
+        {
+          "id": "isu-2-1",
+          "code": "2.1",
+          "name": {
+            "en": "Article in an indexed journal - impact factor above 0.5 (Clarivate WoS) or CiteScore above 0.5 (Scopus)",
+            "ka": "სტატია საერთაშორისო ბაზებში შემავალ რეფერირებად ჟურნალში - 0.5-ზე მეტი იმპაქტ ფაქტორით ან ციტირების ქულით"
+          },
+          "points": 50,
+          "max_points": 300,
+          "max_entries": 6,
+          "variable_points": null,
+          "hint": "Article title, journal, year and link.",
+          "icon": "imgIconFile1"
+        },
+        {
+          "id": "isu-2-2",
+          "code": "2.2",
+          "name": {
+            "en": "Article in an indexed journal - impact factor or CiteScore of 0.5 or less",
+            "ka": "სტატია საერთაშორისო ბაზებში შემავალ რეფერირებად ჟურნალში - არა უმეტეს 0.5 იმპაქტ ფაქტორით ან ციტირების ქულით"
+          },
+          "points": 40,
+          "max_points": 80,
+          "max_entries": 2,
+          "variable_points": null,
+          "hint": "Article title, journal, year and link.",
+          "icon": "imgIconFile1"
+        },
+        {
+          "id": "isu-2-3",
+          "code": "2.3",
+          "name": {
+            "en": "Article in an international scientific collection",
+            "ka": "სტატია საერთაშორისო სამეცნიერო კრებულში"
+          },
+          "points": 30,
+          "max_points": 120,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Article title, journal, year and link.",
+          "icon": "imgIconFile1"
+        },
+        {
+          "id": "isu-2-4",
+          "code": "2.4",
+          "name": {
+            "en": "Article in a local peer-reviewed journal or collection",
+            "ka": "სტატია ადგილობრივ რეფერირებად სამეცნიერო ჟურნალში და/ან კრებულში"
+          },
+          "points": 10,
+          "max_points": 60,
+          "max_entries": 6,
+          "variable_points": null,
+          "hint": "Article title, journal, year and link.",
+          "icon": "imgIconFile1"
+        },
+        {
+          "id": "isu-2-5",
+          "code": "2.5",
+          "name": {
+            "en": "Monograph published abroad (recognised Western publisher)",
+            "ka": "უცხოეთში გამოცემული სამეცნიერო მონოგრაფია"
+          },
+          "points": 70,
+          "max_points": 210,
+          "max_entries": 3,
+          "variable_points": null,
+          "hint": "Title, year, publisher and link.",
+          "icon": "imgIconBook1"
+        },
+        {
+          "id": "isu-2-6",
+          "code": "2.6",
+          "name": {
+            "en": "Chapter in a monograph published abroad",
+            "ka": "უცხოეთში გამოცემული სამეცნიერო მონოგრაფიის თავის ავტორობა"
+          },
+          "points": 30,
+          "max_points": 90,
+          "max_entries": 3,
+          "variable_points": null,
+          "hint": "Title, year, publisher, chapter and link.",
+          "icon": "imgIconBook1"
+        },
+        {
+          "id": "isu-2-7",
+          "code": "2.7",
+          "name": {
+            "en": "Monograph published by ISU with international peer review",
+            "ka": "ილიას სახელმწიფო უნივერსიტეტის საერთაშორისო რეფერირებით გამოცემული სამეცნიერო მონოგრაფია"
+          },
+          "points": 50,
+          "max_points": 150,
+          "max_entries": 3,
+          "variable_points": null,
+          "hint": "Title, year, publisher and link.",
+          "icon": "imgIconBook1"
+        },
+        {
+          "id": "isu-2-8",
+          "code": "2.8",
+          "name": {
+            "en": "Chapter in an ISU monograph with international peer review",
+            "ka": "ილიას სახელმწიფო უნივერსიტეტის საერთაშორისო რეფერირებით გამოცემულ სამეცნიერო მონოგრაფიაში თავის ავტორობა"
+          },
+          "points": 20,
+          "max_points": 100,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Title, year, publisher, chapter and link.",
+          "icon": "imgIconBook1"
+        },
+        {
+          "id": "isu-2-9",
+          "code": "2.9",
+          "name": {
+            "en": "Scientific translation from the original with the ISU logo (scientific book)",
+            "ka": "სამეცნიერო თარგმანი ორიგინალიდან ილიას სახელმწიფო უნივერსიტეტის ლოგოთი (სამეცნიერო წიგნი)"
+          },
+          "points": 20,
+          "max_points": 80,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Title, year, publisher, chapter and link.",
+          "icon": "imgIconBook"
+        },
+        {
+          "id": "isu-2-10",
+          "code": "2.10",
+          "name": {
+            "en": "Paper in international conference proceedings",
+            "ka": "სტატია საერთაშორისო კონფერენციის მასალების კრებულში"
+          },
+          "points": 15,
+          "max_points": 60,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Paper title, proceedings title, year and link.",
+          "icon": "imgIconFile1"
+        },
+        {
+          "id": "isu-2-11",
+          "code": "2.11",
+          "name": {
+            "en": "Paper in local conference proceedings",
+            "ka": "სტატია ადგილობრივი კონფერენციის მასალების კრებულში"
+          },
+          "points": 5,
+          "max_points": 30,
+          "max_entries": 6,
+          "variable_points": null,
+          "hint": "Paper title, proceedings title, year and link.",
+          "icon": "imgIconFile1"
+        },
+        {
+          "id": "isu-2-12",
+          "code": "2.12",
+          "name": {
+            "en": "Textbook published under the ISU name and logo",
+            "ka": "ილიას სახელმწიფო უნივერსიტეტის სახელითა და ლოგოთი გამოსული დარგობრივი სახელმძღვანელო"
+          },
+          "points": 30,
+          "max_points": 90,
+          "max_entries": 3,
+          "variable_points": null,
+          "hint": "Textbook title, year and link.",
+          "icon": "imgIconBook"
+        },
+        {
+          "id": "isu-2-13",
+          "code": "2.13",
+          "name": {
+            "en": "Chapter in a textbook published under the ISU name and logo",
+            "ka": "ილიას სახელმწიფო უნივერსიტეტის სახელითა და ლოგოთი გამოსული დარგობრივი სახელმძღვანელოს თავის ავტორობა"
+          },
+          "points": 15,
+          "max_points": 60,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Textbook title, chapter title, year and link.",
+          "icon": "imgIconBook"
+        },
+        {
+          "id": "isu-2-14",
+          "code": "2.14",
+          "name": {
+            "en": "Textbook or guide published in Georgia (author credited as an ISU professor)",
+            "ka": "საქართველოში გამოცემული დარგობრივი სახელმძღვანელო/გზამკვლევი"
+          },
+          "points": 15,
+          "max_points": 60,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Textbook title, year and link.",
+          "icon": "imgIconBook"
+        },
+        {
+          "id": "isu-2-15",
+          "code": "2.15",
+          "name": {
+            "en": "Chapter in a textbook or guide published in Georgia (author credited as an ISU professor)",
+            "ka": "საქართველოში გამოცემული დარგობრივი სახელმძღვანელოს/გზამკვლევის თავის ავტორობა"
+          },
+          "points": 7,
+          "max_points": 28,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Textbook title, chapter title, year and link.",
+          "icon": "imgIconBook"
+        },
+        {
+          "id": "isu-2-16",
+          "code": "2.16",
+          "name": {
+            "en": "Professional publication (not peer-reviewed: a research report or a database you created)",
+            "ka": "პროფესიული პუბლიკაცია"
+          },
+          "points": 5,
+          "max_points": 30,
+          "max_entries": 6,
+          "variable_points": null,
+          "hint": "Publication title, year and link.",
+          "icon": "imgIconFile2"
+        },
+        {
+          "id": "isu-2-17",
+          "code": "2.17",
+          "name": {
+            "en": "Leading an international research grant",
+            "ka": "საერთაშორისო კვლევითი გრანტის ხელმძღვანელობა"
+          },
+          "points": 40,
+          "max_points": 160,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Grant name, year and number.",
+          "icon": "imgIconFlask"
+        },
+        {
+          "id": "isu-2-18",
+          "code": "2.18",
+          "name": {
+            "en": "Taking part in an international research grant",
+            "ka": "საერთაშორისო კვლევით გრანტში მონაწილეობა"
+          },
+          "points": 20,
+          "max_points": 80,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Grant name, year and number.",
+          "icon": "imgIconFlask"
+        },
+        {
+          "id": "isu-2-19",
+          "code": "2.19",
+          "name": {
+            "en": "Leading a national research grant or project",
+            "ka": "ეროვნული კვლევითი გრანტის/პროექტის ხელმძღვანელობა"
+          },
+          "points": 20,
+          "max_points": 60,
+          "max_entries": 3,
+          "variable_points": null,
+          "hint": "Grant name, year and number.",
+          "icon": "imgIconFlask"
+        },
+        {
+          "id": "isu-2-20",
+          "code": "2.20",
+          "name": {
+            "en": "Taking part in a national research grant or project",
+            "ka": "ეროვნულ კვლევით გრანტში/პროექტში ჩართულობა"
+          },
+          "points": 15,
+          "max_points": 45,
+          "max_entries": 3,
+          "variable_points": null,
+          "hint": "Grant name, year and number.",
+          "icon": "imgIconFlask"
+        },
+        {
+          "id": "isu-2-21",
+          "code": "2.21",
+          "name": {
+            "en": "Leading an ISU research grant",
+            "ka": "ილიას სახელმწიფო უნივერსიტეტის მიერ გაცემული კვლევითი გრანტის ხელმძღვანელობა"
+          },
+          "points": 10,
+          "max_points": 50,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconFlask"
+        },
+        {
+          "id": "isu-2-22",
+          "code": "2.22",
+          "name": {
+            "en": "Taking part in an ISU research grant",
+            "ka": "ილიას სახელმწიფო უნივერსიტეტის მიერ გაცემულ კვლევით გრანტში მონაწილეობა"
+          },
+          "points": 5,
+          "max_points": 25,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconFlask"
+        },
+        {
+          "id": "isu-2-23",
+          "code": "2.23",
+          "name": {
+            "en": "Leading any other grant or project that funds at least one student (total salary 1,500 GEL or more)",
+            "ka": "ნებისმიერი სხვა სახის გრანტის/პროექტის ხელმძღვანელობა, რომლის ბიუჯეტში გათვალისწინებულია მინიმუმ 1 სტუდენტის ჩართულობა"
+          },
+          "points": 5,
+          "max_points": 30,
+          "max_entries": 6,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconFlask"
+        },
+        {
+          "id": "isu-2-24",
+          "code": "2.24",
+          "name": {
+            "en": "Member of an international collaboration",
+            "ka": "საერთაშორისო კოლაბორაციის წევრობა"
+          },
+          "points": 5,
+          "max_points": 25,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-2-25",
+          "code": "2.25",
+          "name": {
+            "en": "Award or scholarship",
+            "ka": "ჯილდო/სტიპენდიები"
+          },
+          "points": 5,
+          "max_points": 30,
+          "max_entries": 6,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconAward"
+        },
+        {
+          "id": "isu-2-26",
+          "code": "2.26",
+          "name": {
+            "en": "International patent",
+            "ka": "საერთაშორისო პატენტი"
+          },
+          "points": 40,
+          "max_points": 120,
+          "max_entries": 3,
+          "variable_points": null,
+          "hint": "Name, year and number.",
+          "icon": "imgIconAward"
+        },
+        {
+          "id": "isu-2-27",
+          "code": "2.27",
+          "name": {
+            "en": "National patent",
+            "ka": "ეროვნული პატენტი"
+          },
+          "points": 15,
+          "max_points": 45,
+          "max_entries": 3,
+          "variable_points": null,
+          "hint": "Name, year and number.",
+          "icon": "imgIconAward"
+        },
+        {
+          "id": "isu-2-28",
+          "code": "2.28",
+          "name": {
+            "en": "Plenary talk at an international seminar, symposium, conference or congress",
+            "ka": "საერთაშორისო სამეცნიერო სემინარზე/სიმპოზიუმზე/კონფერენციაზე/კონგრესზე პლენარული მოხსენების გაკეთება"
+          },
+          "points": 20,
+          "max_points": 100,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Event name, year and link.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-2-29",
+          "code": "2.29",
+          "name": {
+            "en": "Talk at an international seminar, symposium, conference or congress",
+            "ka": "საერთაშორისო სამეცნიერო სემინარზე/სიმპოზიუმზე/კონფერენციაზე/კონგრესზე მოხსენების გაკეთება"
+          },
+          "points": 15,
+          "max_points": 60,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Event name, year and link.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-2-30",
+          "code": "2.30",
+          "name": {
+            "en": "Poster at an international seminar, symposium, conference or congress",
+            "ka": "საერთაშორისო სამეცნიერო სემინარზე/სიმპოზიუმზე/კონფერენციაზე/კონგრესზე სასტენდო პრეზენტაციის გაკეთება"
+          },
+          "points": 5,
+          "max_points": 25,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Event name, year and link.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-2-31",
+          "code": "2.31",
+          "name": {
+            "en": "Talk at a local seminar, symposium, conference or congress",
+            "ka": "ადგილობრივ სემინარზე/სიმპოზიუმზე/კონფერენციაზე/კონგრესზე მოხსენების გაკეთება"
+          },
+          "points": 5,
+          "max_points": 25,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Event name, year and link.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-2-32",
+          "code": "2.32",
+          "name": {
+            "en": "Poster at a local seminar, symposium, conference or congress",
+            "ka": "ადგილობრივ სემინარზე/სიმპოზიუმზე/კონფერენციაზე/კონგრესზე სასტენდო პრეზენტაციის გაკეთება"
+          },
+          "points": 2,
+          "max_points": 10,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Event name, year and link.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-2-33",
+          "code": "2.33",
+          "name": {
+            "en": "Scientific computing software published on GitHub under the university’s name",
+            "ka": "პროგრამული უზრუნველყოფის შემუშავება, რომელიც ეძღვნება სამეცნიერო გამოთვლებს და განთავსებულია github-ზე უნივერსიტეტის სახელით"
+          },
+          "points": 15,
+          "max_points": 45,
+          "max_entries": null,
+          "variable_points": "Only one program gets 15 points; each further program gets 5. A co-authored program gets 10.",
+          "hint": "Name, year and link.",
+          "icon": "imgIconSettings"
+        },
+        {
+          "id": "isu-2-34",
+          "code": "2.34",
+          "name": {
+            "en": "Taking part in an architectural project",
+            "ka": "არქიტექტურულ პროექტში მონაწილეობა"
+          },
+          "points": 15,
+          "max_points": 60,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Name, year and link.",
+          "icon": "imgIconBuilding"
+        },
+        {
+          "id": "isu-2-35",
+          "code": "2.35",
+          "name": {
+            "en": "Supervising a doctoral dissertation (up to 5 doctoral students)",
+            "ka": "ერთი სადისერტაციო ნაშრომის ხელმძღვანელობა (არაუმეტეს 5 დოქტორანტისა)"
+          },
+          "points": 20,
+          "max_points": 80,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Student’s full name, by academic year. Each dissertation counts only once.",
+          "icon": "imgIconGrad"
+        },
+        {
+          "id": "isu-2-36",
+          "code": "2.36",
+          "name": {
+            "en": "Supervising a master’s thesis (up to 5 theses per academic year)",
+            "ka": "ერთი სამაგისტრო ნაშრომის ხელმძღვანელობა (არაუმეტეს 5 ნაშრომისა ერთ სასწავლო წელს)"
+          },
+          "points": 15,
+          "max_points": 150,
+          "max_entries": 10,
+          "variable_points": null,
+          "hint": "Students’ full names, by year. Each thesis counts only once.",
+          "icon": "imgIconGrad"
+        },
+        {
+          "id": "isu-2-37",
+          "code": "2.37",
+          "name": {
+            "en": "Reviewing a doctoral dissertation",
+            "ka": "ერთი სადისერტაციო ნაშრომის რეცენზირება"
+          },
+          "points": 5,
+          "max_points": 20,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Student’s full name and year.",
+          "icon": "imgIconCheck"
+        },
+        {
+          "id": "isu-2-38",
+          "code": "2.38",
+          "name": {
+            "en": "Reviewing a master’s thesis",
+            "ka": "ერთი სამაგისტრო ნაშრომის რეცენზირება"
+          },
+          "points": 5,
+          "max_points": 30,
+          "max_entries": 6,
+          "variable_points": null,
+          "hint": "Student’s full name and year.",
+          "icon": "imgIconCheck"
+        },
+        {
+          "id": "isu-2-39",
+          "code": "2.39",
+          "name": {
+            "en": "Mentoring a student group in practice research (per semester)",
+            "ka": "სტუდენტთა ჯგუფის მენტორობა პრაქტიკის კვლევის საქმიანობაში"
+          },
+          "points": 2,
+          "max_points": 20,
+          "max_entries": 10,
+          "variable_points": null,
+          "hint": "Students’ full names and semesters.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-2-40",
+          "code": "2.40",
+          "name": {
+            "en": "Editor or associate editor of an international peer-reviewed journal",
+            "ka": "საერთაშორისო სამეცნიერო რეფერირებადი ჟურნალის რედაქტორობა ან ასოცირებული რედაქტორობა"
+          },
+          "points": 10,
+          "max_points": 30,
+          "max_entries": 3,
+          "variable_points": null,
+          "hint": "Journal name and link.",
+          "icon": "imgIconEdit"
+        },
+        {
+          "id": "isu-2-41",
+          "code": "2.41",
+          "name": {
+            "en": "Editor of a local peer-reviewed journal",
+            "ka": "ადგილობრივი სამეცნიერო რეფერირებადი ჟურნალის რედაქტორობა"
+          },
+          "points": 5,
+          "max_points": 20,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Journal name and link.",
+          "icon": "imgIconEdit"
+        },
+        {
+          "id": "isu-2-42",
+          "code": "2.42",
+          "name": {
+            "en": "Editorial board member of an international peer-reviewed journal",
+            "ka": "საერთაშორისო სამეცნიერო რეფერირებადი ჟურნალის რედკოლეგიის წევრობა"
+          },
+          "points": 3,
+          "max_points": 15,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Journal name and link.",
+          "icon": "imgIconEdit"
+        },
+        {
+          "id": "isu-2-43",
+          "code": "2.43",
+          "name": {
+            "en": "Editorial board member of a local peer-reviewed journal",
+            "ka": "ადგილობრივი სამეცნიერო რეფერირებადი ჟურნალის რედკოლეგიის წევრობა"
+          },
+          "points": 2,
+          "max_points": 10,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Journal name and link.",
+          "icon": "imgIconEdit"
+        },
+        {
+          "id": "isu-2-44",
+          "code": "2.44",
+          "name": {
+            "en": "Peer review of international conference proceedings",
+            "ka": "საერთაშორისო კონფერენციის მასალების სამეცნიერო რეფერირება"
+          },
+          "points": 5,
+          "max_points": 20,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Conference name, year and link.",
+          "icon": "imgIconCheck"
+        },
+        {
+          "id": "isu-2-45",
+          "code": "2.45",
+          "name": {
+            "en": "Peer review of local conference proceedings",
+            "ka": "ადგილობრივი კონფერენციის მასალების სამეცნიერო რეფერირება"
+          },
+          "points": 2,
+          "max_points": 10,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Conference name, year and link.",
+          "icon": "imgIconCheck"
+        }
+      ]
+    },
+    {
+      "id": "social",
+      "numeral": "III",
+      "name": {
+        "en": "Social impact",
+        "ka": "სოციალური იმპაქტის კომპონენტი"
+      },
+      "rule": "Optional · counts up to 20 points",
+      "min": null,
+      "cap": 20,
+      "items": [
+        {
+          "id": "isu-3-1",
+          "code": "3.1",
+          "name": {
+            "en": "Organising an international conference",
+            "ka": "საერთაშორისო კონფერენციების ორგანიზება"
+          },
+          "points": 20,
+          "max_points": 60,
+          "max_entries": 3,
+          "variable_points": null,
+          "hint": "Conference name, year and link.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-3-2",
+          "code": "3.2",
+          "name": {
+            "en": "Organising a seasonal school",
+            "ka": "სეზონური სკოლების ორგანიზება"
+          },
+          "points": 10,
+          "max_points": 50,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconGrad"
+        },
+        {
+          "id": "isu-3-3",
+          "code": "3.3",
+          "name": {
+            "en": "Creating or running a certificate programme or training course (LLL)",
+            "ka": "სასერტიფიკატო პროგრამების/ტრენინგ კურსების შექმნა, განხორციელება (LLL)"
+          },
+          "points": 5,
+          "max_points": 20,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconGrad"
+        },
+        {
+          "id": "isu-3-4",
+          "code": "3.4",
+          "name": {
+            "en": "Organising an international or local workshop (externally funded)",
+            "ka": "საერთაშორისო ან ადგილობრივი ვორქშოფის ორგანიზება (გრანტი გარე რესურსებით მიღებული)"
+          },
+          "points": 10,
+          "max_points": 40,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-3-5",
+          "code": "3.5",
+          "name": {
+            "en": "Serving on international, government, expert or other commissions and organisations",
+            "ka": "საერთაშორისო, სამთავრობო, საექსპერტო და სხვა კომისიებსა და ორგანიზაციებში მონაწილეობა"
+          },
+          "points": 5,
+          "max_points": 25,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconBuilding"
+        },
+        {
+          "id": "isu-3-6",
+          "code": "3.6",
+          "name": {
+            "en": "Organising professional development trainings or workshops",
+            "ka": "პროფესიული განვითარების ტრენინგების, ვორქშოფების ორგანიზება"
+          },
+          "points": 10,
+          "max_points": 40,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconUsers"
+        },
+        {
+          "id": "isu-3-7",
+          "code": "3.7",
+          "name": {
+            "en": "Attending professional development trainings or workshops",
+            "ka": "პროფესიული განვითარების ტრენინგებზე, ვორქშოფებზე დასწრება"
+          },
+          "points": 2,
+          "max_points": 10,
+          "max_entries": 5,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconUser"
+        },
+        {
+          "id": "isu-3-8",
+          "code": "3.8",
+          "name": {
+            "en": "Public lecture",
+            "ka": "საჯარო ლექცია"
+          },
+          "points": 2,
+          "max_points": 8,
+          "max_entries": 4,
+          "variable_points": null,
+          "hint": "Name and year.",
+          "icon": "imgIconUsers"
+        }
+      ]
+    }
+  ]
+}

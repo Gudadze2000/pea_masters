@@ -143,3 +143,48 @@ def test_settings_show_google_sign_in_instead_of_a_password(admin_page: Page):
     expect(page.get_by_role("heading", name="How you sign in")).to_be_visible()
     expect(page.get_by_text("e2e.admin@iliauni.edu.ge")).to_be_visible()
     expect(page.get_by_label("Current password")).to_have_count(0)
+
+
+def test_admins_set_up_evaluation_periods(admin_page: Page, shot):
+    """Admins add a period with its deadline and publication years, extend the deadline and remove it; names are
+    unique. (Only Admins may manage periods: tests/api/test_evaluations.py.)"""
+    page = admin_page
+    page.goto("/admin/people")
+    page.get_by_role("tab", name="Evaluation periods").click()
+    panel = page.locator(".evaluation-periods")
+    expect(panel).to_contain_text("No evaluation periods yet")
+
+    def fill_period(name: str):
+        sheet = page.get_by_role("dialog")
+        sheet.get_by_label(re.compile("^Name")).fill(name)
+        sheet.get_by_label(re.compile("^Opens on")).fill("2026-09-01")
+        sheet.get_by_label(re.compile("^Deadline")).fill("2026-11-30")
+        sheet.get_by_label(re.compile("^Publications from")).select_option("2024")
+        sheet.get_by_label(re.compile("^Publications to")).select_option("2026")
+        return sheet
+
+    page.get_by_role("button", name="Add period").click()
+    fill_period("Annual evaluation 2025-2026").get_by_role("button", name="Add period").click()
+    row = panel.locator("tbody tr", has_text="Annual evaluation 2025-2026")
+    expect(row).to_contain_text("30 Nov 2026")
+    expect(row).to_contain_text("2024–2026")
+    expect(page.get_by_role("dialog")).to_have_count(0)
+    shot(page, "people-02-evaluation-periods")
+
+    # The same name again: the server says so and the sheet stays open
+    page.get_by_role("button", name="Add period").click()
+    sheet = fill_period("annual evaluation 2025-2026")
+    sheet.get_by_role("button", name="Add period").click()
+    expect(sheet.get_by_role("alert")).to_contain_text("There's already a period called")
+    sheet.get_by_role("button", name="Cancel").click()
+
+    # Extending the deadline
+    row.get_by_role("button", name="Edit Annual evaluation 2025-2026").click()
+    sheet = page.get_by_role("dialog")
+    sheet.get_by_label(re.compile("^Deadline")).fill("2026-12-15")
+    sheet.get_by_role("button", name="Save period").click()
+    expect(row).to_contain_text("15 Dec 2026")
+
+    row.get_by_role("button", name="Remove Annual evaluation 2025-2026").click()
+    page.get_by_role("dialog").get_by_role("button", name="Remove period").click()
+    expect(panel).to_contain_text("No evaluation periods yet")

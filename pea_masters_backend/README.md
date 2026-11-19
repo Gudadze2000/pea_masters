@@ -91,6 +91,11 @@ visibility) is one document in `cvs`, saved with the page's Save button or Ctrl+
 checked against its shape before it's stored. Leaving the page with unsaved changes asks first. Qualifications, research and teaching on the CV come from the profile, not from this document.
 Making a CV public or private is recorded in the audit log; ordinary saves aren't.
 
+Evaluations (`app/evaluations.py`): Admins set up evaluation periods (name, opening day, deadline, which publication
+years count) under People → Evaluation periods; deadlines are whole days, Tbilisi time. Forms have parts → items →
+points and limits; the ISU self-assessment is built in (`app/evaluation_forms/isu_self_assessment.json`), and
+coordinators will create their own (`evaluation_forms`). Sending forms, filling them in and reviewing come next.
+
 Permission rules live in `app/authz.py` (one table of which role may do what); every refusal and change is
 written to the audit log.
 
@@ -140,6 +145,11 @@ tests hand verified Google claims to the same code the real callback uses.
 5. The app calls `GET /api/v1/auth/me` for the user and their roles; `POST /api/v1/auth/logout` revokes the session.
 
 Refusals come back as `/login?error=<code>`; the login page shows a message for each code.
+
+## On the server
+
+See [DEPLOY.md](../DEPLOY.md): Docker Compose (`deploy/`) runs the database, this API (`Dockerfile`) and Caddy, which
+serves the app over https.
 
 ## Notes
 
