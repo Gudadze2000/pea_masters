@@ -238,6 +238,44 @@ def test_send_fill_in_submit_and_resubmit(admin_page: Page, organization, google
     assert not errors, errors
 
 
+def test_an_admin_reopens_and_extends_for_one_person(admin_page: Page, google_sign_in, shot):
+    """Continues from test_send_fill_in_submit_and_resubmit, which ends with Eka's evaluation approved: the Admin takes
+    the approval back and gives Eka ten more days than the period."""
+    page = admin_page
+    page.goto("/admin/evaluations")
+    page.get_by_label("Evaluation period").select_option(label=f"{PERIOD} (open)")
+    row = page.locator(".send-table tbody tr", has_text=RESEARCHER[0])
+    expect(row).to_contain_text("Approved")
+
+    row.get_by_role("button", name=f"Reopen {RESEARCHER[0]}'s evaluation").click()
+    sheet = page.get_by_role("dialog")
+    expect(sheet).to_contain_text("The approval and the final score (50) are taken back")
+    sheet.get_by_label("Reason").fill("The 2026 article was published after the cut-off.")
+    sheet.get_by_role("button", name="Reopen evaluation").click()
+    expect(row).to_contain_text("To review")
+
+    later = date.today() + timedelta(days=40)  # the period ends in 30 days
+    row.get_by_role("button", name=f"Extend {RESEARCHER[0]}'s deadline").click()
+    sheet = page.get_by_role("dialog")
+    sheet.get_by_label("New deadline").fill(str(date.today() + timedelta(days=10)))
+    sheet.get_by_role("button", name="Extend deadline").click()
+    expect(sheet.get_by_role("alert")).to_contain_text("Pick a day after the period's own deadline")
+    sheet.get_by_label("New deadline").fill(str(later))
+    sheet.get_by_role("button", name="Extend deadline").click()
+    expect(row).to_contain_text(f"Deadline extended to {later.day} {later:%b %Y}")
+    shot(page, "evaluation-review-03-exceptions")
+
+    # Eka's form waits for review again, with the later deadline
+    eka = google_sign_in(RESEARCHER[1], RESEARCHER[0])
+    eka.goto("/evaluation-form")
+    expect(banner(eka)).to_have_text(re.compile("^Submitted on"))
+    expect(eka.get_by_text("Your evaluation was approved")).to_have_count(0)
+    deadline = eka.locator(".evaluation-deadline")
+    expect(deadline).to_contain_text(f"{later.day} {later:%b %Y}")
+    expect(deadline).to_contain_text("extended for you")
+    expect(eka.get_by_role("button", name="Update submission").first).to_be_visible()
+
+
 def open_article_item(page: Page) -> None:
     page.goto("/evaluation-form")
     page.get_by_role("tab", name=re.compile("II · Research")).click()

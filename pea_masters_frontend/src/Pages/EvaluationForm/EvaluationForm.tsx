@@ -146,6 +146,7 @@ export function EvaluationForm() {
   const submittedAt = evaluation.submitted_at
   const deadline = dayLabel(period.ends_on)
   const daysLeft = daysUntil(period.ends_on)
+  const setBy = evaluation.deadline_extended ? 'extended for you' : 'set by your admin'
   const entries = evaluation.entries
   const grouped = byItem(entries)
   const listOf = (id: string) => grouped[id] ?? []
@@ -304,7 +305,7 @@ export function EvaluationForm() {
             <small>Entries are saved as soon as you save them; there's nothing else to save.</small>
           </>}
         </section>
-        <section className="dashboard-card"><h2>Deadline</h2><div className="evaluation-deadline"><span><Icon name="imgIconClock" /></span><div><p>{deadline}</p><small>{closed ? 'The evaluation period has ended' : upcoming ? `Opens on ${dayLabel(period.starts_on)}` : daysLeft === 0 ? 'Last day today · set by your admin' : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left · set by your admin`}</small></div></div><small>Until the deadline you can resubmit as often as you need, e.g. when a new article is published.</small></section>
+        <section className="dashboard-card"><h2>Deadline</h2><div className="evaluation-deadline"><span><Icon name="imgIconClock" /></span><div><p>{deadline}</p><small>{closed ? 'The evaluation period has ended' : upcoming ? `Opens on ${dayLabel(period.starts_on)}` : daysLeft === 0 ? `Last day today · ${setBy}` : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left · ${setBy}`}</small></div></div><small>Until the deadline you can resubmit as often as you need, e.g. when a new article is published.</small></section>
       </aside>
     </div>
     {editing && <EntryModal record={editing.record} entry={editing.entry} initial={editing.initial} itemChoices={editing.choices} usedDois={usedDois(editing.entry?.id)}

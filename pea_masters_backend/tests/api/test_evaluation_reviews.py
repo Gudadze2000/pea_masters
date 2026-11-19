@@ -1,4 +1,7 @@
-"""Reviewing submitted evaluations (app/evaluation_reviews.py): decisions on entries, then on the whole form."""
+"""Reviewing submitted evaluations (app/evaluation_reviews.py): decisions on entries, then on the whole form; and
+Admins' exceptions for one person (a later deadline, reopening an approval)."""
+
+from datetime import date, timedelta
 
 from app.evaluation_reviews import score_of
 from app.models import AuditLog
@@ -171,3 +174,66 @@ def test_the_score_counts_approved_entries_within_the_forms_limits():
                entry("software", points=7.5),  # part a: 27.5, capped at 25
                entry("grant"), entry("grant", status="rejected"), entry("grant", hidden=True)]
     assert score_of(structure, entries) == 40
+
+
+# --- Admins: exceptions for one person ------------------------------------------------------------
+
+def test_an_admin_gives_one_person_more_time(as_admin, base, team):  # noqa: F811
+    p = period(as_admin, base, "Closed already", starts=-60, ends=-10)
+    # Forms can't be sent after the deadline: open the period briefly to send them, then close it again
+    as_admin.put(f"{base}/evaluation-periods/{p['id']}", json={
+        "name": p["name"], "starts_on": p["starts_on"], "ends_on": str(date.today() + timedelta(days=5)),
+        "publication_from": 2024, "publication_to": 2026})
+    send(as_admin, base, p["id"], [team["ids"]["nino"], team["ids"]["other"]])
+    as_admin.put(f"{base}/evaluation-periods/{p['id']}", json={
+        "name": p["name"], "starts_on": p["starts_on"], "ends_on": p["ends_on"],
+        "publication_from": 2024, "publication_to": 2026})
+    nino = mine(team["nino"])
+    assert (nino["period"]["status"], nino["can_edit"], nino["deadline_extended"]) == ("closed", False, False)
+    assert error_code(add(team["nino"], nino["id"])) == "period_closed"
+
+    # Only Admins make exceptions, and the extension must be later than the period's own deadline
+    later = str(date.today() + timedelta(days=7))
+    url = f"{base}/evaluations/{nino['id']}/deadline"
+    assert team["head"].put(url, json={"ends_on": later}).status_code == 403
+    assert error_code(as_admin.put(url, json={"ends_on": p["ends_on"]})) == "not_later"
+    extended = as_admin.put(url, json={"ends_on": later, "reason": "Was on sick leave"}).json()
+    assert (extended["deadline_override"], extended["period"]["status"]) == (later, "open")
+
+    # Nino can fill in and submit again; the other researcher in the same period can't
+    nino = mine(team["nino"])
+    assert (nino["period"]["ends_on"], nino["period"]["status"], nino["can_edit"], nino["deadline_extended"]) == (
+        later, "open", True, True)
+    add(team["nino"], nino["id"], description="Late but allowed")
+    assert team["nino"].post(f"/api/v1/me/evaluations/{nino['id']}/submit", json={"confirm": True}).status_code == 200
+    other = mine(team["other"])
+    assert (other["period"]["status"], other["can_edit"]) == ("closed", False)
+    rows = {r["person"]["display_name"]: r["evaluation"] for r in as_admin.get(
+        f"{base}/evaluation-periods/{p['id']}/evaluations").json()}
+    assert rows["Nino Researcher"]["deadline_override"] == later
+    assert rows["Other Researcher"]["deadline_override"] is None
+
+    # Taking the extension away closes it again
+    assert as_admin.put(url, json={"ends_on": None}).json()["period"]["status"] == "closed"
+    assert mine(team["nino"])["can_edit"] is False
+
+
+def test_an_admin_reopens_an_approved_evaluation(as_admin, base, team, db):  # noqa: F811
+    evaluation_id, (first, second, third) = submitted_form(as_admin, base, team)
+    url = f"{base}/evaluations/{evaluation_id}/reopen"
+    assert error_code(as_admin.post(url, json={})) == "not_approved"
+    for entry in (first, second, third):
+        decide(team["head"], base, evaluation_id, entry, "approved")
+    finish(team["head"], base, evaluation_id, "approved")
+
+    assert team["head"].post(url, json={}).status_code == 403  # Admins only
+    as_admin.post(url, json={"reason": "Third article was counted twice"})
+    reopened = mine(team["nino"])
+    assert (reopened["review_state"], reopened["final_score"]) == (None, None)
+    assert [e["status"] for e in reopened["entries"]] == ["approved"] * 3  # decisions are kept
+
+    # The coordinator can change a decision and approve again; the researcher could also update and resubmit
+    decide(team["head"], base, evaluation_id, third, "rejected", "Counted twice")
+    assert finish(team["head"], base, evaluation_id, "approved").json()["final_score"] == 100
+    reason = db.query(AuditLog).filter(AuditLog.action == "evaluation.reopened_by_admin").one().reason
+    assert reason == "Third article was counted twice"

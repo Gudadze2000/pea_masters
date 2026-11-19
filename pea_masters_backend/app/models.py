@@ -343,6 +343,7 @@ class Evaluation(Base):
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     reviewed_at: Mapped[datetime | None]
     final_score: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))  # set when approved
+    deadline_override: Mapped[date | None]  # an Admin gave this person until the end of this day
 
 
 class EvaluationEntry(Base):

@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router"
-import { Check, ClipboardCheck, Send, Undo2, Users, X } from "lucide-react"
+import { CalendarPlus, Check, ClipboardCheck, LockOpen, Send, Undo2, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { ApiError } from "@/lib/api"
 import { peopleOrganizations, useSession } from "@/lib/auth"
-import { formsApi, periodsApi, sendingApi, type EvaluationBrief, type EvaluationPeriod, type FormSummary, type RosterRow, type SendResult } from "@/lib/evaluations"
+import { exceptionsApi, formsApi, periodsApi, sendingApi, type EvaluationBrief, type EvaluationPeriod, type FormSummary, type RosterRow, type SendResult } from "@/lib/evaluations"
 import { useLanguage } from "@/lib/language-context"
 import { localName } from "@/lib/people"
 import { ConfirmSheet } from "@/Pages/People/ConfirmSheet"
+import { DeadlineSheet } from "./DeadlineSheet"
 import "@/components/forms/forms.css"
 import "@/Pages/People/PeoplePage.css"
 import "./SendEvaluationsPage.css"
@@ -59,6 +60,9 @@ export function SendEvaluationsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [sending, setSending] = useState(false)
   const [withdrawing, setWithdrawing] = useState<RosterRow | null>(null)
+  /** Admins: a later deadline for one person, or reopening their approved evaluation */
+  const [extending, setExtending] = useState<RosterRow | null>(null)
+  const [reopening, setReopening] = useState<RosterRow | null>(null)
   const [notice, setNotice] = useState("")
   const noticeTimer = useRef<number | undefined>(undefined)
   useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
@@ -198,6 +202,7 @@ export function SendEvaluationsPage() {
                                 {row.evaluation?.final_score !== null && row.evaluation?.final_score !== undefined
                                   ? <small className="send-when">Final score {row.evaluation.final_score}</small>
                                   : row.evaluation?.submitted_at && <small className="send-when">Submitted {formatDate(row.evaluation.submitted_at)}</small>}
+                                {row.evaluation?.deadline_override && <small className="send-when send-extended">Deadline extended to {formatDate(row.evaluation.deadline_override)}</small>}
                               </td>
                               <td>{row.evaluation ? row.evaluation.entries : ""}</td>
                               <td>
@@ -207,6 +212,14 @@ export function SendEvaluationsPage() {
                                       onClick={() => navigate(`/admin/evaluations/${row.evaluation!.id}?org=${org.id}`)}>
                                       <ClipboardCheck />{row.evaluation.review_state === "approved" ? "View" : "Review"}
                                     </Button>
+                                  )}
+                                  {isAdmin && row.evaluation && (
+                                    <Button variant="outline" size="icon" className="icon-button" aria-label={`Extend ${name}'s deadline`} title="Extend the deadline for them"
+                                      onClick={() => setExtending(row)}><CalendarPlus /></Button>
+                                  )}
+                                  {isAdmin && row.evaluation?.review_state === "approved" && (
+                                    <Button variant="outline" size="icon" className="icon-button" aria-label={`Reopen ${name}'s evaluation`} title="Reopen: take the approval back"
+                                      onClick={() => setReopening(row)}><LockOpen /></Button>
                                   )}
                                   {row.evaluation && !row.evaluation.started && (
                                     <Button variant="outline" size="icon" className="icon-button" aria-label={`Withdraw ${name}'s form`} title="Withdraw the form" onClick={() => setWithdrawing(row)}><Undo2 /></Button>
@@ -236,6 +249,37 @@ export function SendEvaluationsPage() {
                 await loadRoster()
               }}
               onClose={() => setSending(false)}
+            />
+          )}
+
+          {extending?.evaluation && period && (
+            <DeadlineSheet
+              name={extending.person.display_name}
+              period={period}
+              current={extending.evaluation.deadline_override}
+              onSave={async (endsOn, reason) => {
+                await exceptionsApi.setDeadline(org.id, extending.evaluation!.id, endsOn, reason)
+                announce(endsOn ? `${extending.person.display_name} has until ${formatDate(endsOn)}.` : `${extending.person.display_name}'s extension was removed.`)
+                setExtending(null)
+                await loadRoster()
+              }}
+              onClose={() => setExtending(null)}
+            />
+          )}
+
+          {reopening?.evaluation && (
+            <ConfirmSheet
+              title={`Reopen ${reopening.person.display_name}'s evaluation?`}
+              description={`The approval and the final score (${reopening.evaluation.final_score}) are taken back, and the form waits for review again. Entries keep their decisions. ${reopening.person.display_name} can also update and resubmit it if their deadline hasn't passed; extend it if they need to.`}
+              confirmLabel="Reopen evaluation"
+              askReason
+              onConfirm={async reason => {
+                await exceptionsApi.reopen(org.id, reopening.evaluation!.id, reason)
+                announce(`${reopening.person.display_name}'s evaluation was reopened.`)
+                setReopening(null)
+                await loadRoster()
+              }}
+              onClose={() => setReopening(null)}
             />
           )}
 

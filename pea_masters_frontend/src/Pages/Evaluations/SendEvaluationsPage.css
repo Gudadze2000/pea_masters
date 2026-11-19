@@ -56,3 +56,6 @@
   .review-entry-side { align-items: flex-start; }
   .review-rule { padding-left: 20px; }
 }
+
+.send-extended { color: var(--color-brand-700); }
+.deadline-remove { align-self: flex-start; }

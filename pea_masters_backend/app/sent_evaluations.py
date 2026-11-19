@@ -30,6 +30,7 @@ from app.evaluations import (
     FormStructure,
     Localized,
     PeriodOut,
+    PeriodStatus,
     built_in_structure,
     find_form,
     find_period,
@@ -61,6 +62,7 @@ class EvaluationBrief(BaseModel):
     entries: int  # entries that will be sent (not hidden)
     review_state: ReviewState | None
     final_score: float | None
+    deadline_override: date | None  # an Admin gave this person until this day
 
 
 class RosterRow(BaseModel):
@@ -149,7 +151,8 @@ class MyEvaluationBrief(BaseModel):
 
 class MyEvaluation(BaseModel):
     id: uuid.UUID
-    period: PeriodOut
+    period: PeriodOut  # as it is for this person: ends_on and status follow a deadline extended for them
+    deadline_extended: bool
     form_name: Localized
     structure: FormStructure
     state: State
@@ -231,17 +234,36 @@ def period_of(db: Session, evaluation: Evaluation) -> EvaluationPeriod:
     return db.get(EvaluationPeriod, evaluation.period_id)  # type: ignore[return-value]
 
 
-def is_open(period: EvaluationPeriod) -> bool:
-    return period.archived_at is None and status_of(period, today()) == "open"
+def deadline_of(evaluation: Evaluation, period: EvaluationPeriod) -> date:
+    """The last day this person can submit: the period's deadline, or later if an Admin extended it for them"""
+    override = evaluation.deadline_override
+    return max(period.ends_on, override) if override else period.ends_on
+
+
+def status_for(evaluation: Evaluation, period: EvaluationPeriod) -> PeriodStatus:
+    on = today()
+    if on < period.starts_on:
+        return "upcoming"
+    return "closed" if period.archived_at is not None or on > deadline_of(evaluation, period) else "open"
+
+
+def period_for(evaluation: Evaluation, period: EvaluationPeriod) -> PeriodOut:
+    """The period as it is for this person"""
+    return to_out(period).model_copy(update={"ends_on": deadline_of(evaluation, period),
+                                             "status": status_for(evaluation, period)})
+
+
+def is_open(evaluation: Evaluation, period: EvaluationPeriod) -> bool:
+    return status_for(evaluation, period) == "open"
 
 
 def day_label(day: date) -> str:
     return f"{day.day} {day:%b %Y}"  # 1 Sep 2026
 
 
-def require_open(period: EvaluationPeriod) -> None:
+def require_open(evaluation: Evaluation, period: EvaluationPeriod) -> None:
     on = today()
-    if period.archived_at is not None or on > period.ends_on:
+    if period.archived_at is not None or on > deadline_of(evaluation, period):
         raise problem(status.HTTP_409_CONFLICT, "period_closed",
                       "The deadline has passed, so the form can't be changed. Contact your coordinator if something "
                       "needs to change.")
@@ -258,7 +280,7 @@ def require_not_approved(evaluation: Evaluation) -> None:
 
 def require_editable(db: Session, evaluation: Evaluation) -> None:
     require_not_approved(evaluation)
-    require_open(period_of(db, evaluation))
+    require_open(evaluation, period_of(db, evaluation))
     if evaluation.state == "submitted":
         raise problem(status.HTTP_409_CONFLICT, "submitted",
                       "Your form is submitted. Use “Update submission” to change it.")
@@ -310,10 +332,12 @@ def my_evaluation_out(db: Session, evaluation: Evaluation) -> MyEvaluation:
     entries = entries_of(db, evaluation)
     files = files_of(db, [e.id for e in entries])
     return MyEvaluation(
-        id=evaluation.id, period=to_out(period), form_name=name_of(evaluation),
+        id=evaluation.id, period=period_for(evaluation, period),
+        deadline_extended=deadline_of(evaluation, period) > period.ends_on, form_name=name_of(evaluation),
         structure=FormStructure.model_validate(evaluation.form_structure),
         state=evaluation.state,  # type: ignore[arg-type]
-        can_edit=is_open(period) and evaluation.state != "submitted" and evaluation.review_state != "approved",
+        can_edit=is_open(evaluation, period) and evaluation.state != "submitted"
+        and evaluation.review_state != "approved",
         sent_at=evaluation.sent_at, submitted_at=evaluation.submitted_at, review_state=evaluation.review_state,
         review_comment=evaluation.review_comment, reviewed_at=evaluation.reviewed_at,
         final_score=number(evaluation.final_score), entries=[entry_out(e, files.get(e.id, [])) for e in entries],
@@ -341,7 +365,7 @@ def my_evaluations(user: User = Depends(current_user), db: Session = Depends(get
         rejected = [e for e in entries if e.status == "rejected"]
         missing = [e for e in entries if not files.get(e.id) and e.status != "rejected"]
         briefs.append(MyEvaluationBrief(
-            id=evaluation.id, period=to_out(period), form_name=name_of(evaluation),
+            id=evaluation.id, period=period_for(evaluation, period), form_name=name_of(evaluation),
             state=evaluation.state, submitted_at=evaluation.submitted_at,  # type: ignore[arg-type]
             review_state=evaluation.review_state, final_score=number(evaluation.final_score),  # type: ignore[arg-type]
             entries=len(entries), rejected=len(rejected), missing_files=len(missing),
@@ -469,7 +493,7 @@ def reopen(evaluation_id: uuid.UUID, request: Request, user: User = Depends(curr
     researcher resubmits."""
     evaluation = my_evaluation(db, user, evaluation_id)
     require_not_approved(evaluation)
-    require_open(period_of(db, evaluation))
+    require_open(evaluation, period_of(db, evaluation))
     if evaluation.state != "submitted":
         raise problem(status.HTTP_409_CONFLICT, "not_submitted", "The form isn't submitted.")
     evaluation.state = "updating"
@@ -522,7 +546,8 @@ def brief(evaluation: Evaluation, entries: int) -> EvaluationBrief:
                            state=evaluation.state, started=evaluation.started_at is not None,  # type: ignore[arg-type]
                            sent_at=evaluation.sent_at, submitted_at=evaluation.submitted_at, entries=entries,
                            review_state=evaluation.review_state,  # type: ignore[arg-type]
-                           final_score=number(evaluation.final_score))
+                           final_score=number(evaluation.final_score),
+                           deadline_override=evaluation.deadline_override)
 
 
 def active_evaluations(db: Session, period_id: uuid.UUID, user_ids: list[uuid.UUID]) -> dict[uuid.UUID, Evaluation]:

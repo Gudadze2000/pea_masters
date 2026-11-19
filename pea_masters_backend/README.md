@@ -113,6 +113,11 @@ approved entries within the form's limits (`evaluations.final_score`), and locks
 fixed and resubmitted while the period is open; entries the researcher didn't change keep their decisions. The
 reviewer sees what was submitted even while the researcher changes it, and can have the server check an entry's DOI in
 Web of Science again (`GET …/evaluations/{id}/entries/{entry}/wos`, against the researcher's name).
+
+Exceptions for one person (Admins only, from Evaluations): a later deadline (`evaluations.deadline_override`; that
+person can fill in and submit until the end of that day even after the period has closed for everyone else), and
+reopening an approved evaluation (the approval and final score are taken back; entries keep their decisions). Both go
+to the audit log with an optional reason. Extending the deadline for everyone is editing the period itself.
 The Administration pages (People, Evaluation forms) open only for Admins and Coordinators; anyone else is sent to the
 dashboard, and the API refuses them anyway.
 

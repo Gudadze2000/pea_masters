@@ -46,6 +46,7 @@ class Action(StrEnum):
     MANAGE_EVALUATION_FORMS = "evaluation_forms.manage"  # create forms; change or remove their own (Admins: any)
     SEND_EVALUATIONS = "evaluations.send"  # send forms to researchers for a period (coordinators: their own)
     REVIEW_EVALUATIONS = "evaluations.review"  # approve or reject entries and forms (coordinators: their own)
+    MAKE_EVALUATION_EXCEPTIONS = "evaluations.exceptions"  # one person: a later deadline, or reopen an approval
 
 
 # Which organization roles may perform each action. Root (the developers) may do everything, everywhere.
@@ -65,6 +66,7 @@ POLICY: dict[Action, frozenset[str]] = {
     Action.MANAGE_EVALUATION_FORMS: frozenset({"admin", "coordinator"}),
     Action.SEND_EVALUATIONS: frozenset({"admin", "coordinator"}),
     Action.REVIEW_EVALUATIONS: frozenset({"admin", "coordinator"}),
+    Action.MAKE_EVALUATION_EXCEPTIONS: frozenset({"admin"}),
 }
 
 # Strongest first; the strongest role that allows an action is the one acted under
