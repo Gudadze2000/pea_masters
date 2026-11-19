@@ -1,81 +1,98 @@
 import { useSyncExternalStore } from "react"
+import { api } from "./api"
 
 /**
- * Notifications shown in the top bar pop-up. Sample data until the back end exists; which ones the user has read
- * is kept in the browser.
+ * Notifications under the bell, from the server (app/notifications.py). They're fetched when something first shows
+ * them, then every minute and whenever the tab gets focus again; reading them is saved on the server.
  */
+export type NotificationKind =
+  | "form_sent" | "form_changed" | "entry_rejected" | "form_returned" | "form_approved" | "form_reopened"
+  | "deadline_extended" | "deadline_soon" | "form_submitted"
 export type NotificationTone = "danger" | "warning" | "success" | "info" | "brand"
-export type NotificationKind = "rejected" | "deadline" | "approved" | "comment" | "missing-file" | "period" | "profile" | "system"
 
 export type AppNotification = {
   id: string
   kind: NotificationKind
-  tone: NotificationTone
   title: string
   detail: string
+  /** The page it opens */
+  link: string | null
+  /** An evaluation entry it's about: the page opens that entry */
+  entry_ref: { recordId: string; entryId: string } | null
   /** When it arrived, in ms */
   at: number
-  /** Page the notification opens */
-  to?: string
+  read: boolean
+}
+
+type ServerNotification = Omit<AppNotification, "at"> & { created_at: string }
+
+export const toneOf: Record<NotificationKind, NotificationTone> = {
+  form_sent: "brand", form_changed: "info", entry_rejected: "danger", form_returned: "danger",
+  form_approved: "success", form_reopened: "info", deadline_extended: "info", deadline_soon: "warning",
+  form_submitted: "info",
+}
+
+type State = { items: AppNotification[]; unread: number; loaded: boolean }
+
+const REFRESH_MS = 60_000
+let state: State = { items: [], unread: 0, loaded: false }
+const listeners = new Set<() => void>()
+let timer: number | undefined
+let pending: Promise<void> | null = null
+
+function set(next: State) {
+  state = next
+  listeners.forEach(listener => listener())
+}
+
+/** Fetches the newest notifications; failures keep what's shown (the next refresh tries again) */
+export function refreshNotifications(): Promise<void> {
+  pending ??= api<{ items: ServerNotification[]; unread: number }>("/me/notifications")
+    .then(({ items, unread }) => set({
+      items: items.map(({ created_at, ...item }) => ({ ...item, at: Date.parse(created_at) })), unread, loaded: true,
+    }))
+    .catch(() => undefined)
+    .finally(() => { pending = null })
+  return pending
+}
+
+const onFocus = () => { void refreshNotifications() }
+
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  if (listeners.size === 1) {
+    void refreshNotifications()
+    timer = window.setInterval(() => { if (document.visibilityState === "visible") void refreshNotifications() }, REFRESH_MS)
+    window.addEventListener("focus", onFocus)
+  }
+  return () => {
+    listeners.delete(listener)
+    if (listeners.size === 0) {
+      window.clearInterval(timer)
+      window.removeEventListener("focus", onFocus)
+    }
+  }
+}
+
+/** The notifications, newest first, and how many are unread; re-renders when they change */
+export const useNotifications = () => useSyncExternalStore(subscribe, () => state)
+
+export function markRead(id: string) {
+  const item = state.items.find(entry => entry.id === id)
+  if (!item || item.read) return
+  set({ ...state, items: state.items.map(entry => (entry.id === id ? { ...entry, read: true } : entry)), unread: Math.max(0, state.unread - 1) })
+  void api<null>(`/me/notifications/${id}/read`, { method: "POST" }).catch(() => refreshNotifications())
+}
+
+export function markAllRead() {
+  if (state.unread === 0) return
+  set({ ...state, items: state.items.map(entry => ({ ...entry, read: true })), unread: 0 })
+  void api<null>("/me/notifications/read-all", { method: "POST" }).catch(() => refreshNotifications())
 }
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
-// Sample times are relative to when the app loaded, so "Today" / "Earlier" always has something in it
-const loadedAt = Date.now()
-
-const sample: (Omit<AppNotification, "at"> & { ago: number })[] = [
-  { id: "n-rejected-article", ago: 10 * MINUTE, kind: "rejected", tone: "danger", title: "Journal article needs revision", detail: "Article (Scopus) entry #2 was rejected: the DOI does not match the attached PDF. Open the record to see the reviewer's comment.", to: "/evaluation-form" },
-  { id: "n-deadline", ago: 1 * HOUR, kind: "deadline", tone: "warning", title: "Submission deadline approaching", detail: "Submit your evaluation form by 30 November 2026.", to: "/evaluation-form" },
-  { id: "n-education-approved", ago: 2 * HOUR, kind: "approved", tone: "success", title: "Education entries approved", detail: "3 education entries were approved by your faculty administrator.", to: "/profile#education" },
-  { id: "n-admin-comment", ago: 5 * HOUR, kind: "comment", tone: "info", title: "New comment from Giorgi Kapanadze", detail: "\"Please add the ISBN for the 2025 monograph.\"", to: "/evaluation-form" },
-  { id: "n-missing-file", ago: 1 * DAY + 3 * HOUR, kind: "missing-file", tone: "warning", title: "Conference presentation is missing a file", detail: "Attach a certificate or programme page (PDF or image).", to: "/evaluation-form" },
-  { id: "n-teaching-approved", ago: 2 * DAY, kind: "approved", tone: "success", title: "Teaching portfolio approved", detail: "Your teaching portfolio has been reviewed and approved.", to: "/profile#teaching" },
-  { id: "n-period-open", ago: 3 * DAY, kind: "period", tone: "info", title: "Evaluation period is open", detail: "You can now add records for the 2025-2026 annual evaluation.", to: "/evaluation-form" },
-  { id: "n-profile", ago: 6 * DAY, kind: "profile", tone: "brand", title: "Complete your profile", detail: "Add a photo and a short biography so reviewers and students can find you.", to: "/profile#general" },
-  { id: "n-system", ago: 9 * DAY, kind: "system", tone: "info", title: "CV Builder is available", detail: "Build and download your academic CV from the records you have already entered.", to: "/cv-builder" },
-]
-
-export const notifications: AppNotification[] = sample.map(({ ago, ...item }) => ({ ...item, at: loadedAt - ago }))
-
-const READ_KEY = "pea.notifications.read.v1"
-// Older items start out read, so the sample opens with a few unread ones like a real inbox would
-const defaultRead = ["n-missing-file", "n-teaching-approved", "n-period-open", "n-profile", "n-system"]
-
-function loadRead(): Set<string> {
-  try {
-    const raw = window.localStorage.getItem(READ_KEY)
-    if (raw) return new Set(JSON.parse(raw) as string[])
-  } catch {
-    // Unreadable storage: fall back to the defaults
-  }
-  return new Set(defaultRead)
-}
-
-let read = loadRead()
-const listeners = new Set<() => void>()
-
-function setRead(next: Set<string>) {
-  read = next
-  try {
-    window.localStorage.setItem(READ_KEY, JSON.stringify([...next]))
-  } catch {
-    // Storage unavailable: read state lasts for this visit only
-  }
-  listeners.forEach(listener => listener())
-}
-
-const subscribe = (listener: () => void) => {
-  listeners.add(listener)
-  return () => { listeners.delete(listener) }
-}
-
-/** The set of read notification ids; re-renders when it changes */
-export const useReadNotifications = () => useSyncExternalStore(subscribe, () => read)
-
-export const markRead = (id: string) => { if (!read.has(id)) setRead(new Set(read).add(id)) }
-export const markAllRead = () => setRead(new Set(notifications.map(item => item.id)))
 
 /** "10 min ago", "3 hr ago", "2 days ago" */
 export function timeAgo(at: number, now = Date.now()) {

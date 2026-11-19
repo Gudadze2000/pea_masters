@@ -103,3 +103,8 @@
 .settings-link-button { display: inline-flex; align-items: center; border: 1px solid var(--input); border-radius: var(--radius-md); background: var(--card); color: var(--foreground); font-weight: 500; text-decoration: none; transition: background-color .15s; }
 .settings-link-button:hover { background: var(--muted); }
 .settings-link-button svg { width: 16px; height: 16px; }
+
+/* Notifications: what PEA tells people about (no switches until email exists) */
+.settings-notify-intro { margin-bottom: 12px; font-size: 14px; line-height: 22px; color: var(--color-neutral-700); }
+.settings-notify-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; padding-left: 18px; list-style: disc; }
+.settings-notify-list li::marker { color: var(--primary); }

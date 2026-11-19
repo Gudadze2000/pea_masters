@@ -1,25 +1,46 @@
+import { lazy, Suspense, useEffect, useState, type ComponentType } from "react"
 import { Navigate, Route, Routes } from "react-router"
 import { RequireAuth } from "./components/RequireAuth"
-import { LoginPage } from "./Pages/Login/LoginPage"
-import { HomePage } from "./Pages/MainPage/HomePage"
-import { LegacyProfileRedirect, ProfilePage } from "./Pages/Profile/ProfilePage"
-import { QualificationsProvider } from "./Pages/Profile/qualifications/QualificationsProvider"
-import { CvBuilderPage } from "./Pages/CvBuilder/CvBuilderPage"
-import { EvaluationForm } from "./Pages/EvaluationForm/EvaluationForm"
-import { SettingsPage } from "./Pages/Settings/SettingsPage"
-import { PeoplePage } from "./Pages/People/PeoplePage"
 import { RequireStaff } from "./components/RequireStaff"
-import { EvaluationFormsPage } from "./Pages/EvaluationForms/EvaluationFormsPage"
-import { FormEditorPage } from "./Pages/EvaluationForms/FormEditorPage"
-import { SendEvaluationsPage } from "./Pages/Evaluations/SendEvaluationsPage"
-import { ReviewEvaluationPage } from "./Pages/Evaluations/ReviewEvaluationPage"
+import { LoginPage } from "./Pages/Login/LoginPage"
+import { QualificationsProvider } from "./Pages/Profile/qualifications/QualificationsProvider"
 
+/*
+ * Each page is its own file, loaded the first time it's opened, so the first visit only downloads the app's frame and
+ * the page in front of you. The login page stays in the main file: it's the first screen for anyone signed out.
+ */
+function page<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) {
+  return lazy(() => load().then(module => ({ default: module[name] })))
+}
+
+const HomePage = page(() => import("./Pages/MainPage/HomePage"), "HomePage")
+const ProfilePage = page(() => import("./Pages/Profile/ProfilePage"), "ProfilePage")
+const LegacyProfileRedirect = lazy(() => import("./Pages/Profile/ProfilePage").then(module => ({ default: module.LegacyProfileRedirect })))
+const CvBuilderPage = page(() => import("./Pages/CvBuilder/CvBuilderPage"), "CvBuilderPage")
+const EvaluationForm = page(() => import("./Pages/EvaluationForm/EvaluationForm"), "EvaluationForm")
+const SettingsPage = page(() => import("./Pages/Settings/SettingsPage"), "SettingsPage")
+const PeoplePage = page(() => import("./Pages/People/PeoplePage"), "PeoplePage")
+const EvaluationFormsPage = page(() => import("./Pages/EvaluationForms/EvaluationFormsPage"), "EvaluationFormsPage")
+const FormEditorPage = page(() => import("./Pages/EvaluationForms/FormEditorPage"), "FormEditorPage")
+const SendEvaluationsPage = page(() => import("./Pages/Evaluations/SendEvaluationsPage"), "SendEvaluationsPage")
+const ReviewEvaluationPage = page(() => import("./Pages/Evaluations/ReviewEvaluationPage"), "ReviewEvaluationPage")
+
+/** Shown while a page's file loads: nothing at first, so a quick load doesn't flash a message */
+function PageLoading() {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisible(true), 400)
+    return () => window.clearTimeout(timer)
+  }, [])
+  return <p className="page-loading" role="status">{visible ? "Loading…" : ""}</p>
+}
 
 function App() {
 
   return (
     // Qualification entries live above the routes so they survive moving between pages
     <QualificationsProvider>
+      <Suspense fallback={<PageLoading />}>
         <Routes>
         {/* Landing page is the login screen; it forwards to /home when already signed in. */}
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -51,7 +72,8 @@ function App() {
         <Route path="/admin/evaluation-forms/:formId" element={<FormEditorPage />} />
         </Route>
         </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
     </QualificationsProvider>
   )
 }

@@ -86,7 +86,8 @@ export function EvaluationForm() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [actionError, setActionError] = useState('')
-  const linkHandled = useRef(false)
+  /** The link (router location) whose entry was last opened, so each new link opens its entry once */
+  const linkHandled = useRef('')
 
   useEffect(() => {
     let cancelled = false
@@ -109,8 +110,8 @@ export function EvaluationForm() {
 
   // Other pages can link straight to one entry (e.g. the dashboard's "Fix"): open its part and its edit dialog
   useEffect(() => {
-    if (!evaluation || !form || linkHandled.current) return
-    linkHandled.current = true
+    if (!evaluation || !form || linkHandled.current === location.key) return
+    linkHandled.current = location.key
     const target = (location.state as EvaluationLinkState | null)?.edit
     if (!target) return
     navigate(location.pathname, { replace: true, state: null }) // a reload doesn't reopen the dialog
@@ -119,7 +120,7 @@ export function EvaluationForm() {
     const part = form.parts.find(item => item.items.some(other => other.id === target.recordId))
     if (part) setTab(part.id)
     if (entry && record && evaluation.can_edit) setEditing({ record, entry })
-  }, [evaluation, form, location.pathname, location.state, navigate])
+  }, [evaluation, form, location.key, location.pathname, location.state, navigate])
 
   const breadcrumb = [{ label: 'Evaluation form' }]
   if (!evaluation || !form) {
@@ -146,6 +147,7 @@ export function EvaluationForm() {
   const submittedAt = evaluation.submitted_at
   const deadline = dayLabel(period.ends_on)
   const daysLeft = daysUntil(period.ends_on)
+  const setBy = evaluation.deadline_extended ? 'extended for you' : 'set by your admin'
   const entries = evaluation.entries
   const grouped = byItem(entries)
   const listOf = (id: string) => grouped[id] ?? []
@@ -304,7 +306,7 @@ export function EvaluationForm() {
             <small>Entries are saved as soon as you save them; there's nothing else to save.</small>
           </>}
         </section>
-        <section className="dashboard-card"><h2>Deadline</h2><div className="evaluation-deadline"><span><Icon name="imgIconClock" /></span><div><p>{deadline}</p><small>{closed ? 'The evaluation period has ended' : upcoming ? `Opens on ${dayLabel(period.starts_on)}` : daysLeft === 0 ? 'Last day today · set by your admin' : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left · set by your admin`}</small></div></div><small>Until the deadline you can resubmit as often as you need, e.g. when a new article is published.</small></section>
+        <section className="dashboard-card"><h2>Deadline</h2><div className="evaluation-deadline"><span><Icon name="imgIconClock" /></span><div><p>{deadline}</p><small>{closed ? 'The evaluation period has ended' : upcoming ? `Opens on ${dayLabel(period.starts_on)}` : daysLeft === 0 ? `Last day today · ${setBy}` : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left · ${setBy}`}</small></div></div><small>Until the deadline you can resubmit as often as you need, e.g. when a new article is published.</small></section>
       </aside>
     </div>
     {editing && <EntryModal record={editing.record} entry={editing.entry} initial={editing.initial} itemChoices={editing.choices} usedDois={usedDois(editing.entry?.id)}

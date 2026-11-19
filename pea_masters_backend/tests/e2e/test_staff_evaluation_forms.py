@@ -74,6 +74,7 @@ def test_a_head_of_department_makes_forms(admin_page: Page, google_sign_in, shot
     page.get_by_role("button", name="Save").click()
     expect(page.locator(".form-save-status")).to_have_text("Saved")
     expect(page).to_have_url(re.compile(r"/admin/evaluation-forms/[0-9a-f-]{36}\?org="))
+    expect(page.get_by_role("button", name="Cancel")).to_have_count(0)  # only before the first save
     shot(page, "forms-02-copy-saved")
 
     # Leaving with unsaved changes asks first

@@ -1,17 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from "react"
 import { useNavigate } from "react-router"
-import { AlertTriangle, Bell, CalendarClock, CalendarDays, Check, ChevronRight, MessageSquare, Minimize2, Paperclip, Sparkles, UserRound, X } from "lucide-react"
+import { AlertTriangle, Bell, CalendarClock, CalendarPlus, Check, ChevronRight, FileText, Inbox, LockOpen, Minimize2, RotateCcw, X } from "lucide-react"
 import {
-  badgeCount, isToday, markAllRead, markRead, notifications, timeAgo, useNotificationsRequest, useReadNotifications,
+  badgeCount, isToday, markAllRead, markRead, timeAgo, toneOf, useNotifications, useNotificationsRequest,
   type AppNotification, type NotificationKind,
 } from "@/lib/notifications"
-import { entryNeedingAttention } from "@/lib/evaluations"
 import type { EvaluationLinkState } from "@/Pages/EvaluationForm/evaluation-model"
 import "./notifications.css"
 
 const kindIcons: Record<NotificationKind, ComponentType<{ "aria-hidden"?: boolean }>> = {
-  rejected: AlertTriangle, deadline: CalendarClock, approved: Check, comment: MessageSquare,
-  "missing-file": Paperclip, period: CalendarDays, profile: UserRound, system: Sparkles,
+  form_sent: FileText, form_changed: FileText, entry_rejected: AlertTriangle, form_returned: RotateCcw,
+  form_approved: Check, form_reopened: LockOpen, deadline_extended: CalendarPlus, deadline_soon: CalendarClock,
+  form_submitted: Inbox,
 }
 
 /** How many of the newest notifications the small pop-up lists; "View all" shows the rest */
@@ -24,7 +24,7 @@ type Tab = "all" | "unread"
 /** Bell button in the top bar and the notifications pop-up that opens below it (and grows to fill the page). */
 export function NotificationsMenu() {
   const navigate = useNavigate()
-  const read = useReadNotifications()
+  const { items: notifications, unread: unreadCount } = useNotifications()
   const [open, setOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [tab, setTab] = useState<Tab>("all")
@@ -41,7 +41,7 @@ export function NotificationsMenu() {
     setExpanded(request.expanded)
   }
 
-  const unread = notifications.filter(item => !read.has(item.id))
+  const unread = notifications.filter(item => !item.read)
   const filtered = tab === "unread" ? unread : notifications
   const shown = expanded ? filtered : filtered.slice(0, PREVIEW_COUNT)
   const today = shown.filter(item => isToday(item.at))
@@ -83,20 +83,18 @@ export function NotificationsMenu() {
     }
   }, [open])
 
-  const openItem = async (item: AppNotification) => {
+  const openItem = (item: AppNotification) => {
     markRead(item.id)
     close()
-    if (item.kind === "rejected" || item.kind === "missing-file") {
-      const target = await entryNeedingAttention(item.kind)
-      const state: EvaluationLinkState | undefined = target ? { edit: target } : undefined
-      navigate("/evaluation-form", { state })
-    } else if (item.to) navigate(item.to)
+    // About one entry: the evaluation page opens it
+    const state: EvaluationLinkState | undefined = item.entry_ref ? { edit: item.entry_ref } : undefined
+    if (item.link) navigate(item.link, { state })
   }
 
   const group = (label: string, items: AppNotification[]) => items.length > 0 && (
     <section className="notif-group" aria-label={label}>
       <h3>{label}</h3>
-      <ul>{items.map(item => <NotificationRow key={item.id} item={item} unread={!read.has(item.id)} onOpen={() => void openItem(item)} />)}</ul>
+      <ul>{items.map(item => <NotificationRow key={item.id} item={item} unread={!item.read} onOpen={() => openItem(item)} />)}</ul>
     </section>
   )
 
@@ -105,13 +103,13 @@ export function NotificationsMenu() {
       <button
         ref={buttonRef}
         className="notification-button"
-        aria-label={unread.length ? `Notifications, ${unread.length} unread` : "Notifications"}
+        aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"}
         aria-expanded={open}
         aria-controls="notifications-panel"
         onClick={() => (open ? close() : setOpen(true))}
       >
         <Bell aria-hidden />
-        {unread.length > 0 && <span className="notif-bell-badge" aria-hidden="true">{badgeCount(unread.length)}</span>}
+        {unreadCount > 0 && <span className="notif-bell-badge" aria-hidden="true">{badgeCount(unreadCount)}</span>}
       </button>
 
       <div
@@ -128,11 +126,11 @@ export function NotificationsMenu() {
           <header className="notif-head">
             <div className="notif-title">
               <h2>Notifications</h2>
-              {unread.length > 0 && <span className="notif-count" aria-label={`${unread.length} unread`}>{badgeCount(unread.length)}</span>}
+              {unreadCount > 0 && <span className="notif-count" aria-label={`${unreadCount} unread`}>{badgeCount(unreadCount)}</span>}
             </div>
             <div className="notif-head-actions">
-              <button className="notif-mark-all" onClick={markAllRead} disabled={unread.length === 0}>
-                <Check aria-hidden />{unread.length ? "Mark all read" : "All read"}
+              <button className="notif-mark-all" onClick={markAllRead} disabled={unreadCount === 0}>
+                <Check aria-hidden />{unreadCount ? "Mark all read" : "All read"}
               </button>
               {expanded && <button className="notif-icon-button" aria-label="Show fewer notifications" onClick={() => setExpanded(false)}><Minimize2 aria-hidden /></button>}
               {expanded && <button className="notif-icon-button" aria-label="Close notifications" onClick={close}><X aria-hidden /></button>}
@@ -142,7 +140,7 @@ export function NotificationsMenu() {
           <div className="notif-tabs" role="tablist" aria-label="Filter notifications">
             {(["all", "unread"] as const).map(id => (
               <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
-                {id === "all" ? `All (${notifications.length})` : `Unread (${unread.length})`}
+                {id === "all" ? `All (${notifications.length})` : `Unread (${unreadCount})`}
               </button>
             ))}
           </div>
@@ -154,8 +152,8 @@ export function NotificationsMenu() {
               ? (
                 <div className="notif-empty">
                   <span><Bell aria-hidden /></span>
-                  <p>You're all caught up</p>
-                  <small>No unread notifications. New review updates and reminders will appear here.</small>
+                  <p>{tab === "unread" ? "You're all caught up" : "No notifications yet"}</p>
+                  <small>Forms sent to you, review decisions and deadline reminders appear here.</small>
                 </div>
               )
               : <>{group("Today", today)}{group("Earlier", earlier)}</>}
@@ -179,7 +177,7 @@ function NotificationRow({ item, unread, onOpen }: { item: AppNotification; unre
   return (
     <li>
       <button className="notif-row" data-unread={unread || undefined} onClick={onOpen}>
-        <span className={`notif-icon tone-${item.tone}`}><KindIcon aria-hidden /></span>
+        <span className={`notif-icon tone-${toneOf[item.kind] ?? "info"}`}>{KindIcon ? <KindIcon aria-hidden /> : <Bell aria-hidden />}</span>
         <span className="notif-text">
           <span className="notif-row-title">{item.title}</span>
           <span className="notif-row-detail">{item.detail}</span>

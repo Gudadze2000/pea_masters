@@ -115,6 +115,8 @@ export type EvaluationBrief = {
   entries: number
   review_state: ReviewState | null
   final_score: number | null
+  /** An Admin gave this person until this day (ISO date) */
+  deadline_override: string | null
 }
 
 export type RosterRow = { person: Person; evaluation: EvaluationBrief | null }
@@ -183,14 +185,31 @@ export type EntryInput = {
 
 export type EntryRef = { item_id: string; entry_id: string }
 
+export type PartScore = {
+  id: string
+  numeral: string
+  name: string
+  /** Entries not rejected, within the item's and the part's limits */
+  score: number
+  min: number | null
+  cap: number | null
+}
+
 export type MyEvaluationBrief = {
   id: string
+  /** As it is for this person (a deadline extended for them included) */
   period: EvaluationPeriod
+  deadline_extended: boolean
   form_name: Localized
   state: EvaluationState
   submitted_at: string | null
   review_state: ReviewState | null
+  review_comment: string | null
   final_score: number | null
+  /** So far: entries sent and not rejected; the final score counts approved ones only */
+  score: number
+  total_minimum: number | null
+  parts: PartScore[]
   entries: number
   rejected: number
   missing_files: number
@@ -200,7 +219,9 @@ export type MyEvaluationBrief = {
 
 export type MyEvaluation = {
   id: string
+  /** As it is for this person: ends_on and status follow a deadline an Admin extended for them */
   period: EvaluationPeriod
+  deadline_extended: boolean
   form_name: Localized
   structure: FormStructure
   state: EvaluationState
@@ -297,4 +318,17 @@ export const reviewApi = {
     api<EvaluationReview>(`${review(orgId, id)}/review`, { method: "POST", body: { decision, comment: comment || null } }),
   /** Looks the entry's DOI up in Web of Science on the server; includes_you is about the researcher */
   checkDoi: (orgId: string, id: string, entryId: string) => api<WosArticle>(`${review(orgId, id)}/entries/${entryId}/wos`),
+}
+
+/* ---------- Admins: exceptions for one person ---------- */
+
+export type ExceptionResult = { deadline_override: string | null; period: EvaluationPeriod }
+
+export const exceptionsApi = {
+  /** A later deadline for one person (ISO date), or null to take it away */
+  setDeadline: (orgId: string, id: string, endsOn: string | null, reason: string) =>
+    api<ExceptionResult>(`${review(orgId, id)}/deadline`, { method: "PUT", body: { ends_on: endsOn, reason: reason || null } }),
+  /** Takes an approval back: the form waits for review again */
+  reopen: (orgId: string, id: string, reason: string | null) =>
+    api<ExceptionResult>(`${review(orgId, id)}/reopen`, { method: "POST", body: { reason } }),
 }

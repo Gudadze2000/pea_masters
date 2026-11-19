@@ -214,3 +214,36 @@
   .dashboard-sidebar, [data-slot="sidebar-gap"], .nav-group-items,
   .dashboard-sidebar :is(.dashboard-nav-link, .dashboard-brand, .user-card, .workspace-label, .user-card .grow) { transition: none !important; }
 }
+
+/* ---------- Shared by several pages ----------
+   Each page loads only its own stylesheet (App.tsx loads pages on demand), so anything more than one page uses lives
+   here, in the stylesheet every signed-in page loads. */
+.page-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.page-actions .dashboard-button { height: 42px; }
+.row-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.nowrap { white-space: nowrap; }
+.muted { color: var(--muted-foreground); }
+
+/* Two or three options side by side, one selected (role="tab" buttons with aria-checked) */
+.segmented { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--radius-md); background: var(--muted); }
+.segmented button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 6px; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-600); white-space: nowrap; cursor: pointer; }
+.segmented button svg { width: 14px; height: 14px; }
+.segmented button:hover { color: var(--foreground); }
+.segmented [aria-checked="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgb(31 26 26 / .08); }
+
+/* A person's initials in a circle, next to their name */
+.researcher { display: inline-flex; align-items: center; gap: 12px; font-weight: 500; }
+.researcher-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--color-brand-100); color: var(--color-brand-700); font-size: 12px; font-weight: 500; }
+
+/* Spinning loader icon */
+.wos-spin { animation: wos-spin 1s linear infinite; }
+@keyframes wos-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .wos-spin { animation: none; } }
+
+/* "Are you sure?" dialog (ConfirmDialog in Pages/CvBuilder/cv-ui.tsx) */
+.confirm-backdrop { position: fixed; inset: 0; z-index: 50; background: rgb(0 0 0 / .25); }
+.confirm-dialog { position: fixed; z-index: 50; top: 50%; left: 50%; transform: translate(-50%, -50%); width: calc(100% - 32px); max-width: 420px; padding: 24px; border-radius: var(--radius-3xl); background: var(--card); box-shadow: var(--shadow-modal); }
+.confirm-title { font-size: 18px; line-height: 26px; font-weight: 600; }
+.confirm-description { margin-top: 6px; font-size: 14px; line-height: 22px; color: var(--color-neutral-600); overflow-wrap: anywhere; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+.confirm-actions .dashboard-button { height: 40px; }

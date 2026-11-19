@@ -175,7 +175,8 @@ def test_send_fill_in_submit_and_resubmit(admin_page: Page, organization, google
     # 6. The researcher sees why, and can ask the coordinator: an email to the head of department, filled in
     page.reload()
     expect(page.get_by_text("Your coordinator returned your form")).to_be_visible()
-    expect(page.get_by_text("Please attach the right PDF and resubmit.")).to_be_visible()
+    expect(page.locator(".evaluation-banner", has_text="returned your form")).to_contain_text(
+        "Please attach the right PDF and resubmit.")
     page.get_by_role("tab", name=re.compile("II · Research")).click()
     page.get_by_role("button", name="Ask coordinator").click()
     dialog = page.get_by_role("dialog")
@@ -234,6 +235,91 @@ def test_send_fill_in_submit_and_resubmit(admin_page: Page, organization, google
     expect(page.get_by_role("button", name="Update submission")).to_have_count(0)
     expect(page.get_by_role("button", name="Add entry")).to_have_count(0)
     shot(page, "evaluation-04-approved")
+
+    assert not errors, errors
+
+
+def test_an_admin_reopens_and_extends_for_one_person(admin_page: Page, google_sign_in, shot):
+    """Continues from test_send_fill_in_submit_and_resubmit, which ends with Eka's evaluation approved: the Admin takes
+    the approval back and gives Eka ten more days than the period."""
+    page = admin_page
+    page.goto("/admin/evaluations")
+    page.get_by_label("Evaluation period").select_option(label=f"{PERIOD} (open)")
+    row = page.locator(".send-table tbody tr", has_text=RESEARCHER[0])
+    expect(row).to_contain_text("Approved")
+
+    row.get_by_role("button", name=f"Reopen {RESEARCHER[0]}'s evaluation").click()
+    sheet = page.get_by_role("dialog")
+    expect(sheet).to_contain_text("The approval and the final score (50) are taken back")
+    sheet.get_by_label("Reason").fill("The 2026 article was published after the cut-off.")
+    sheet.get_by_role("button", name="Reopen evaluation").click()
+    expect(row).to_contain_text("To review")
+
+    later = date.today() + timedelta(days=40)  # the period ends in 30 days
+    row.get_by_role("button", name=f"Extend {RESEARCHER[0]}'s deadline").click()
+    sheet = page.get_by_role("dialog")
+    sheet.get_by_label("New deadline").fill(str(date.today() + timedelta(days=10)))
+    sheet.get_by_role("button", name="Extend deadline").click()
+    expect(sheet.get_by_role("alert")).to_contain_text("Pick a day after the period's own deadline")
+    sheet.get_by_label("New deadline").fill(str(later))
+    sheet.get_by_role("button", name="Extend deadline").click()
+    expect(row).to_contain_text(f"Deadline extended to {later.day} {later:%b %Y}")
+    shot(page, "evaluation-review-03-exceptions")
+
+    # Eka's form waits for review again, with the later deadline
+    eka = google_sign_in(RESEARCHER[1], RESEARCHER[0])
+    eka.goto("/evaluation-form")
+    expect(banner(eka)).to_have_text(re.compile("^Submitted on"))
+    expect(eka.locator(".evaluation-banner", has_text="was approved")).to_have_count(0)
+    deadline = eka.locator(".evaluation-deadline")
+    expect(deadline).to_contain_text(f"{later.day} {later:%b %Y}")
+    expect(deadline).to_contain_text("extended for you")
+    expect(eka.get_by_role("button", name="Update submission").first).to_be_visible()
+
+
+def test_dashboard_and_notifications_follow_the_evaluation(google_sign_in, shot):
+    """After the tests above: Eka's form was sent, rejected in part, returned, approved, reopened and her deadline
+    extended; her head of department was told about each submission."""
+    eka = google_sign_in(RESEARCHER[1], RESEARCHER[0])
+    errors: list[str] = []
+    eka.on("pageerror", lambda error: errors.append(str(error)))
+    eka.goto("/home")
+    expect(eka.locator(".evaluation-banner")).to_contain_text("waiting for review")
+    expect(eka.locator(".stat-card", has_text="Evaluation status")).to_contain_text("Submitted")
+    expect(eka.locator(".stat-card", has_text="Time left")).to_contain_text("(extended for you)")
+    expect(eka.locator(".dashboard-card", has_text="Evaluation progress")).to_contain_text("II. Research")
+    shot(eka, "dashboard-01-researcher")
+
+    # Every step reached her bell, newest first
+    bell = eka.get_by_role("button", name=re.compile("^Notifications"))
+    expect(bell).to_have_accessible_name("Notifications, 6 unread")
+    bell.click()
+    panel = eka.locator("#notifications-panel")
+    panel.get_by_role("button", name="View all notifications").click()
+    titles = panel.locator(".notif-row-title")
+    expect(titles).to_have_text(["Your deadline was extended", "Your evaluation was reopened",
+                                 "Your evaluation was approved", "Your form was returned", "An entry was rejected",
+                                 "Your evaluation form is here"])
+    expect(panel).to_contain_text("“Allelic diversity of Caucasian landraces”: DOI does not match the attached PDF.")
+    panel.locator(".notif-row", has_text="Your evaluation was approved").click()
+    expect(eka).to_have_url(re.compile(r"/evaluation-form$"))
+    expect(bell).to_have_accessible_name("Notifications, 5 unread")
+    bell.click()
+    panel.get_by_role("button", name="Mark all read").click()
+    expect(bell).to_have_accessible_name("Notifications")
+
+    # Her head of department: told about both submissions, with a link to the review, and a "to review" card
+    head = google_sign_in(HEAD[1], HEAD[0])
+    head.goto("/home")
+    expect(head.locator(".dashboard-card", has_text="To review")).to_contain_text("1 of 1 submitted · 1 to review")
+    expect(head.locator(".attention-row", has_text="1 form waits for your review")).to_be_visible()
+    shot(head, "dashboard-02-coordinator")
+    head.get_by_role("button", name=re.compile("^Notifications")).click()
+    rows = head.locator("#notifications-panel .notif-row-title")
+    expect(rows).to_have_text([f"{RESEARCHER[0]} resubmitted their form", f"{RESEARCHER[0]} submitted their form"])
+    head.locator("#notifications-panel .notif-row").first.click()
+    expect(head).to_have_url(re.compile(r"/admin/evaluations/[0-9a-f-]{36}\?org="))
+    expect(head.get_by_role("heading", name=RESEARCHER[0], level=1)).to_be_visible()
 
     assert not errors, errors
 

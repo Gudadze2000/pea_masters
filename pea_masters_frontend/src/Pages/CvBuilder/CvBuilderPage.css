@@ -26,11 +26,6 @@
 .cv-warning small { display: block; margin-top: 2px; font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
 
 /* Segmented control (visibility, preview mode, citation style) */
-.segmented { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--radius-md); background: var(--muted); }
-.segmented button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 6px; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-600); white-space: nowrap; cursor: pointer; }
-.segmented button svg { width: 14px; height: 14px; }
-.segmented button:hover { color: var(--foreground); }
-.segmented [aria-checked="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgb(31 26 26 / .08); }
 
 /* Visibility card */
 .cv-visibility-card { display: flex; flex-direction: column; gap: 16px; }

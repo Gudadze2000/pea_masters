@@ -10,6 +10,7 @@ from app import (
     cv,
     evaluation_reviews,
     evaluations,
+    notifications,
     orcid,
     people,
     positions,
@@ -60,6 +61,7 @@ app.include_router(cv.router)
 app.include_router(evaluations.router)
 app.include_router(sent_evaluations.router)
 app.include_router(evaluation_reviews.router)
+app.include_router(notifications.router)
 app.include_router(wos.router)
 app.include_router(crossref.router)
 app.include_router(research_output.router)
