@@ -1,0 +1,58 @@
+/* Administration → Evaluations (SendEvaluationsPage.tsx) */
+
+.send-toolbar { align-items: flex-end; flex-wrap: wrap; gap: 12px 16px; }
+.send-toolbar .form-field { min-width: 260px; }
+.send-toolbar > p { flex: 1; min-width: 200px; padding-bottom: 10px; }
+.send-muted { font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.send-note { margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius-lg); background: var(--muted); font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
+.send-empty-title { margin-bottom: 4px; font-size: 15px; line-height: 22px; font-weight: 600; }
+.send-empty-action { margin-top: 16px; }
+
+.send-table { min-width: 820px; }
+.send-table .send-check { width: 44px; padding-right: 0; }
+.send-table input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+.send-table input[type="checkbox"]:disabled { cursor: not-allowed; opacity: .4; }
+.send-when { display: block; margin-top: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.data-table-empty svg { display: inline; width: 16px; height: 16px; margin-right: 4px; vertical-align: -3px; }
+.muted { color: var(--muted-foreground); }
+
+.send-sheet-label { font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-700); }
+.send-sheet-people { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 14px; line-height: 22px; }
+
+/* Reviewing one form (ReviewEvaluationPage.tsx) */
+.review-part { display: flex; flex-direction: column; gap: 16px; }
+.review-empty { padding: 0 4px; }
+.review-rule { padding: 0 20px 12px 74px; font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
+.review-rule strong { font-weight: 500; color: var(--foreground); }
+.review-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 16px; padding: 16px 20px; border-top: 1px solid var(--border); }
+.review-entry[data-status="approved"] { background: color-mix(in srgb, var(--success-soft) 45%, transparent); }
+.review-entry[data-status="rejected"] { background: color-mix(in srgb, var(--danger-soft) 45%, transparent); }
+.review-entry-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.review-entry-title { font-size: 14px; line-height: 22px; font-weight: 500; overflow-wrap: anywhere; }
+.review-entry-main > small { font-size: 12px; line-height: 18px; color: var(--muted-foreground); overflow-wrap: anywhere; }
+.review-entry-files { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; line-height: 20px; }
+.review-entry-files a { display: inline-flex; align-items: center; gap: 4px; color: var(--color-brand-700); }
+.review-entry-files a:hover { text-decoration: underline; }
+.review-entry-comment { font-size: 13px; line-height: 20px; color: var(--destructive); }
+.review-entry-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.review-entry-actions { display: flex; gap: 6px; }
+.review-approve { background: var(--success); color: #fff; }
+.review-approve:hover { background: color-mix(in srgb, var(--success) 88%, #000); }
+.review-reject { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
+.review-reject label { font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-700); }
+.review-reject-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.review-check { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-size: 12px; line-height: 18px; color: var(--color-neutral-700); }
+.review-check svg { width: 14px; height: 14px; flex-shrink: 0; }
+.review-check a { display: inline-flex; align-items: center; gap: 2px; color: var(--color-brand-700); }
+.review-check a svg { width: 12px; height: 12px; }
+.review-check-good { color: var(--success); }
+.review-check-bad { color: var(--destructive); }
+.review-decision { display: flex; flex-direction: column; gap: 12px; }
+.review-decision hr { border: 0; border-top: 1px solid var(--border); }
+.review-decision small { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+
+@media (max-width: 767.98px) {
+  .review-entry { grid-template-columns: minmax(0, 1fr); }
+  .review-entry-side { align-items: flex-start; }
+  .review-rule { padding-left: 20px; }
+}

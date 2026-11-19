@@ -3,7 +3,6 @@ import { AlertTriangle, LoaderCircle } from "lucide-react"
 import { api, ApiError } from "@/lib/api"
 import { useLanguage } from "@/lib/language-context"
 import { groupByFaculty, localName, type LocalizedName, type Unit } from "@/lib/people"
-import { PUBLICATION_YEARS } from "@/Pages/EvaluationForm/evaluation-model"
 
 /** GET /api/v1/orgs/{org}/research-output (app/research_output.py) */
 type PersonOutput = {
@@ -40,8 +39,9 @@ const YEARS = Array.from({ length: thisYear - FIRST_YEAR + 1 }, (_, i) => thisYe
  */
 export function ResearchOutputPanel({ orgId, units, canPickUnit }: { orgId: string; units: Unit[]; canPickUnit: boolean }) {
   const { language } = useLanguage()
-  const [from, setFrom] = useState(PUBLICATION_YEARS.from)
-  const [to, setTo] = useState(Math.min(PUBLICATION_YEARS.to, thisYear))
+  // The last three years by default; any range can be picked
+  const [from, setFrom] = useState(thisYear - 2)
+  const [to, setTo] = useState(thisYear)
   const [unitId, setUnitId] = useState("")
   const [state, setState] = useState<State>({ status: "loading" })
   const [request, setRequest] = useState("")

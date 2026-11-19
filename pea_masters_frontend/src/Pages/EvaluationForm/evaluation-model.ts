@@ -1,195 +1,120 @@
-import { parts, type Part } from './self-assessment'
+import type { EntryStatus, EvaluationEntry, FormStructure, SubmittedEntry } from '@/lib/evaluations'
 
-export type EvaluationEntry = {
-  id: string
-  description: string
-  detail: string
-  files: string[]
-  status: 'Draft' | 'Approved' | 'Rejected' | 'Submitted'
-  comment?: string
-  /** Points claimed for this entry, only on record types scored per entry (RecordDef.variablePoints) */
-  points?: number
-  /** The researcher chose not to send it: kept in the draft, left out of the score and the submission */
-  hidden?: boolean
-  /** Web of Science check of the entry's DOI when it was saved, shown to the researcher and the reviewer */
-  wos?: WosCheck
-}
+/*
+ * The evaluation page works on the form the coordinator sent (a copy of it, kept with the evaluation on the server)
+ * and the entries saved there. This file turns the form into what the page shows and works out the scores.
+ */
 
-export type WosCheck = {
-  doi: string
-  found: boolean
-  checkedAt: string
-  title?: string
-  source?: string
-  year?: number
-  timesCited?: number
-  recordUrl?: string
-  /** False when the researcher's family name isn't among the authors */
-  includesYou?: boolean
-  /** Not in Web of Science: whether Crossref knows the DOI at all */
-  registered?: boolean
-  /** Not in Web of Science: whether its journal is in Web of Science's journal list, and the journal's name */
-  journalInWos?: boolean
-  journal?: string
-}
+export type { EvaluationEntry, WosCheck } from '@/lib/evaluations'
 
-/** Entries that are part of the form; hidden ones are kept but never sent or scored */
-export const isSent = (entry: EvaluationEntry) => !entry.hidden
-
-/** One kind of scored activity: the original records below and every item of the ISU self-assessment form */
+/** One item of the form: researchers add entries to it, each worth `points` (or what the entry states) */
 export type RecordDef = {
   id: string
-  /** Item number on the ISU form, e.g. "2.1" */
+  /** Item number, e.g. "2.1" */
   code?: string
   name: string
   georgian: string
-  /** Points per entry (the form's "unit points") */
+  /** Points per entry */
   points: number
   icon: string
-  required: boolean
-  /** Most entries that can count (from the form's answer options) */
+  /** Most entries that can count */
   maxEntries?: number
-  /** Most points this record can contribute */
+  /** Most points this item can contribute */
   maxPoints?: number
   /** Set when each entry states its own points; the text explains the rule */
   variablePoints?: string
-  /** What to write in the description (the form's "performance indicator") */
+  /** What to write in the entry */
   hint?: string
 }
 
-export const records = [
-  { id: 'article', name: 'Article - Scopus / WoS indexed', georgian: 'სტატია (Scopus / WoS)', points: 10, icon: 'imgIconFile1', required: true },
-  { id: 'monograph', name: 'Monograph', georgian: 'მონოგრაფია', points: 20, icon: 'imgIconBook1', required: false },
-  { id: 'conference', name: 'Conference presentation', georgian: 'კონფერენციაზე მოხსენება', points: 3, icon: 'imgIconUsers', required: true },
-  { id: 'grant', name: 'Research grant - international', georgian: 'საერთაშორისო გრანტი', points: 15, icon: 'imgIconFlask', required: false },
-  { id: 'supervision', name: 'Doctoral student supervision', georgian: 'დოქტორანტის ხელმძღვანელობა', points: 8, icon: 'imgIconGrad', required: false },
-  { id: 'patent', name: 'Patent', georgian: 'პატენტი', points: 12, icon: 'imgIconAward', required: false },
-] as const satisfies readonly RecordDef[]
+export type Part = {
+  id: string
+  numeral: string
+  name: string
+  georgian: string
+  /** Shown under the part heading */
+  rule: string
+  min?: number
+  /** Points above this don't count towards the total */
+  cap?: number
+  items: RecordDef[]
+}
+
+export type Form = { parts: Part[]; totalMinimum?: number; items: Map<string, RecordDef> }
+
+const optional = <T,>(value: T | null) => value ?? undefined
+
+export function toForm(structure: FormStructure): Form {
+  const parts = structure.parts.map(part => ({
+    id: part.id, numeral: part.numeral, name: part.name.en, georgian: part.name.ka, rule: part.rule,
+    min: optional(part.min), cap: optional(part.cap),
+    items: part.items.map(item => ({
+      id: item.id, code: item.code || undefined, name: item.name.en, georgian: item.name.ka, points: item.points,
+      icon: item.icon, maxEntries: optional(item.max_entries), maxPoints: optional(item.max_points),
+      variablePoints: optional(item.variable_points), hint: item.hint || undefined,
+    })),
+  }))
+  return { parts, totalMinimum: optional(structure.total_minimum), items: new Map(parts.flatMap(part => part.items.map(item => [item.id, item]))) }
+}
+
+/** Entries that are part of the form; hidden ones are kept but never sent or scored */
+export const isSent = (entry: { hidden?: boolean }) => !entry.hidden
+
 /** Router state for linking to one entry: navigate("/evaluation-form", { state: { edit: { recordId, entryId } } }) */
 export type EvaluationLinkState = { edit?: { recordId: string; entryId: string } }
 
-/** The first entry that needs action (rejected, or missing its evidence file), for links from other pages */
-export function findEntryNeedingAttention(entries: Record<string, EvaluationEntry[]>, kind: 'rejected' | 'missing-file', preferRecordId?: string) {
-  const needs = (entry: EvaluationEntry) => entry.hidden ? false : kind === 'rejected' ? entry.status === 'Rejected' : entry.files.length === 0 && entry.status !== 'Rejected'
-  const ids = preferRecordId ? [preferRecordId, ...Object.keys(entries).filter(id => id !== preferRecordId)] : Object.keys(entries)
-  for (const recordId of ids) {
-    const entry = entries[recordId]?.find(needs)
-    if (entry) return { recordId, entryId: entry.id }
-  }
-  return null
+/** What scoring needs from an entry: the researcher's own entries, or a submission being reviewed */
+export type ScoredEntry = { item_id: string; status: EntryStatus; points: number | null; hidden?: boolean }
+
+/** Entries by item */
+export type EvaluationEntries<T extends ScoredEntry = EvaluationEntry> = Record<string, T[]>
+
+export function byItem<T extends ScoredEntry>(entries: T[]): EvaluationEntries<T> {
+  const grouped: EvaluationEntries<T> = {}
+  for (const entry of entries) (grouped[entry.item_id] ??= []).push(entry)
+  return grouped
 }
 
-/** Any record id: one of the original records above or an ISU form item ("isu-2-1") */
-export type RecordId = string
-export type EvaluationEntries = Record<RecordId, EvaluationEntry[]>
-
-/** The original records followed by every item of the ISU self-assessment form */
-export const allRecords: readonly RecordDef[] = [...records, ...parts.flatMap(part => part.items)]
-export const findRecord = (id: RecordId) => allRecords.find(record => record.id === id)
-
-/** Entries that count: everything sent except rejected ones (the backend will only count approved ones) */
-export function recordScore(record: RecordDef, entries: EvaluationEntry[] = []) {
-  const sum = entries.filter(entry => isSent(entry) && entry.status !== 'Rejected').reduce((total, entry) => total + (record.variablePoints ? entry.points ?? 0 : record.points), 0)
+/** Entries that count: everything sent except rejected ones (the final score counts approved ones only) */
+export function recordScore(record: RecordDef, entries: ScoredEntry[] = []) {
+  const sum = entries.filter(entry => isSent(entry) && entry.status !== 'rejected').reduce((total, entry) => total + (record.variablePoints ? entry.points ?? 0 : record.points), 0)
   return record.maxPoints === undefined ? sum : Math.min(sum, record.maxPoints)
 }
 
-/** A part's score as entered, and the amount that counts towards the total (social impact is capped at 20) */
-export function partScore(part: Part, entries: EvaluationEntries) {
+/** A part's score as entered, and the amount that counts towards the total (some parts are capped) */
+export function partScore(part: Part, entries: EvaluationEntries<ScoredEntry>) {
   const raw = part.items.reduce((total, record) => total + recordScore(record, entries[record.id]), 0)
   return { raw, counted: part.cap === undefined ? raw : Math.min(raw, part.cap) }
 }
-export const initialEntries: EvaluationEntries = {
-  article: [
-    { id: 'article-1', description: 'Drought-responsive transcription factors in wheat', detail: 'DOI 10.1007/s00425-023-04102', files: ['article-2023.pdf'], status: 'Approved' },
-    { id: 'article-2', description: 'Allelic diversity of Caucasian landraces', detail: 'DOI 10.1111/tpj.16221', files: ['landraces.pdf'], status: 'Rejected', comment: '“DOI does not match the attached PDF. Please upload the correct file.” - G. Kapanadze' },
-    { id: 'article-3', description: 'Transcriptomics of heat stress response', detail: 'DOI pending', files: [], status: 'Draft' },
-  ],
-  monograph: [{ id: 'monograph-1', description: 'Plant Genomics of the Caucasus (Springer, 2024)', detail: 'ISBN 978-3-031-12345-6', files: ['monograph-title-page.pdf'], status: 'Draft' }],
-  conference: [
-    { id: 'conference-1', description: 'EPSO Plant Science Conference 2025 - oral', detail: 'Vienna, 12 Sept 2025', files: ['programme.png'], status: 'Draft' },
-    { id: 'conference-2', description: 'FESPB Congress 2024 - poster', detail: 'Seville, 3 Jul 2024', files: [], status: 'Draft' },
-  ],
-  grant: [{ id: 'grant-1', description: 'Horizon Europe GENDROUGHT (PI)', detail: '2022-2025', files: ['grant-agreement.pdf'], status: 'Submitted' }],
-  supervision: [], patent: [],
-  // Every ISU form item starts empty
-  ...Object.fromEntries(parts.flatMap(part => part.items).map(record => [record.id, []])),
-}
-export const draftKey = 'pea-evaluation-draft-v1'
 
-const isEntry = (e: unknown): e is EvaluationEntry => {
-  if (!e || typeof e !== 'object') return false
-  const entry = e as Record<string, unknown>
-  return typeof entry.id === 'string' && typeof entry.description === 'string' && typeof entry.detail === 'string'
-    && Array.isArray(entry.files) && entry.files.every(file => typeof file === 'string')
-    && ['Draft', 'Approved', 'Rejected', 'Submitted'].includes(entry.status as string)
-    && (entry.points === undefined || (typeof entry.points === 'number' && Number.isFinite(entry.points)))
-    && (entry.hidden === undefined || typeof entry.hidden === 'boolean')
-    && (entry.wos === undefined || (typeof entry.wos === 'object' && entry.wos !== null
-      && typeof (entry.wos as Record<string, unknown>).doi === 'string' && typeof (entry.wos as Record<string, unknown>).found === 'boolean'))
-}
-
-export function readDraft(): EvaluationEntries {
-  try {
-    const value: unknown = JSON.parse(localStorage.getItem(draftKey) ?? 'null')
-    if (value && typeof value === 'object') {
-      const saved = value as Record<string, unknown>
-      // The original records must be valid; ISU items missing from drafts saved before they existed start empty
-      if (records.every(record => Array.isArray(saved[record.id]) && (saved[record.id] as unknown[]).every(isEntry))) {
-        return Object.fromEntries(allRecords.map(record => {
-          const list = saved[record.id]
-          return [record.id, Array.isArray(list) ? list.filter(isEntry) : []]
-        }))
-      }
-    }
-  } catch { /* Storage may be unavailable. Keep the form usable in memory. */ }
-  return initialEntries
-}
-
-/** Publication years that count for this evaluation (academic years 2024-25 and 2025-26). TODO: from the evaluation period on the server */
-export const PUBLICATION_YEARS = { from: 2024, to: 2026 }
-
-/** Last moment to submit or resubmit, set by the admin. TODO: comes from the evaluation period on the server */
-export const DEADLINE = new Date('2026-11-30T23:59:59+04:00')
-export const deadlineLabel = DEADLINE.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Tbilisi' })
-
-/** What was last sent: when, and the entries as they were then (to cancel an update and to tell what changed) */
-export type Submission = { at: string; entries: EvaluationEntries }
-const submissionKey = 'pea-evaluation-submission-v1'
-
-export function readSubmission(): Submission | null {
-  try {
-    const value: unknown = JSON.parse(localStorage.getItem(submissionKey) ?? 'null')
-    if (value && typeof value === 'object') {
-      const saved = value as Record<string, unknown>
-      const entries = saved.entries as Record<string, unknown> | undefined
-      if (typeof saved.at === 'string' && entries && typeof entries === 'object'
-        && Object.values(entries).every(list => Array.isArray(list) && list.every(isEntry))) {
-        return { at: saved.at, entries: entries as EvaluationEntries }
-      }
-    }
-  } catch { /* Storage may be unavailable */ }
-  return null
-}
-
-/** Saves the submission and the entries with it. TODO: POST to the API once evaluations are stored on the server */
-export function writeSubmission(submission: Submission) {
-  try {
-    localStorage.setItem(submissionKey, JSON.stringify(submission))
-    localStorage.setItem(draftKey, JSON.stringify(submission.entries))
-    return true
-  } catch { return false }
+export function formScore(form: Form, entries: EvaluationEntries<ScoredEntry>) {
+  const scores = form.parts.map(part => ({ part, ...partScore(part, entries) }))
+  return { scores, total: scores.reduce((sum, score) => sum + score.counted, 0) }
 }
 
 /** What an update changes compared with the last submission: new or edited entries, and entries hidden or shown again */
-export function changesSince(submitted: EvaluationEntries, current: EvaluationEntries) {
-  const before = new Map(Object.values(submitted).flat().map(entry => [entry.id, entry]))
+export function changesSince(submitted: SubmittedEntry[], current: EvaluationEntry[]) {
+  const content = (entry: { item_id: string; description: string; detail: string; points: number | null }, files: string[]) =>
+    JSON.stringify([entry.item_id, entry.description, entry.detail, entry.points, files])
+  const before = new Map(submitted.map(entry => [entry.id, entry]))
   let changed = 0, hidden = 0, shown = 0
-  for (const entry of Object.values(current).flat()) {
+  for (const entry of current) {
     const old = before.get(entry.id)
     if (!old) { if (isSent(entry)) changed++; continue }
     if (isSent(old) && !isSent(entry)) hidden++
     else if (!isSent(old) && isSent(entry)) shown++
-    else if (isSent(entry) && JSON.stringify(old) !== JSON.stringify(entry)) changed++
+    else if (isSent(entry) && content(old, old.file_ids) !== content(entry, entry.files.map(file => file.id))) changed++
   }
   return { changed, hidden, shown, any: changed + hidden + shown > 0 }
+}
+
+/** "1 Sep 2026" from an ISO date */
+export const dayLabel = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+
+/** Today's date in Tbilisi, where deadlines are set (YYYY-MM-DD) */
+export const tbilisiToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tbilisi' }).format(new Date())
+
+/** Whole days from today (Tbilisi) to the deadline: 0 on the last day */
+export function daysUntil(iso: string) {
+  return Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${tbilisiToday()}T00:00:00Z`)) / 86400000)
 }

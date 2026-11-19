@@ -5,7 +5,8 @@ import {
   badgeCount, isToday, markAllRead, markRead, notifications, timeAgo, useNotificationsRequest, useReadNotifications,
   type AppNotification, type NotificationKind,
 } from "@/lib/notifications"
-import { findEntryNeedingAttention, readDraft, type EvaluationLinkState } from "@/Pages/EvaluationForm/evaluation-model"
+import { entryNeedingAttention } from "@/lib/evaluations"
+import type { EvaluationLinkState } from "@/Pages/EvaluationForm/evaluation-model"
 import "./notifications.css"
 
 const kindIcons: Record<NotificationKind, ComponentType<{ "aria-hidden"?: boolean }>> = {
@@ -82,14 +83,11 @@ export function NotificationsMenu() {
     }
   }, [open])
 
-  const openItem = (item: AppNotification) => {
+  const openItem = async (item: AppNotification) => {
     markRead(item.id)
     close()
     if (item.kind === "rejected" || item.kind === "missing-file") {
-      const draft = readDraft()
-      const target = item.kind === "rejected"
-        ? findEntryNeedingAttention(draft, "rejected", "article")
-        : findEntryNeedingAttention(draft, "missing-file", "conference")
+      const target = await entryNeedingAttention(item.kind)
       const state: EvaluationLinkState | undefined = target ? { edit: target } : undefined
       navigate("/evaluation-form", { state })
     } else if (item.to) navigate(item.to)
@@ -98,7 +96,7 @@ export function NotificationsMenu() {
   const group = (label: string, items: AppNotification[]) => items.length > 0 && (
     <section className="notif-group" aria-label={label}>
       <h3>{label}</h3>
-      <ul>{items.map(item => <NotificationRow key={item.id} item={item} unread={!read.has(item.id)} onOpen={() => openItem(item)} />)}</ul>
+      <ul>{items.map(item => <NotificationRow key={item.id} item={item} unread={!read.has(item.id)} onOpen={() => void openItem(item)} />)}</ul>
     </section>
   )
 

@@ -39,6 +39,8 @@ const navigation: NavItem[] = [
 /** Shown to Admins and Coordinators only. The backend enforces the same rule. */
 const administration: NavItem[] = [
   { label: "People", icon: "imgIconUser1", to: "/admin/people" },
+  { label: "Evaluations", icon: "imgIconCheck", to: "/admin/evaluations" },
+  { label: "Evaluation forms", icon: "imgIconFile2", to: "/admin/evaluation-forms" },
 ]
 
 // Every page mounts its own sidebar, so whether "My profile" is open is remembered here between pages

@@ -67,7 +67,7 @@ def test_admin_sets_up_a_department_whose_head_registers_researchers(admin_page:
     nika.goto("/home")
     expect(nika.get_by_text("ADMINISTRATION")).to_have_count(0)
     nika.goto("/admin/people")
-    expect(nika.get_by_text("This page is for Admins and heads of department")).to_be_visible()
+    expect(nika).to_have_url(re.compile(r"/home$"))  # Administration pages send Researchers back to the dashboard
     page.reload()
     expect(row(page, HEAD_NAME)).to_contain_text("Active")
 

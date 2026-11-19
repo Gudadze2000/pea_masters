@@ -1,0 +1,59 @@
+/* Evaluation forms: the list (EvaluationFormsPage.tsx), the editor (FormEditorPage.tsx) and its preview (FormPreview.tsx) */
+
+/* ---------- list ---------- */
+.form-list-subtitle { margin-top: 2px; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.form-list-table { min-width: 680px; }
+.form-list-name { padding: 0; font: inherit; font-weight: 500; color: var(--foreground); text-align: left; cursor: pointer; }
+.form-list-name:hover { color: var(--color-brand-700); text-decoration: underline; }
+.form-list-name:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+.data-table-empty svg { display: inline; width: 16px; height: 16px; margin-right: 4px; vertical-align: -3px; }
+
+/* ---------- editor ---------- */
+.form-editor .segmented { align-self: flex-start; }
+.form-save-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
+.form-save-status svg { width: 16px; height: 16px; color: var(--success); }
+.form-save-status.unsaved { color: var(--color-warning-600); font-weight: 500; }
+.form-readonly-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: var(--muted); font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-700); }
+.form-readonly-badge svg { width: 14px; height: 14px; }
+.form-readonly-note { padding: 12px 16px; border-radius: var(--radius-lg); background: var(--info-soft); color: var(--info); font-size: 13px; line-height: 20px; }
+
+.form-part { display: flex; flex-direction: column; gap: 16px; }
+.form-part .card-heading { margin-bottom: 0; }
+.form-items-heading { margin-top: 4px; font-size: 13px; line-height: 20px; font-weight: 600; color: var(--color-neutral-700); }
+.form-items { display: flex; flex-direction: column; gap: 8px; }
+.form-item { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); }
+.form-item[data-open] { border-color: var(--input); box-shadow: 0 1px 2px rgb(31 26 26 / .06); }
+.form-item[data-problem] { border-color: var(--destructive); }
+.form-item-summary { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 4px; }
+.form-item-toggle { display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; padding: 4px 8px; border-radius: var(--radius-md); text-align: left; cursor: pointer; }
+.form-item-toggle:hover { background: var(--muted); }
+.form-item-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.form-item-toggle .evaluation-record-code { margin-right: 0; flex-shrink: 0; }
+.form-item-chevron { width: 16px; height: 16px; flex-shrink: 0; color: var(--muted-foreground); transform: rotate(-90deg); transition: transform .15s; }
+.form-item[data-open] .form-item-chevron { transform: none; }
+.form-item-title { display: flex; flex-direction: column; min-width: 0; }
+.form-item-title > span { overflow: hidden; font-size: 14px; line-height: 22px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.form-item-title small { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.form-item[data-problem] .form-item-title small { color: var(--destructive); }
+.form-item-title small svg { width: 13px; height: 13px; }
+.form-item-body { padding: 16px; border-top: 1px solid var(--border); }
+.form-check-field { justify-content: flex-end; min-height: 100%; }
+.form-check { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-700); cursor: pointer; }
+.form-check input { width: 16px; height: 16px; accent-color: var(--primary); }
+.form-add-item, .form-add-part { align-self: flex-start; }
+
+@media (prefers-reduced-motion: reduce) { .form-item-chevron { transition: none; } }
+
+/* ---------- preview ---------- */
+.form-preview { display: flex; flex-direction: column; gap: 24px; }
+.form-preview-intro { display: flex; flex-direction: column; gap: 6px; }
+.form-preview-intro h2 { font-size: 17px; line-height: 24px; font-weight: 600; }
+.form-preview-rules { font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
+.form-preview-notes { display: flex; flex-direction: column; gap: 4px; padding: 0 20px 16px 74px; font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
+.form-preview-notes strong { font-weight: 500; color: var(--foreground); }
+.muted { color: var(--muted-foreground); }
+
+@media (max-width: 767.98px) {
+  .form-preview-notes { padding-left: 20px; }
+  .form-item-summary .row-actions { gap: 4px; }
+}

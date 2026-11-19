@@ -3,9 +3,10 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Identity, Text, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Identity, Numeric, Text, func
 from sqlalchemy.dialects.postgresql import ENUM, INET, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -309,9 +310,64 @@ class EvaluationForm(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
     organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"))
     owner_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    name: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)  # English
+    name_ka: Mapped[str] = mapped_column(Text, server_default="")
     description: Mapped[str] = mapped_column(Text, server_default="")
     structure: Mapped[dict[str, Any]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
     archived_at: Mapped[datetime | None]
+
+
+class Evaluation(Base):
+    """A form sent to one researcher for one evaluation period (app/sent_evaluations.py)"""
+    __tablename__ = "evaluations"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"))
+    period_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("evaluation_periods.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    form_ref: Mapped[str] = mapped_column(Text)  # a built-in key or a custom form's id
+    form_name: Mapped[str] = mapped_column(Text)
+    form_name_ka: Mapped[str] = mapped_column(Text, server_default="")
+    form_structure: Mapped[dict[str, Any]] = mapped_column(JSONB)  # the form as it was when sent
+    sent_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    sent_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    started_at: Mapped[datetime | None]  # first entry added: the form can't be replaced or withdrawn any more
+    state: Mapped[str] = mapped_column(Text, server_default="draft")  # draft | submitted | updating
+    submitted_at: Mapped[datetime | None]
+    submission: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)  # the entries as last submitted
+    withdrawn_at: Mapped[datetime | None]
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    review_state: Mapped[str | None] = mapped_column(Text)  # approved (final) | returned | None: waiting
+    review_comment: Mapped[str | None] = mapped_column(Text)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    reviewed_at: Mapped[datetime | None]
+    final_score: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))  # set when approved
+
+
+class EvaluationEntry(Base):
+    """One entry on an evaluation: an article, a semester's teaching, a grant…"""
+    __tablename__ = "evaluation_entries"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    evaluation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("evaluations.id", ondelete="CASCADE"))
+    item_id: Mapped[str] = mapped_column(Text)
+    description: Mapped[str] = mapped_column(Text)
+    detail: Mapped[str] = mapped_column(Text, server_default="")
+    points: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))  # only on items whose entries state their points
+    hidden: Mapped[bool] = mapped_column(server_default="false")
+    status: Mapped[str] = mapped_column(Text, server_default="draft")  # draft | submitted | approved | rejected
+    review_comment: Mapped[str | None] = mapped_column(Text)
+    wos: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    reviewed_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class EvaluationEntryFile(Base):
+    """Evidence attached to an evaluation entry (an uploaded document)"""
+    __tablename__ = "evaluation_entry_files"
+    entry_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("evaluation_entries.id", ondelete="CASCADE"),
+                                                primary_key=True)
+    file_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("files.id"), primary_key=True)
+    position: Mapped[int] = mapped_column(server_default="0")
