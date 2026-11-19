@@ -178,9 +178,6 @@
 .wos-actions .dashboard-button, .wos-actions button { background: var(--card); }
 .wos-actions a { display: inline-flex; align-items: center; gap: 4px; color: var(--primary); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
 .wos-actions a svg { width: 13px; height: 13px; }
-.wos-spin { animation: wos-spin 1s linear infinite; }
-@keyframes wos-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .wos-spin { animation: none; } }
 .wos-badge { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 99px; background: var(--success-soft); color: var(--success); font-size: 11px; line-height: 16px; font-weight: 500; text-decoration: none; white-space: nowrap; }
 a.wos-badge:hover { text-decoration: underline; }
 .wos-badge-missing, .wos-badge-warn { background: var(--color-warning-50); color: var(--color-warning-600); }

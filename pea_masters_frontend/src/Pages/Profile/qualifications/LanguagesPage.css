@@ -1,5 +1,4 @@
 /* My profile → Professional & qualifications → Languages (table editor) */
-.page-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 /* The table's layout follows the card's own width (container query), not the screen:
    the card is narrower than the screen whenever the sidebar or section menu is beside it. */
 .languages-card { display: flex; flex-direction: column; gap: 16px; container: languages / inline-size; }

@@ -51,7 +51,6 @@
 .form-preview-rules { font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
 .form-preview-notes { display: flex; flex-direction: column; gap: 4px; padding: 0 20px 16px 74px; font-size: 13px; line-height: 20px; color: var(--color-neutral-700); }
 .form-preview-notes strong { font-weight: 500; color: var(--foreground); }
-.muted { color: var(--muted-foreground); }
 
 @media (max-width: 767.98px) {
   .form-preview-notes { padding-left: 20px; }

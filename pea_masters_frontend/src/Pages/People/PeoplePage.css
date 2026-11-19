@@ -1,10 +1,6 @@
 /* People page (PeoplePage.tsx, PersonSheet.tsx, DepartmentsPanel.tsx) */
 
 .people-tabs { align-self: flex-start; }
-.segmented { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--radius-md); background: var(--muted); }
-.segmented button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 6px; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-600); white-space: nowrap; cursor: pointer; }
-.segmented button:hover { color: var(--foreground); }
-.segmented [aria-checked="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgb(31 26 26 / .08); }
 
 .people-load-error { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .org-select { width: auto; min-width: 200px; }
@@ -20,8 +16,6 @@
 .people-table tr[data-inactive] .researcher-avatar { background: var(--muted); color: var(--muted-foreground); }
 .person-name { display: flex; flex-direction: column; min-width: 0; }
 .person-name small { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--muted-foreground); }
-.nowrap { white-space: nowrap; }
-.muted { color: var(--muted-foreground); }
 
 .role-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .role-chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; background: var(--muted); font-size: 12px; line-height: 18px; font-weight: 500; color: var(--color-neutral-700); white-space: nowrap; }

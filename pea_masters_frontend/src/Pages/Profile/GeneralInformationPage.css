@@ -1,7 +1,5 @@
 /* My profile → General information. Shell/card/button styles come from components/layout/app-shell.css */
 .profile-content { gap: 24px; }
-.page-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.page-actions .dashboard-button { height: 42px; }
 .save-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 20px; color: var(--success); }
 .save-status svg { width: 16px; height: 16px; }
 
