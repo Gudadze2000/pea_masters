@@ -24,6 +24,7 @@ const EvaluationFormsPage = page(() => import("./Pages/EvaluationForms/Evaluatio
 const FormEditorPage = page(() => import("./Pages/EvaluationForms/FormEditorPage"), "FormEditorPage")
 const SendEvaluationsPage = page(() => import("./Pages/Evaluations/SendEvaluationsPage"), "SendEvaluationsPage")
 const ReviewEvaluationPage = page(() => import("./Pages/Evaluations/ReviewEvaluationPage"), "ReviewEvaluationPage")
+const PrivacyPage = page(() => import("./Pages/Privacy/PrivacyPage"), "PrivacyPage")
 
 /** Shown while a page's file loads: nothing at first, so a quick load doesn't flash a message */
 function PageLoading() {
@@ -45,6 +46,8 @@ function App() {
         {/* Landing page is the login screen; it forwards to /home when already signed in. */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
+        {/* Public: readable without signing in (Google asks for a privacy policy link) */}
+        <Route path="/privacy" element={<PrivacyPage />} />
         {/* Accounts are created by an organization's Admin, not by self-registration */}
         <Route path="/register" element={<Navigate to="/login" replace />} />
         {/* Everything below needs a signed-in user */}

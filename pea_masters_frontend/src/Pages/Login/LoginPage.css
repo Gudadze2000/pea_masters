@@ -164,3 +164,7 @@
   .login-content { padding: 4.5rem 1rem 2rem; }
   .login-language { top: 1rem; right: 1rem; }
 }
+
+/* Link to the privacy page, under the sign-in form */
+.login-privacy { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
+.login-privacy:hover { color: var(--color-brand-700); text-decoration: underline; }
