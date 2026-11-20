@@ -29,7 +29,7 @@ Crossref and ORCID, and Docker Hub, PyPI, npm and GitHub work too. `ghcr.io` is 
 Connect to the VPN, then `ssh pea-server`:
 
 ```bash
-git clone https://github.com/Gudadze2000/pea_masters.git ~/pea_masters
+git clone https://github.com/Pea-Iliauni/pea_masters.git ~/pea_masters
 cd ~/pea_masters
 git switch backup_test_branch      # the branch the server runs; deploy.sh pulls this branch
 sudo ./deploy/install.sh           # Docker, firewall, automatic security updates, backups folder
