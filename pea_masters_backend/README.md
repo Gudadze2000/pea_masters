@@ -89,7 +89,9 @@ from Argus, which isn't connected yet.
 Research outputs (`app/research_outputs.py`, `research_outputs`): publications, datasets, and software and code on
 My profile, kept all year. Added by hand, by DOI (the browser looks it up in Crossref, then DataCite for datasets and
 software), or imported from Web of Science, ORCID or a BibTeX file (`POST …/research-outputs/import` adds many and skips
-ones already there). One DOI, or without one the same title and year, appears once per person.
+ones already there). One DOI, or without one the same title and year, appears once per person. The evaluation form
+offers the ones from the period's publication years that aren't in it yet ("From your profile"; an entry can also be
+filled in from any of them), so nothing is typed twice.
 
 CV builder (`app/cv.py`): each person's CV (headline, research statement, links, talks, layout, visibility, and which
 research outputs it leaves out) is one document in `cvs`, saved with the page's Save button or Ctrl+S

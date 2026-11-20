@@ -31,8 +31,10 @@ type State = { status: 'loading' } | { status: 'ready'; documents: WosArticle[] 
  * "Missing from your form": the researcher's Web of Science documents from the evaluation years that aren't in any
  * entry yet, found by the ResearcherID / ORCID iD on their profile. Adding one opens a filled-in entry.
  */
-export function MissingFromForm({ entries, years: { from, to }, locked, onAdd }: {
+export function MissingFromForm({ entries, onProfile, years: { from, to }, locked, onAdd }: {
   entries: EvaluationEntry[]
+  /** DOIs on My profile → Research outputs: "From your profile" offers those, so they aren't listed here too */
+  onProfile: Set<string>
   /** The publication years that count for the evaluation period */
   years: { from: number; to: number }
   locked: boolean; onAdd: (article: WosArticle) => void
@@ -66,7 +68,8 @@ export function MissingFromForm({ entries, years: { from, to }, locked, onAdd }:
   if (state.status === 'error') return <p className="missing-card missing-quiet" role="status"><Search aria-hidden="true" />Couldn't look for your articles in Web of Science: {state.message}</p>
   if (state.status === 'no-identifier') return <p className="missing-card missing-quiet"><Search aria-hidden="true" /><span>Let PEA find your Web of Science articles: add your ResearcherID or ORCID iD in <Link to="/profile#identifiers" className="text-action">My profile → Research identifiers</Link>.</span></p>
 
-  const missing = state.documents.filter(article => !dismissed.has(articleKey(article)) && !inForm(article, entries))
+  const missing = state.documents.filter(article => !dismissed.has(articleKey(article)) && !inForm(article, entries)
+    && !(article.doi && onProfile.has(article.doi.toLowerCase())))
   if (missing.length === 0) return null
   const shown = expanded ? missing : missing.slice(0, SHOWN)
 

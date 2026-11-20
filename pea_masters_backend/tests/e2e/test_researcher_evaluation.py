@@ -305,7 +305,9 @@ def test_dashboard_and_notifications_follow_the_evaluation(google_sign_in, shot)
     expect(eka).to_have_url(re.compile(r"/evaluation-form$"))
     expect(bell).to_have_accessible_name("Notifications, 5 unread")
     bell.click()
-    panel.get_by_role("button", name="Mark all read").click()
+    mark_all = panel.get_by_role("button", name="Mark all read")
+    expect(mark_all).to_be_enabled()
+    mark_all.click()
     expect(bell).to_have_accessible_name("Notifications")
 
     # Her head of department: told about both submissions, with a link to the review, and a "to review" card
@@ -418,7 +420,7 @@ def test_publications_are_found_by_researcher_id(admin_page: Page, organization,
     # 2. The evaluation form lists the period's 2024-2026 documents that aren't in it: not the 2019 one, and not
     # Heat-shock proteins, which test_articles_are_checked_in_web_of_science added (the form is on the server)
     open_article_item(page)
-    missing = page.locator(".missing-card")
+    missing = page.locator(".missing-card", has_text="Web of Science")
     expect(missing.get_by_role("heading")).to_have_text("1 Web of Science article from 2024–2026 isn't in your form")
     expect(missing).to_contain_text("Root architecture of drought-tolerant wheat")
     expect(missing).not_to_contain_text("Seed bank digitisation")
@@ -634,5 +636,41 @@ def test_research_outputs_on_the_profile(admin_page: Page, google_sign_in, shot)
     section.get_by_role("button", name="Delete landrace-tools").click()
     page.get_by_role("alertdialog").get_by_role("button", name="Delete").click()
     expect(section.locator(".outputs-group", has_text="Software and code")).to_have_count(0)
+
+    assert not errors, errors
+
+
+def test_the_evaluation_form_offers_outputs_from_the_profile(admin_page: Page, shot):
+    """After test_research_outputs_on_the_profile: the Admin's profile holds a 2025 dataset that isn't on the
+    evaluation form, and publications outside the period's years (2024-2026), which aren't offered."""
+    page = admin_page
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.goto("/evaluation-form")
+    card = page.locator(".missing-card", has_text="on your profile")
+    expect(card.get_by_role("heading")).to_have_text(
+        "1 research output from 2024–2026 on your profile isn't in your form")
+    expect(card).to_contain_text("Caucasian wheat landraces: genotype data")
+    expect(card).not_to_contain_text("Barley in the Caucasus")  # 2022: outside the period's years
+    shot(page, "evaluation-07-from-profile")
+
+    # Adding it opens a filled-in entry: a citation, and its DOI
+    card.get_by_role("button", name="Add Caucasian wheat landraces: genotype data").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog.get_by_label(re.compile("^Performance indicator"))).to_have_value(
+        "Admin T (2025). Caucasian wheat landraces: genotype data (version 2.1) [Dataset]. Zenodo.")
+    expect(dialog.get_by_label(re.compile("^DOI"))).to_have_value(DATACITE_DOI)
+    dialog.get_by_role("button", name="Save as draft").click()
+    expect(card).to_have_count(0)
+
+    # Starting from an item, the entry can be filled in from any output not in the form yet
+    open_article_item(page)
+    record_card(page, ARTICLE).get_by_role("button", name="Add entry").click()
+    dialog = page.get_by_role("dialog")
+    dialog.get_by_label("Fill in from my profile").select_option(label="Barley in the Caucasus (2022)")
+    expect(dialog.get_by_label(re.compile("^Performance indicator"))).to_have_value(
+        "Admin T (2022). Barley in the Caucasus. Genetic Resources.")
+    expect(dialog.get_by_label(re.compile("^DOI"))).to_have_value("10.5555/pea.e2e.orcid-1")
+    dialog.get_by_role("button", name="Cancel").click()
 
     assert not errors, errors

@@ -231,3 +231,17 @@ export async function lookupDoi(input: string, signal?: AbortSignal): Promise<Ou
   }
   throw new Error("Nothing was found for this DOI in Crossref or DataCite. Check it for typos.")
 }
+
+/**
+ * A one-line citation for an evaluation entry's description:
+ * "Beridze N, Schulz K (2025). Drought tolerance in wheat. Planta, 261(2), 12-25."
+ * Datasets and software say what they are: "… landrace-tools (version 1.0.0) [Software]. GitHub."
+ */
+export function outputCitation(output: Pick<OutputDraft, "kind" | "subtype" | "authors" | "year" | "title" | "venue" | "volume" | "issue" | "pages" | "version" | "status">) {
+  const authors = output.authors.split(";").map(name => name.trim()).filter(Boolean).join(", ")
+  const when = output.year ?? (output.status !== "Published" ? output.status.toLowerCase() : "n.d.")
+  const title = output.kind === "publication" ? output.title : `${output.title}${output.version ? ` (version ${output.version})` : ""} [${output.subtype}]`
+  const issue = output.kind === "publication" && output.volume ? `${output.volume}${output.issue ? `(${output.issue})` : ""}` : ""
+  const where = [output.venue, issue, output.kind === "publication" ? output.pages : ""].filter(Boolean).join(", ")
+  return `${authors ? `${authors} ` : ""}(${when}). ${title.replace(/\.$/, "")}.${where ? ` ${where}.` : ""}`
+}

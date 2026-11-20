@@ -169,7 +169,7 @@ export function ResearchOutputsSection({ onEmptied, cv }: {
           <h2 id="outputs-heading">Research outputs {outputs.length > 0 && <span className="count-badge">{outputs.length}</span>}</h2>
           <p className="outputs-subtitle">{cv
             ? "These are kept on My profile: adding or changing one here changes your profile too. Untick any this CV shouldn't show."
-            : "Your publications, datasets, and software and code, kept here all year."}</p>
+            : "Your publications, datasets, and software and code, kept here all year. Your CV and evaluation forms take them from here."}</p>
         </div>
         <div className="outputs-actions">
           <Button variant="outline" className="dashboard-button compact" onClick={() => setImportFrom("wos")}><Download />Import from Web of Science</Button>
