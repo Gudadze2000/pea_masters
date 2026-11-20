@@ -63,7 +63,7 @@ Optional: in Docker Desktop → **Settings → General**, turn on **Start Docker
 ## 2. Get the code
 
 ```powershell
-git clone https://github.com/Gudadze2000/pea_masters.git
+git clone https://github.com/Pea-Iliauni/pea_masters.git
 cd pea_masters
 git switch backup_test_branch
 ```
