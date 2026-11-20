@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Navigate, useLocation, useParams } from "react-router"
 import { AlertDialog } from "@base-ui/react/alert-dialog"
-import { Check, CircleDashed, Plus } from "lucide-react"
+import { BookOpen, Check, CircleDashed, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import { useMyProfile } from "@/lib/profile"
@@ -13,6 +13,8 @@ import { LanguagesSection } from "./sections/LanguagesSection"
 import { ProfileHeader } from "./sections/ProfileHeader"
 import { entryTitle, QualificationSection } from "./sections/QualificationSection"
 import { ResearchSection } from "./sections/ResearchSection"
+import { ResearchOutputsSection } from "./sections/ResearchOutputsSection"
+import { useOutputs } from "@/lib/research-outputs"
 import { TeachingSection } from "./sections/TeachingSection"
 import "./ProfilePage.css"
 
@@ -45,6 +47,14 @@ export function ProfilePage() {
   const [active, setActive] = useState("general")
   const [previewing, setPreviewing] = useState(false)
 
+  // Research outputs: shown once there are some (or the person chose to add one), offered below until then
+  const outputs = useOutputs()
+  const showOutputs = outputs.status !== "ready" || outputs.outputs.length > 0 || revealed.has("outputs")
+  const revealOutputs = () => {
+    setRevealed(current => new Set(current).add("outputs"))
+    requestAnimationFrame(() => scrollToSection("outputs"))
+  }
+
   const isShown = (section: SectionDef) => (entries[section.id]?.length ?? 0) > 0 || revealed.has(section.id) || editor?.sectionId === section.id
   const shown = ordered.filter(isShown)
   const hidden = ordered.filter(section => !isShown(section))
@@ -58,7 +68,8 @@ export function ProfilePage() {
   }, [hash, profile])
 
   // Highlight the part of the page being read in the contents list
-  const ids = useMemo(() => ["general", ...shown.map(s => s.id), ...(hidden.length ? ["add-more"] : []), "teaching", "research"], [shown, hidden.length])
+  const offerMore = hidden.length > 0 || !showOutputs
+  const ids = useMemo(() => ["general", ...shown.map(s => s.id), ...(offerMore ? ["add-more"] : []), "teaching", "research", ...(showOutputs ? ["outputs"] : [])], [shown, offerMore, showOutputs])
   useEffect(() => {
     const observer = new IntersectionObserver(observed => {
       const visible = observed.filter(entry => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
@@ -139,11 +150,16 @@ export function ProfilePage() {
                   />
                 ))}
 
-              {entriesStatus === "ready" && hidden.length > 0 && (
+              {entriesStatus === "ready" && offerMore && (
                 <section id="add-more" className="dashboard-card add-more" aria-labelledby="add-more-heading">
                   <h2 id="add-more-heading">Add to your profile</h2>
                   <p>Sections you haven't filled in yet. Add only what applies to you.</p>
                   <div className="add-more-chips">
+                    {!showOutputs && (
+                      <button type="button" className="add-chip" disabled={editor !== null} onClick={revealOutputs}>
+                        <BookOpen aria-hidden="true" /><span>Research outputs</span><Plus aria-hidden="true" className="add-chip-plus" />
+                      </button>
+                    )}
                     {hidden.map(section => {
                       const Icon = section.icon
                       return (
@@ -162,6 +178,7 @@ export function ProfilePage() {
               <p className="profile-group-label">Teaching &amp; research</p>
               <TeachingSection />
               <ResearchSection />
+              {showOutputs && <ResearchOutputsSection onEmptied={() => setRevealed(current => { const next = new Set(current); next.delete("outputs"); return next })} />}
             </div>
 
             <nav className="dashboard-card profile-contents" aria-label="On this page">
@@ -174,10 +191,10 @@ export function ProfilePage() {
                 {shown.map(section => (
                   <ContentsLink key={section.id} id={section.id} label={section.label} active={active} count={entries[section.id]?.length ?? 0} />
                 ))}
-                {hidden.length > 0 && (
+                {offerMore && (
                   <li>
                     <button type="button" className="contents-add" aria-current={active === "add-more" ? "location" : undefined} onClick={() => scrollToSection("add-more")}>
-                      <Plus aria-hidden="true" /><span>Add {hidden.length === 1 ? "1 more section" : `${hidden.length} more sections`}</span>
+                      <Plus aria-hidden="true" /><span>Add {hidden.length + (showOutputs ? 0 : 1) === 1 ? "1 more section" : `${hidden.length + (showOutputs ? 0 : 1)} more sections`}</span>
                     </button>
                   </li>
                 )}
@@ -186,6 +203,7 @@ export function ProfilePage() {
               <ul>
                 <ContentsLink id="teaching" label="Teaching" active={active} />
                 <ContentsLink id="research" label="Research" active={active} />
+                {showOutputs && <ContentsLink id="outputs" label="Research outputs" active={active} count={outputs.outputs.length} />}
               </ul>
             </nav>
           </div>

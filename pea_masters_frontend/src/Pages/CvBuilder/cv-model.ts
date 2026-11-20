@@ -44,7 +44,7 @@ export type ProfileLinks = {
 
 /** Sections of the CV, in the order the researcher chose */
 export type SectionId =
-  | "summary" | "interests" | "appointments" | "education" | "publications" | "grants" | "talks"
+  | "summary" | "interests" | "appointments" | "education" | "publications" | "outputs" | "grants" | "talks"
   | "teaching" | "supervision" | "awards" | "memberships" | "service" | "patents" | "languages" | "metrics"
 
 export type CvData = {
@@ -60,7 +60,8 @@ export type CvData = {
   /** Show the research interests from My profile → Research instead of the CV's own list */
   useProfileInterests: boolean
   interests: string[]
-  publications: Publication[]
+  /** Research outputs (kept on My profile) this CV leaves out; everything else is shown */
+  hiddenOutputs: string[]
   talks: Talk[]
   metrics: { hIndex: string; citations: string; source: string; asOf: string }
 }
@@ -78,7 +79,8 @@ export const SECTION_META: Record<SectionId, SectionMeta> = {
   interests: { label: "Research interests", source: "My profile → Research, or CV builder" },
   appointments: { label: "Academic appointments", source: "Qualifications → Employment" },
   education: { label: "Education", source: "Qualifications → Education" },
-  publications: { label: "Publications", source: "CV builder" },
+  publications: { label: "Publications", source: "My profile → Research outputs" },
+  outputs: { label: "Datasets & software", source: "My profile → Research outputs" },
   grants: { label: "Grants & research projects", source: "My profile → Research" },
   talks: { label: "Talks & presentations", source: "CV builder" },
   teaching: { label: "Teaching", source: "Teaching" },
@@ -92,7 +94,7 @@ export const SECTION_META: Record<SectionId, SectionMeta> = {
 }
 
 const DEFAULT_ORDER: SectionId[] = [
-  "summary", "interests", "appointments", "education", "publications", "grants", "talks",
+  "summary", "interests", "appointments", "education", "publications", "outputs", "grants", "talks",
   "teaching", "supervision", "awards", "memberships", "service", "patents", "languages", "metrics",
 ]
 
@@ -100,7 +102,7 @@ export const emptyPublication = (): Omit<Publication, "id"> => ({
   type: "Journal article", status: "Published", authors: "", title: "", venue: "", year: "", volume: "", issue: "", pages: "", doi: "", url: "",
 })
 
-/** A new, empty CV: the researcher fills it in, or imports publications */
+/** A new, empty CV: the researcher fills it in; publications come from My profile → Research outputs */
 export const initialCv: CvData = {
   version: 1,
   visibility: "private",
@@ -112,7 +114,7 @@ export const initialCv: CvData = {
   profiles: { orcid: "", scopus: "", researcherId: "", scholar: "", researchGate: "", semanticScholar: "", website: "", github: "" },
   useProfileInterests: true,
   interests: [],
-  publications: [],
+  hiddenOutputs: [],
   talks: [],
   metrics: { hIndex: "", citations: "", source: "Web of Science", asOf: "" },
 }
@@ -145,7 +147,7 @@ export function normaliseCv(raw: unknown): CvData | null {
     // CVs saved before this option: keep a list the researcher wrote themselves, otherwise follow the profile
     useProfileInterests: typeof data.useProfileInterests === "boolean" ? data.useProfileInterests
       : !(Array.isArray(data.interests) && data.interests.length > 0 && data.interests.join("|") !== LEGACY_SAMPLE_INTERESTS),
-    publications: Array.isArray(data.publications) ? data.publications.map(pub => ({ ...emptyPublication(), ...pub, id: pub.id || crypto.randomUUID() })) : [],
+    hiddenOutputs: Array.isArray(data.hiddenOutputs) ? data.hiddenOutputs.filter(id => typeof id === "string") : [],
     talks: Array.isArray(data.talks) ? data.talks.map(talk => ({ ...talk, id: talk.id || crypto.randomUUID() })) : [],
   }
 }
@@ -163,12 +165,17 @@ const SAMPLE_TALKS = new Set(["talk1", "talk2"])
 const SAMPLE_HEADLINE = "Associate Professor of Biology"
 const SAMPLE_SUMMARY = "I study how plants adapt to drought and climate change"
 
+/** A CV kept in a browser, with the publications CVs used to hold (the server moves them to the profile when saved) */
+export type BrowserCv = CvData & { publications: Publication[] }
+
 /** The CV this browser kept before CVs moved to the server, minus the sample items; null when there is none */
-export function browserCv(): CvData | null {
+export function browserCv(): BrowserCv | null {
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY)
-    const data = stored ? normaliseCv((JSON.parse(stored) as { data: unknown }).data) : null
+    const raw = stored ? (JSON.parse(stored) as { data: { publications?: Partial<Publication>[] } }).data : null
+    const data = raw ? normaliseCv(raw) : null
     if (!data) return null
+    const publications = Array.isArray(raw?.publications) ? raw.publications : []
     return {
       ...data,
       personal: {
@@ -176,7 +183,7 @@ export function browserCv(): CvData | null {
         headline: data.personal.headline === SAMPLE_HEADLINE ? "" : data.personal.headline,
         summary: data.personal.summary.startsWith(SAMPLE_SUMMARY) ? "" : data.personal.summary,
       },
-      publications: data.publications.filter(pub => !SAMPLE_PUBLICATIONS.has(pub.id)),
+      publications: publications.filter(pub => !SAMPLE_PUBLICATIONS.has(pub.id ?? "")).map(pub => ({ ...emptyPublication(), ...pub, id: pub.id || crypto.randomUUID() })),
       talks: data.talks.filter(talk => !SAMPLE_TALKS.has(talk.id)),
     }
   } catch {
@@ -184,7 +191,6 @@ export function browserCv(): CvData | null {
   }
 }
 
-/** Removes the browser copy once it's safely on the server */
 export function forgetBrowserCv() {
   try { window.localStorage.removeItem(STORAGE_KEY) } catch { /* nothing to remove */ }
 }

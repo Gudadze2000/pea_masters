@@ -12,6 +12,8 @@ import { EntryModal, type UsedDoi } from './EntryModal'
 import { EvaluationIcon as Icon, EvaluationModal } from './EvaluationModal'
 import { WosBadge } from './WosCheck'
 import { MissingFromForm } from './MissingFromForm'
+import { FromProfile, outputInForm } from './FromProfile'
+import { outputCitation, useOutputs, type ResearchOutput } from '@/lib/research-outputs'
 import {
   byItem, changesSince, dayLabel, daysUntil, formScore, isSent, recordScore, toForm,
   type EvaluationEntry, type EvaluationLinkState, type RecordDef,
@@ -88,6 +90,8 @@ export function EvaluationForm() {
   const [actionError, setActionError] = useState('')
   /** The link (router location) whose entry was last opened, so each new link opens its entry once */
   const linkHandled = useRef('')
+  // Research outputs on My profile: offered as entries ("From your profile", and in the entry dialog)
+  const { outputs } = useOutputs()
 
   useEffect(() => {
     let cancelled = false
@@ -230,6 +234,22 @@ export function EvaluationForm() {
     }
     return used
   }
+  /** The form item an output most likely belongs to: by its kind, then by words in the items' names */
+  const likelyItem = (output: ResearchOutput) => {
+    const patterns = output.kind === 'dataset' ? [/data/i, /software|program/i] : output.kind === 'software' ? [/software|program|code/i]
+      : output.subtype === 'Book' ? [/monograph|book/i] : output.subtype === 'Book chapter' ? [/chapter/i]
+        : output.subtype === 'Conference paper' ? [/conference|proceeding/i, /article/i] : [/article/i]
+    for (const pattern of patterns) {
+      const found = allItems.find(item => pattern.test(item.name))
+      if (found) return found
+    }
+    return allItems[0]
+  }
+  /** "From your profile": a new entry for the output, filled in */
+  const addOutput = (output: ResearchOutput) =>
+    setEditing({ record: likelyItem(output), initial: { description: outputCitation(output), detail: output.doi || output.url }, choices: allItems })
+  /** Outputs not in the form yet, for the entry dialog's "Fill in from my profile" */
+  const outputsNotInForm = outputs.filter(output => !outputInForm(output, entries))
   /** "Missing from your form": a new entry for the article, in the item most likely meant for articles */
   const addArticle = (article: WosArticle) => {
     const likely = allItems.find(item => /article/i.test(item.name)) ?? allItems[0]
@@ -263,7 +283,8 @@ export function EvaluationForm() {
             ? <div className="evaluation-banner evaluation-banner-info"><Icon name="imgIconUnlock" /><div><p>Updating your submitted form</p><small>Your coordinator keeps seeing the version you sent on {formatWhen(submittedAt)} until you resubmit.{changeSummary ? ` Changes so far: ${changeSummary}.` : ''}</small></div><Button variant="outline" className="dashboard-button evaluation-banner-action" disabled={busy} onClick={() => void discardUpdate()}>Discard changes</Button></div>
             : null}
     {!locked && rejected > 0 && <div className="evaluation-banner"><Icon name="imgIconAlert" /><div><p>{rejected} {rejected === 1 ? 'entry was' : 'entries were'} rejected</p><small>Fix the {rejected === 1 ? 'entry' : 'entries'} and {submittedAt ? 'resubmit' : 'submit'}, or hide {rejected === 1 ? 'it' : 'them'} if you'd rather not send {rejected === 1 ? 'it' : 'them'}. Not sure what's wrong? Use “Ask coordinator” on the entry.</small></div></div>}
-    {period.status === 'open' && !approved && <MissingFromForm entries={entries} years={{ from: period.publication_from, to: period.publication_to }} locked={locked} onAdd={addArticle} />}
+    {period.status === 'open' && !approved && <FromProfile entries={entries} years={{ from: period.publication_from, to: period.publication_to }} locked={locked} onAdd={addOutput} />}
+    {period.status === 'open' && !approved && <MissingFromForm entries={entries} onProfile={new Set(outputs.map(output => output.doi).filter(Boolean))} years={{ from: period.publication_from, to: period.publication_to }} locked={locked} onAdd={addArticle} />}
     <div className="evaluation-tabs" role="tablist" aria-label="Evaluation sections">
       {form.parts.map(part => <button key={part.id} type="button" role="tab" id={`evaluation-tab-${part.id}`} aria-selected={activePart.id === part.id} aria-controls="evaluation-tabpanel" onClick={() => setTab(part.id)}>{[part.numeral, part.name].filter(Boolean).join(' · ')}<span className="evaluation-tab-score">{pts(score.scores.find(item => item.part.id === part.id)?.raw ?? 0)}</span></button>)}
     </div>
@@ -310,6 +331,7 @@ export function EvaluationForm() {
       </aside>
     </div>
     {editing && <EntryModal record={editing.record} entry={editing.entry} initial={editing.initial} itemChoices={editing.choices} usedDois={usedDois(editing.entry?.id)}
+      profileOutputs={editing.entry || editing.initial ? undefined : outputsNotInForm}
       recordName={id => form.items.get(id)?.name ?? 'another item'} onClose={() => setEditing(null)} onSave={saveEntry} />}
     {contact && <ContactCoordinator topic={contact.topic} onClose={() => setContact(null)} />}
     <EvaluationModal open={review} onClose={() => setReview(false)}

@@ -2,7 +2,8 @@ import type { Entry } from "@/Pages/Profile/qualifications/sections"
 import type { ResearchOverview } from "@/lib/profile-entries"
 import { programmes, students } from "@/Pages/Profile/teaching/argus"
 import { formatCitation, type CitationPart } from "./citations"
-import { SECTION_META, type CvData, type PublicationType, type SectionId } from "./cv-model"
+import type { ResearchOutput } from "@/lib/research-outputs"
+import { SECTION_META, type CvData, type Publication, type PublicationStatus, type PublicationType, type SectionId } from "./cv-model"
 
 /**
  * Turns the researcher's profile (qualifications, research, teaching) plus the
@@ -34,6 +35,25 @@ export type ViewOptions = {
   ownFamilyName: string
   /** Research overview as saved on My profile: projects, and interests when the CV uses the profile's */
   research: ResearchOverview
+  /** Research outputs on My profile (publications, datasets, software); the CV hides the ones in cv.hiddenOutputs */
+  outputs: ResearchOutput[]
+}
+
+/** A research output in the shape the citation styles format */
+function asPublication(output: ResearchOutput): Publication {
+  return {
+    id: output.id, type: output.subtype as PublicationType, status: output.status as PublicationStatus,
+    authors: output.authors, title: output.title, venue: output.venue, year: output.year ? String(output.year) : "",
+    volume: output.volume, issue: output.issue, pages: output.pages, doi: output.doi, url: output.url,
+  }
+}
+
+/** Datasets and software: "Title (version 2.1) [Dataset]", then the repository or publisher where a journal would be */
+function asCitable(output: ResearchOutput): Publication {
+  return {
+    ...asPublication(output), type: "Report", status: "Published", volume: "", issue: "", pages: "",
+    title: `${output.title}${output.version ? ` (version ${output.version})` : ""} [${output.subtype}]`,
+  }
 }
 
 const year = (date: string | undefined) => date?.slice(0, 4) ?? ""
@@ -90,12 +110,28 @@ export function buildCvSections(cv: CvData, qualifications: Record<string, Entry
           detail: [v.thesis && `Thesis: “${v.thesis}”`, v.supervisor && `Supervisor: ${v.supervisor}`].filter(Boolean).join(" · ") || undefined,
         })))
       case "publications": {
-        const sorted = [...cv.publications].sort((a, b) => (b.year || "9999").localeCompare(a.year || "9999"))
+        const hidden = new Set(cv.hiddenOutputs)
+        const sorted = options.outputs.filter(output => output.kind === "publication" && !hidden.has(output.id)).map(asPublication)
+          .sort((a, b) => (b.year || "9999").localeCompare(a.year || "9999"))
         const groups = PUBLICATION_GROUPS
           .map(group => ({
             label: group.label,
             items: sorted.filter(pub => group.types.includes(pub.type)).map(pub => ({
               key: pub.id, title: pub.title, citation: formatCitation(pub, cv.citationStyle, options.ownFamilyName),
+            })),
+          }))
+          .filter(group => group.items.length)
+        return groups.length ? { id, label, kind: "publications", groups } : null
+      }
+      case "outputs": {
+        const hidden = new Set(cv.hiddenOutputs)
+        const shown = options.outputs.filter(output => output.kind !== "publication" && !hidden.has(output.id))
+          .sort((a, b) => (b.year ?? 9999) - (a.year ?? 9999))
+        const groups = (["dataset", "software"] as const)
+          .map(kind => ({
+            label: kind === "dataset" ? "Datasets" : "Software & code",
+            items: shown.filter(output => output.kind === kind).map(output => ({
+              key: output.id, title: output.title, citation: formatCitation(asCitable(output), cv.citationStyle, options.ownFamilyName),
             })),
           }))
           .filter(group => group.items.length)
@@ -169,8 +205,8 @@ function list(id: SectionId, label: string, items: CvItem[]): CvSection | null {
 }
 
 /** How many entries each section would show, for the "Sections & layout" list */
-export function sectionCounts(cv: CvData, qualifications: Record<string, Entry[]>, research: ResearchOverview) {
-  const all = buildCvSections({ ...cv, sections: cv.sections.map(section => ({ ...section, enabled: true })) }, qualifications, { asVisitor: false, ownFamilyName: "", research })
+export function sectionCounts(cv: CvData, qualifications: Record<string, Entry[]>, research: ResearchOverview, outputs: ResearchOutput[]) {
+  const all = buildCvSections({ ...cv, sections: cv.sections.map(section => ({ ...section, enabled: true })) }, qualifications, { asVisitor: false, ownFamilyName: "", research, outputs })
   const counts: Partial<Record<SectionId, number>> = {}
   for (const section of all) {
     counts[section.id] =

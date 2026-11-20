@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/forms/FormField'
 import { ApiError } from '@/lib/api'
 import type { EntryInput } from '@/lib/evaluations'
+import { outputCitation, type ResearchOutput } from '@/lib/research-outputs'
 import { entriesApi, type ServerDocument } from '@/lib/profile-entries'
 import { useIdentity } from '@/lib/profile'
 import { findDoi } from '@/lib/wos'
@@ -23,12 +24,14 @@ const label = (record: RecordDef) => (record.code ? `${record.code} ${record.nam
  * Adds or edits one entry. Evidence files upload as soon as they're chosen; the entry itself is saved on the server
  * when the dialog is saved (onSave returns the server's error message, if any, and the dialog stays open).
  */
-export function EntryModal({ record: startRecord, entry, initial, itemChoices, usedDois, recordName, onClose, onSave }: {
+export function EntryModal({ record: startRecord, entry, initial, itemChoices, profileOutputs, usedDois, recordName, onClose, onSave }: {
   record: RecordDef; entry?: EvaluationEntry
   /** Starting values for a new entry, e.g. from "Missing from your form" */
   initial?: { description: string; detail: string }
   /** Lets the person choose which item the entry belongs to (a new entry from "Missing from your form") */
   itemChoices?: RecordDef[]
+  /** Research outputs on My profile not in the form yet: a new entry can be filled in from one */
+  profileOutputs?: ResearchOutput[]
   /** DOIs in the other entries of the form */
   usedDois: Map<string, UsedDoi>
   recordName: (id: string) => string
@@ -104,6 +107,19 @@ export function EntryModal({ record: startRecord, entry, initial, itemChoices, u
               {itemChoices.map(item => <option key={item.id} value={item.id}>{label(item)}</option>)}
             </select>
             <p className="field-hint">Which item of the form this article counts for.</p>
+          </div>
+        )}
+        {profileOutputs && profileOutputs.length > 0 && (
+          <div className="form-field">
+            <label htmlFor="evaluation-from-profile">Fill in from my profile</label>
+            <select id="evaluation-from-profile" className="form-control" defaultValue="" onChange={event => {
+              const output = profileOutputs.find(item => item.id === event.target.value)
+              if (output) { setDescription(outputCitation(output)); setDetail(output.doi || output.url) }
+            }}>
+              <option value="" disabled>Choose one of your research outputs…</option>
+              {profileOutputs.map(output => <option key={output.id} value={output.id}>{output.title}{output.year ? ` (${output.year})` : ''}</option>)}
+            </select>
+            <p className="field-hint">From My profile → Research outputs. You can still change the text below.</p>
           </div>
         )}
         <FormField idPrefix="evaluation" field={{ name: 'description', label: record.code ? 'Performance indicator' : 'Description', type: 'textarea', required: true, hint: record.hint ?? 'Describe the activity and include the relevant year and details.' }} value={description} onChange={setDescription} />

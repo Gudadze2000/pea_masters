@@ -30,7 +30,8 @@ from app.main import app  # noqa: E402
 from app.models import Organization, OrganizationDomain, OrganizationMembership, RoleAssignment, User  # noqa: E402
 
 TABLES = ", ".join([  # emptied before every test; child tables first
-    "notifications", "evaluation_entry_files", "evaluation_entries", "evaluations", "evaluation_forms",
+    "research_outputs", "notifications", "evaluation_entry_files", "evaluation_entries", "evaluations",
+    "evaluation_forms",
     "evaluation_periods",
     "cvs", "profile_entry_files", "profile_entries", "external_lookups",
     "wos_author_searches", "wos_lookups", "audit_log", "profiles", "files", "coordinator_assignments",

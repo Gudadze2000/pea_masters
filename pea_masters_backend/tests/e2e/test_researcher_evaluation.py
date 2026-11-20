@@ -305,7 +305,9 @@ def test_dashboard_and_notifications_follow_the_evaluation(google_sign_in, shot)
     expect(eka).to_have_url(re.compile(r"/evaluation-form$"))
     expect(bell).to_have_accessible_name("Notifications, 5 unread")
     bell.click()
-    panel.get_by_role("button", name="Mark all read").click()
+    mark_all = panel.get_by_role("button", name="Mark all read")
+    expect(mark_all).to_be_enabled()
+    mark_all.click()
     expect(bell).to_have_accessible_name("Notifications")
 
     # Her head of department: told about both submissions, with a link to the review, and a "to review" card
@@ -418,7 +420,7 @@ def test_publications_are_found_by_researcher_id(admin_page: Page, organization,
     # 2. The evaluation form lists the period's 2024-2026 documents that aren't in it: not the 2019 one, and not
     # Heat-shock proteins, which test_articles_are_checked_in_web_of_science added (the form is on the server)
     open_article_item(page)
-    missing = page.locator(".missing-card")
+    missing = page.locator(".missing-card", has_text="Web of Science")
     expect(missing.get_by_role("heading")).to_have_text("1 Web of Science article from 2024–2026 isn't in your form")
     expect(missing).to_contain_text("Root architecture of drought-tolerant wheat")
     expect(missing).not_to_contain_text("Seed bank digitisation")
@@ -461,20 +463,29 @@ def test_publications_are_found_by_researcher_id(admin_page: Page, organization,
     expect(page.get_by_label("Total citations")).to_have_value("50")
     expect(page.get_by_label("Source")).to_have_value("Web of Science")
 
-    page.get_by_role("tab", name="Publications").click()
+    # Its research outputs are the profile's: importing here adds them to the profile, and the CV shows them
+    page.get_by_role("tab", name="Research outputs").click()
     page.get_by_role("button", name="Import from Web of Science").click()
     sheet = page.get_by_role("dialog")
-    expect(sheet.locator(".cv-wos-item")).to_have_count(3)
+    expect(sheet.locator(".outputs-import-item")).to_have_count(3)
     expect(sheet).to_contain_text("Planta · 2025")  # "PLANTA" in Web of Science
     shot(page, "cv-01-import-from-wos")
-    sheet.get_by_role("button", name="Add 3 publications").click()
-    added = page.get_by_role("status").filter(has_text="from Web of Science")
-    expect(added).to_have_text("3 publications added from Web of Science.")
-    expect(page.locator(".cv-pub-card", has_text="Seed bank digitisation in Georgia")).to_be_visible()
+    sheet.get_by_role("button", name="Add 3 to my profile").click()
+    expect(page.get_by_role("status").filter(has_text="added")).to_have_text("3 outputs were added to your profile.")
+    expect(page.locator(".output-card", has_text="Seed bank digitisation in Georgia")).to_be_visible()
+    expect(page.locator(".cv-publications li", has_text="Seed bank digitisation in Georgia")).not_to_have_count(0)
 
-    # Opening the import again: everything is already on the CV
+    # Opening the import again: everything is already on the profile
     page.get_by_role("button", name="Import from Web of Science").click()
     expect(page.get_by_role("dialog").get_by_role("button", name="Add", exact=True)).to_be_disabled()
+    page.get_by_role("dialog").get_by_role("button", name="Cancel").click()
+
+    # The same publications on My profile
+    page.goto("/profile#outputs")
+    publications = page.locator("#outputs .outputs-group", has_text="Publications")
+    for title in ("Heat-shock proteins in Caucasian wheat", "Root architecture of drought-tolerant wheat",
+                  "Seed bank digitisation in Georgia"):
+        expect(publications).to_contain_text(title)
 
     assert not errors, errors
 
@@ -527,20 +538,139 @@ def test_connect_orcid_and_import_works(admin_page: Page, shot):
     shot(page, "profile-03-orcid-connected")
 
     page.get_by_role("button", name="CV builder").click()
-    page.get_by_role("tab", name="Publications").click()
+    page.get_by_role("tab", name="Research outputs").click()
     page.get_by_role("button", name="Import from ORCID").click()
     sheet = page.get_by_role("dialog")
     expect(sheet).to_contain_text(f"2 public works on ORCID record {fake_clarivate.ORCID_ID}.")
-    expect(sheet.locator(".cv-wos-item")).to_have_count(2)
-    sheet.get_by_role("button", name="Add 2 publications").click()
-    expect(page.get_by_role("status").filter(has_text="from ORCID")).to_contain_text("2 publications added from ORCID.")
-    expect(page.locator(".cv-pub-card", has_text="Seed banks of Georgia")).to_contain_text("Admin T")
+    expect(sheet.locator(".outputs-import-item")).to_have_count(2)
+    sheet.get_by_role("button", name="Add 2 to my profile").click()
+    expect(page.get_by_role("status").filter(has_text="added")).to_contain_text("2 outputs were added to your profile.")
+    seed_banks = page.locator(".output-card", has_text="Seed banks of Georgia")
+    expect(seed_banks).to_contain_text("Admin T")
+
+    # Each CV chooses which of the profile's outputs it shows
+    on_cv = page.locator(".cv-publications li", has_text="Seed banks of Georgia")
+    expect(on_cv).not_to_have_count(0)
+    seed_banks.get_by_label("On this CV").uncheck()
+    expect(on_cv).to_have_count(0)
     page.get_by_role("button", name="Save", exact=True).click()
     expect(page.locator(".cv-save-status")).to_contain_text("Saved ·")
+    page.reload()
+    page.get_by_role("tab", name="Research outputs").click()
+    on_this_cv = page.locator(".output-card", has_text="Seed banks of Georgia").get_by_label("On this CV")
+    expect(on_this_cv).not_to_be_checked()
 
     page.get_by_role("button", name="My profile", exact=True).click()
     card.get_by_role("button", name="Disconnect to change it").click()
     expect(card.get_by_role("textbox", name="ORCID iD")).to_have_value(fake_clarivate.ORCID_ID)
     expect(card.get_by_role("link", name="Connect ORCID iD")).to_be_visible()
+
+    assert not errors, errors
+
+
+DATACITE_DOI = "10.5281/zenodo.7654321"
+DATACITE = {"data": {"attributes": {
+    "titles": [{"title": "Caucasian wheat landraces: genotype data"}],
+    "creators": [{"name": "Admin, Test", "givenName": "Test", "familyName": "Admin"}],
+    "publisher": "Zenodo", "publicationYear": 2025, "version": "2.1", "rightsList": [{"rights": "CC BY 4.0"}],
+    "types": {"resourceTypeGeneral": "Dataset"}}}}
+
+
+def test_research_outputs_on_the_profile(admin_page: Page, google_sign_in, shot):
+    """Publications, datasets and software on My profile: offered under "Add to your profile" while empty, found by DOI
+    (Crossref and DataCite answered by the test itself), added by hand. The Web of Science and ORCID imports are tested
+    from the CV builder above, which adds to the same list."""
+    page = admin_page
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    # The browser looks DOIs up in Crossref, then DataCite: answer here instead of the internet
+    page.route("https://api.crossref.org/**", lambda route: route.fulfill(status=404, body="Resource not found."))
+    page.route(f"https://api.datacite.org/dois/{DATACITE_DOI.replace('/', '%2F')}",
+               lambda route: route.fulfill(status=200, json=DATACITE))
+
+    # Someone with no outputs yet is offered the section under "Add to your profile"
+    eka = google_sign_in(RESEARCHER[1], RESEARCHER[0])
+    eka.goto("/profile")
+    expect(eka.locator("#outputs")).to_have_count(0)
+    eka.locator("#add-more").get_by_role("button", name="Research outputs").click()
+    expect(eka.locator("#outputs")).to_contain_text("No research outputs yet")
+
+    # The Admin's profile holds the publications imported in the CV builder above (Web of Science and ORCID)
+    page.goto("/profile#outputs")
+    section = page.locator("#outputs")
+    publications = section.locator(".outputs-group", has_text="Publications")
+    for title in ("Seed bank digitisation in Georgia", "Barley in the Caucasus", "Seed banks of Georgia"):
+        expect(publications).to_contain_text(title)
+    expect(page.locator("#add-more").get_by_role("button", name="Research outputs")).to_have_count(0)
+
+    # A dataset by DOI: not in Crossref, found in DataCite, checked and added
+    section.get_by_label("Add by DOI").fill(f"https://doi.org/{DATACITE_DOI}")
+    section.get_by_role("button", name="Look up").click()
+    sheet = page.get_by_role("dialog")
+    expect(sheet.get_by_role("heading", name="Check dataset")).to_be_visible()
+    expect(sheet.get_by_label(re.compile("^Repository or publisher"))).to_have_value("Zenodo")
+    expect(sheet.get_by_label(re.compile("^Licence"))).to_have_value("CC BY 4.0")
+    sheet.get_by_role("button", name="Add to my profile").click()
+    datasets = section.locator(".outputs-group", has_text="Datasets")
+    expect(datasets).to_contain_text("Caucasian wheat landraces: genotype data")
+    expect(datasets).to_contain_text("Version 2.1")
+
+    # Software by hand: it needs a repository link or a DOI
+    section.get_by_role("button", name="Add by hand").click()
+    section.get_by_role("button", name="Software or code").click()
+    sheet = page.get_by_role("dialog")
+    sheet.get_by_label(re.compile("^Name")).fill("landrace-tools")
+    sheet.get_by_label(re.compile("^Authors or contributors")).fill("Admin T")
+    sheet.get_by_role("button", name="Add to my profile").click()
+    expect(sheet).to_contain_text("Add a repository link or a DOI")
+    sheet.get_by_label(re.compile("^Repository link")).fill("https://github.com/example/landrace-tools")
+    sheet.get_by_label(re.compile("^Licence")).fill("MIT")
+    sheet.get_by_role("button", name="Add to my profile").click()
+    expect(section.locator(".outputs-group", has_text="Software and code")).to_contain_text("landrace-tools")
+    expect(page.locator(".profile-contents")).to_contain_text("Research outputs")
+    expect(page.get_by_role("dialog")).to_have_count(0)
+    section.scroll_into_view_if_needed()
+    shot(page, "profile-04-research-outputs")
+
+    # Deleting one
+    section.get_by_role("button", name="Delete landrace-tools").click()
+    page.get_by_role("alertdialog").get_by_role("button", name="Delete").click()
+    expect(section.locator(".outputs-group", has_text="Software and code")).to_have_count(0)
+
+    assert not errors, errors
+
+
+def test_the_evaluation_form_offers_outputs_from_the_profile(admin_page: Page, shot):
+    """After test_research_outputs_on_the_profile: the Admin's profile holds a 2025 dataset that isn't on the
+    evaluation form, and publications outside the period's years (2024-2026), which aren't offered."""
+    page = admin_page
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    page.goto("/evaluation-form")
+    card = page.locator(".missing-card", has_text="on your profile")
+    expect(card.get_by_role("heading")).to_have_text(
+        "1 research output from 2024–2026 on your profile isn't in your form")
+    expect(card).to_contain_text("Caucasian wheat landraces: genotype data")
+    expect(card).not_to_contain_text("Barley in the Caucasus")  # 2022: outside the period's years
+    shot(page, "evaluation-07-from-profile")
+
+    # Adding it opens a filled-in entry: a citation, and its DOI
+    card.get_by_role("button", name="Add Caucasian wheat landraces: genotype data").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog.get_by_label(re.compile("^Performance indicator"))).to_have_value(
+        "Admin T (2025). Caucasian wheat landraces: genotype data (version 2.1) [Dataset]. Zenodo.")
+    expect(dialog.get_by_label(re.compile("^DOI"))).to_have_value(DATACITE_DOI)
+    dialog.get_by_role("button", name="Save as draft").click()
+    expect(card).to_have_count(0)
+
+    # Starting from an item, the entry can be filled in from any output not in the form yet
+    open_article_item(page)
+    record_card(page, ARTICLE).get_by_role("button", name="Add entry").click()
+    dialog = page.get_by_role("dialog")
+    dialog.get_by_label("Fill in from my profile").select_option(label="Barley in the Caucasus (2022)")
+    expect(dialog.get_by_label(re.compile("^Performance indicator"))).to_have_value(
+        "Admin T (2022). Barley in the Caucasus. Genetic Resources.")
+    expect(dialog.get_by_label(re.compile("^DOI"))).to_have_value("10.5555/pea.e2e.orcid-1")
+    dialog.get_by_role("button", name="Cancel").click()
 
     assert not errors, errors
