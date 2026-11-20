@@ -24,7 +24,7 @@ function draftFor(topic: ContactTopic | undefined, coordinator: string, me: stri
 const q = encodeURIComponent
 
 /**
- * Write to your coordinator (head of department) from your own email: Gmail, Outlook on the web, or whatever mail app
+ * Write to your Coordinator from your own email: Gmail, Outlook on the web, or whatever mail app
  * the computer uses. Nothing is sent by PEA itself. Messages inside PEA come later.
  */
 export function ContactCoordinator({ onClose, topic }: { onClose: () => void; topic?: ContactTopic }) {
@@ -57,14 +57,14 @@ export function ContactCoordinator({ onClose, topic }: { onClose: () => void; to
   const link = (variant: 'default' | 'outline') => buttonVariants({ variant, className: 'dashboard-button' })
 
   return <EvaluationModal open onClose={onClose} wide title="Contact your coordinator"
-    description={topic ? `About “${topic.entry}”` : 'Questions about your evaluation go to the head of your department.'}>
+    description={topic ? `About “${topic.entry}”` : 'Questions about your evaluation go to your department\'s Coordinator.'}>
     {coordinator ? <>
       <div className="evaluation-modal-body">
         <div className="contact-person">
           <span className="contact-avatar" aria-hidden="true">{coordinator.name.split(/\s+/).filter(Boolean).map(word => word[0]).slice(0, 2).join('').toUpperCase()}</span>
           <div>
             <p>{coordinator.name}</p>
-            <small>Head of {identity.department || 'your department'} · <a href={`mailto:${coordinator.email}`}>{coordinator.email}</a></small>
+            <small>Coordinator of {identity.department || 'your department'} · <a href={`mailto:${coordinator.email}`}>{coordinator.email}</a></small>
           </div>
           <Button variant="outline" size="sm" className="contact-copy" onClick={() => void copy()} aria-label={`Copy ${coordinator.email}`}>
             {copied ? <><Check aria-hidden="true" />Copied</> : <><Copy aria-hidden="true" />Copy address</>}
@@ -87,7 +87,7 @@ export function ContactCoordinator({ onClose, topic }: { onClose: () => void; to
       <div className="evaluation-modal-body">
         <div className="evaluation-warning">
           <Mail aria-hidden="true" />
-          <div><p>No coordinator assigned yet</p><small>{identity.department ? `${identity.department} doesn't have a head of department in PEA yet.` : "You aren't in a department in PEA yet."} Ask your organization's administrator to set one up.</small></div>
+          <div><p>No coordinator assigned yet</p><small>{identity.department ? `${identity.department} doesn't have a Coordinator in PEA yet.` : "You aren't in a department in PEA yet."} Ask your organization's administrator to set one up.</small></div>
         </div>
       </div>
       <div className="evaluation-modal-footer"><Button variant="outline" className="dashboard-button" onClick={onClose}>Close</Button></div>

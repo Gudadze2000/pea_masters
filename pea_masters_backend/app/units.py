@@ -5,7 +5,7 @@
         ├── Computer Science                              (department, has one Coordinator)
         └── Mathematics
 
-Researchers belong to a department; each department has at most one Coordinator, its head. Admins create, rename
+Researchers belong to a department; each department has at most one Coordinator. Admins create, rename
 and move units; everyone in the organization can list them.
 """
 
@@ -109,7 +109,7 @@ def find_unit(db: Session, org_id: uuid.UUID, unit_id: uuid.UUID, kind: str | No
 
 
 def find_department(db: Session, org_id: uuid.UUID, unit_id: uuid.UUID) -> OrganizationUnit:
-    """People belong to, and Coordinators head, departments, never faculties."""
+    """People belong to, and Coordinators coordinate, departments, never faculties."""
     return find_unit(db, org_id, unit_id, "department")
 
 

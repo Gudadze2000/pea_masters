@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Check, Pencil, Plus, Search, UserCheck, UserX } from "lucide-react"
+import { useNavigate } from "react-router"
+import { Check, FileSpreadsheet, Pencil, Plus, Search, UserCheck, UserX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout"
 import "@/components/forms/forms.css"
@@ -26,11 +27,12 @@ function formatDate(value: string | null) {
 
 /**
  * People and structure of the organization.
- * Admins manage everyone, roles, faculties and departments. Heads of department (Coordinators) register and
+ * Admins manage everyone, roles, faculties and departments. Coordinators register and
  * manage the Researchers of their own department. The backend enforces the same rules.
  */
 export function PeoplePage() {
   const session = useSession()
+  const navigate = useNavigate()
   const { language } = useLanguage()
   const organizations = session ? peopleOrganizations(session) : []
   const [orgId, setOrgId] = useState(organizations[0]?.id ?? "")
@@ -92,17 +94,17 @@ export function PeoplePage() {
         {() => (
           <div className="dashboard-content">
             <div className="page-heading"><div><h1>People</h1></div></div>
-            <div className="dashboard-card"><p>This page is for Admins and heads of department. Ask your organization's PEA administrator if you need access.</p></div>
+            <div className="dashboard-card"><p>This page is for Admins and Coordinators. Ask your organization's PEA administrator if you need access.</p></div>
           </div>
         )}
       </WorkspaceLayout>
     )
   }
 
-  const isHead = !canManageRoles
-  const headedDepartments = org.coordinates.map(unit => unit.id)
-  const headedNames = org.coordinates.map(unit => localName(unit.name, language)).join(", ")
-  /** Heads of department act on Researchers only, never on Admins or other heads */
+  const isCoordinator = !canManageRoles
+  const coordinatedDepartments = org.coordinates.map(unit => unit.id)
+  const coordinatedNames = org.coordinates.map(unit => localName(unit.name, language)).join(", ")
+  /** Coordinators act on Researchers only, never on Admins or other Coordinators */
   const canEdit = (person: Person) => canManageRoles || person.roles.every(role => role === "member")
 
   const search = query.trim().toLowerCase()
@@ -123,8 +125,8 @@ export function PeoplePage() {
             <div>
               <h1>People</h1>
               <p>
-                {isHead
-                  ? `Researchers of ${headedNames || "your department"}. You can register them, correct their names, and deactivate or reactivate them.`
+                {isCoordinator
+                  ? `Researchers of ${coordinatedNames || "your department"}. You can register them, correct their names, and deactivate or reactivate them.`
                   : `Everyone in ${localName(org.name, language)}: who can sign in, their roles, faculties and departments.`}
               </p>
             </div>
@@ -136,13 +138,18 @@ export function PeoplePage() {
                 </select>
               )}
               {canRegister && tab === "people" && (
-                <Button className="dashboard-button" onClick={() => setDialog({ kind: "add" })}><Plus />{isHead ? "Add researcher" : "Add person"}</Button>
+                <Button variant="outline" className="dashboard-button" onClick={() => navigate(`/admin/people/import?org=${org.id}`)}>
+                  <FileSpreadsheet />Add several
+                </Button>
+              )}
+              {canRegister && tab === "people" && (
+                <Button className="dashboard-button" onClick={() => setDialog({ kind: "add" })}><Plus />{isCoordinator ? "Add researcher" : "Add person"}</Button>
               )}
             </div>
           </div>
 
           <div className="segmented people-tabs" role="tablist" aria-label="People sections">
-            <button type="button" role="tab" aria-selected={tab === "people"} aria-checked={tab === "people"} onClick={() => setTab("people")}>{isHead ? "Researchers" : "People"} ({people.length})</button>
+            <button type="button" role="tab" aria-selected={tab === "people"} aria-checked={tab === "people"} onClick={() => setTab("people")}>{isCoordinator ? "Researchers" : "People"} ({people.length})</button>
             {canManageRoles && <button type="button" role="tab" aria-selected={tab === "structure"} aria-checked={tab === "structure"} onClick={() => setTab("structure")}>Structure</button>}
             {canManageRoles && <button type="button" role="tab" aria-selected={tab === "periods"} aria-checked={tab === "periods"} onClick={() => setTab("periods")}>Evaluation periods</button>}
             <button type="button" role="tab" aria-selected={tab === "output"} aria-checked={tab === "output"} onClick={() => setTab("output")}>Research output</button>
@@ -166,7 +173,7 @@ export function PeoplePage() {
           ) : (
             <section className="dashboard-card" aria-labelledby="people-heading">
               <div className="card-heading">
-                <h2 id="people-heading">{isHead ? "Researchers" : "People"}</h2>
+                <h2 id="people-heading">{isCoordinator ? "Researchers" : "People"}</h2>
               </div>
 
               <div className="people-filters">
@@ -179,7 +186,7 @@ export function PeoplePage() {
                   <option value="">All statuses</option>
                   {(Object.keys(statusLabels) as PersonStatus[]).map(status => <option key={status} value={status}>{statusLabels[status]}</option>)}
                 </select>
-                {!isHead && (
+                {!isCoordinator && (
                   <>
                     <select className="form-control" aria-label="Filter by role" value={roleFilter} onChange={event => setRoleFilter(event.target.value as Role | "")}>
                       <option value="">All roles</option>
@@ -211,7 +218,7 @@ export function PeoplePage() {
                     {loading ? (
                       <tr><td colSpan={6} className="data-table-empty">Loading…</td></tr>
                     ) : visible.length === 0 ? (
-                      <tr><td colSpan={6} className="data-table-empty">{filtered ? "No one matches these filters." : isHead ? "No Researchers in your department yet. Use “Add researcher”." : "No people yet."}</td></tr>
+                      <tr><td colSpan={6} className="data-table-empty">{filtered ? "No one matches these filters." : isCoordinator ? "No Researchers in your department yet. Use “Add researcher”." : "No people yet."}</td></tr>
                     ) : visible.map(person => (
                       <tr key={person.id} data-inactive={person.status === "deactivated" || undefined}>
                         <td>
@@ -233,7 +240,7 @@ export function PeoplePage() {
                           <div className="role-chips">
                             {person.roles.map(role => (
                               <span key={role} className={`role-chip role-${role}`}>
-                                {role === "coordinator" && person.coordinates ? `Head: ${localName(person.coordinates.name, language)}` : roleLabels[role]}
+                                {role === "coordinator" && person.coordinates ? `Coordinator: ${localName(person.coordinates.name, language)}` : roleLabels[role]}
                               </span>
                             ))}
                           </div>
@@ -274,7 +281,7 @@ export function PeoplePage() {
               positions={positions}
               domainHint={domainHint}
               canManageRoles={canManageRoles}
-              headedDepartments={headedDepartments}
+              coordinatedDepartments={coordinatedDepartments}
               onClose={() => setDialog(null)}
               onSaved={(_, message) => finish(message)}
               onAddDepartment={() => { setDialog(null); setTab("structure") }}
@@ -283,7 +290,7 @@ export function PeoplePage() {
           {dialog?.kind === "deactivate" && (
             <ConfirmSheet
               title={`Deactivate ${dialog.person.display_name}?`}
-              description="They'll be signed out right away and won't be able to sign in. Their data and history are kept, and they can be reactivated later. A head of department stops heading it."
+              description="They'll be signed out right away and won't be able to sign in. Their data and history are kept, and they can be reactivated later. A Coordinator stops coordinating their department."
               confirmLabel="Deactivate"
               destructive
               askReason
@@ -297,7 +304,7 @@ export function PeoplePage() {
           {dialog?.kind === "reactivate" && (
             <ConfirmSheet
               title={`Reactivate ${dialog.person.display_name}?`}
-              description="They'll be able to sign in again with their previous roles. A former head of department needs to be made head again by an Admin."
+              description="They'll be able to sign in again with their previous roles. A former Coordinator needs to be made Coordinator again by an Admin."
               confirmLabel="Reactivate"
               onClose={() => setDialog(null)}
               onConfirm={async () => {

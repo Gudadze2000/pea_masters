@@ -18,10 +18,10 @@ type Props = {
   units: Unit[]
   positions: Position[]
   domainHint: string
-  /** Admins: full form. Heads of department: Researchers in their own department only. */
+  /** Admins: full form. Coordinators: Researchers in their own department only. */
   canManageRoles: boolean
-  /** Departments the signed-in head of department heads */
-  headedDepartments: string[]
+  /** Departments the signed-in Coordinator coordinates */
+  coordinatedDepartments: string[]
   onClose: () => void
   onSaved: (person: Person, message: string) => void
   /** Closes the panel and opens the Structure tab */
@@ -29,10 +29,10 @@ type Props = {
 }
 
 /** Side panel to register someone or change their name, department and roles. */
-export function PersonSheet({ orgId, person, units, positions, domainHint, canManageRoles, headedDepartments, onClose, onSaved, onAddDepartment }: Props) {
+export function PersonSheet({ orgId, person, units, positions, domainHint, canManageRoles, coordinatedDepartments, onClose, onSaved, onAddDepartment }: Props) {
   const { language } = useLanguage()
   const editing = person !== null
-  const ownDepartments = units.filter(unit => headedDepartments.includes(unit.id))
+  const ownDepartments = units.filter(unit => coordinatedDepartments.includes(unit.id))
   const [email, setEmail] = useState("")
   const [name, setName] = useState(person?.display_name ?? "")
   /** While false, the name follows the email ("giorgi.kekelidze.3@…" → "Giorgi Kekelidze") */
@@ -68,8 +68,8 @@ export function PersonSheet({ orgId, person, units, positions, domainHint, canMa
     if (!editing && !email.trim()) found.email = "Email is required."
     if (!name.trim()) found.name = "Name is required."
     if (canManageRoles && roles.size === 0) found.roles = "Choose at least one role."
-    if (canManageRoles && roles.has("coordinator") && !coordinatesId) found.coordinates = "Choose the department they head."
-    if (!canManageRoles && !editing && !departmentId) found.department = "You don't head a department yet. Ask an Admin."
+    if (canManageRoles && roles.has("coordinator") && !coordinatesId) found.coordinates = "Choose the department they coordinate."
+    if (!canManageRoles && !editing && !departmentId) found.department = "You don't coordinate a department yet. Ask an Admin."
     setErrors(found)
     setFailure("")
     if (Object.keys(found).length) return
@@ -235,17 +235,17 @@ export function PersonSheet({ orgId, person, units, positions, domainHint, canMa
 
               {canManageRoles && roles.has("coordinator") && hasDepartments && (
                 <div className="form-field span-4">
-                  <label htmlFor="person-coordinates">Head of department *</label>
+                  <label htmlFor="person-coordinates">Coordinates department *</label>
                   <select id="person-coordinates" className="form-control" value={coordinatesId} data-empty={coordinatesId ? undefined : true}
                     aria-invalid={errors.coordinates ? true : undefined}
                     aria-describedby={errors.coordinates ? "person-coordinates-error" : "person-coordinates-hint"}
                     onChange={event => { setCoordinatesId(event.target.value); setErrors(current => ({ ...current, coordinates: "" })) }}>
                     <option value="">Choose a department</option>
-                    {departmentOptions(unit => unit.coordinator && unit.coordinator.id !== person?.id ? `head: ${unit.coordinator.display_name}` : null)}
+                    {departmentOptions(unit => unit.coordinator && unit.coordinator.id !== person?.id ? `Coordinator: ${unit.coordinator.display_name}` : null)}
                   </select>
                   {errors.coordinates
                     ? <p id="person-coordinates-error" className="field-error">{errors.coordinates}</p>
-                    : <p id="person-coordinates-hint" className="field-hint">Each department has one head, who registers and manages its Researchers.</p>}
+                    : <p id="person-coordinates-hint" className="field-hint">Each department has one Coordinator, who registers and manages its Researchers.</p>}
                 </div>
               )}
 

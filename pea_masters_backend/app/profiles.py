@@ -1,6 +1,6 @@
 """General information: a person's biography (English and Georgian) and photo, plus the institutional details shown
-with it (organization, faculty, department, academic position). People edit their own; Admins and heads of
-department can view the profiles of the people they manage."""
+with it (organization, faculty, department, academic position). People edit their own; Admins and
+Coordinators can view the profiles of the people they manage."""
 
 import io
 import uuid
@@ -58,7 +58,7 @@ class AffiliationOut(BaseModel):
     faculty: Ref | None
     department: Ref | None
     position: Ref | None
-    coordinator: Contact | None  # who the person contacts about their evaluation: their head of department
+    coordinator: Contact | None  # who the person contacts about their evaluation: their Coordinator
 
 
 class ProfileOut(BaseModel):
@@ -85,7 +85,7 @@ def photo_url(file_id: uuid.UUID | None) -> str | None:
 
 def coordinator_of(db: Session, org_id: uuid.UUID, user_id: uuid.UUID,
                    department_id: uuid.UUID | None) -> Contact | None:
-    """The person's own Coordinator if one is assigned to them, otherwise the head of their department.
+    """The person's own Coordinator if one is assigned to them, otherwise their department's Coordinator.
     Nobody is their own coordinator, and only active members of the organization count."""
     current = (
         (CoordinatorAssignment.organization_id == org_id)
@@ -293,7 +293,7 @@ def remove_my_photo(request: Request, user: User = Depends(current_user), db: Se
 @router.get("/api/v1/orgs/{org_id}/people/{user_id}/profile", response_model=ProfileOut)
 def person_profile(org_id: uuid.UUID, user_id: uuid.UUID, actor: Actor = Depends(get_actor),
                    db: Session = Depends(get_db)):
-    """Admins see everyone's; heads of department see their department's people."""
+    """Admins see everyone's; Coordinators see their department's people."""
     get_organization(db, org_id)
     authorize(db, actor, Action.VIEW_PEOPLE, org_id, target_user_id=user_id)
     member = db.scalar(select(OrganizationMembership.id).where(
@@ -307,7 +307,7 @@ def person_profile(org_id: uuid.UUID, user_id: uuid.UUID, actor: Actor = Depends
 @router.get("/api/v1/files/{file_id}", response_class=FileResponse)
 def get_file(file_id: uuid.UUID, actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
     """Serves an uploaded file to its owner and Root. Photos also to anyone sharing an organization with the owner;
-    supporting documents only to those who review the owner: Admins of their organization and their head of
+    supporting documents only to those who review the owner: Admins of their organization and their
     department."""
     file = db.get(File, file_id)
     if file is None or file.deleted_at is not None:

@@ -269,7 +269,7 @@ def replace_section(section: str, body: SectionIn, request: Request, user: User 
 async def upload_document(file: UploadFile, request: Request, user: User = Depends(current_user),
                           db: Session = Depends(get_db)):
     """A supporting document (PDF, JPG or PNG, at most 10 MB), to attach to entries. Only the owner, Admins of their
-    organization and their head of department can open it (app/profiles.py get_file)."""
+    organization and their Coordinator can open it (app/profiles.py get_file)."""
     data = await file.read(DOCUMENT_MAX_BYTES + 1)
     if len(data) > DOCUMENT_MAX_BYTES:
         raise problem(status.HTTP_413_CONTENT_TOO_LARGE, "document_too_large", "Documents can be at most 10 MB.")

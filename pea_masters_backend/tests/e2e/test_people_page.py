@@ -43,7 +43,7 @@ def test_admin_sets_up_a_department_whose_head_registers_researchers(admin_page:
     dialog.get_by_role("button", name="Add department").click()
     expect(page.get_by_role("status")).to_contain_text(f"{DEPARTMENT} was added.")
     expect(page.get_by_role("heading", name=FACULTY, level=3)).to_be_visible()
-    expect(row(page, DEPARTMENT)).to_contain_text("No head yet")
+    expect(row(page, DEPARTMENT)).to_contain_text("No Coordinator yet")
     shot(page, "1-structure")
 
     # 3. Registers someone into the department as a Researcher
@@ -77,9 +77,9 @@ def test_admin_sets_up_a_department_whose_head_registers_researchers(admin_page:
     page.get_by_role("button", name=f"Edit {HEAD_NAME}").click()
     dialog = page.get_by_role("dialog")
     dialog.get_by_role("checkbox", name=re.compile("^Coordinator")).check()
-    dialog.get_by_label("Head of department *").select_option(label=DEPARTMENT)
+    dialog.get_by_label("Coordinates department *").select_option(label=DEPARTMENT)
     dialog.get_by_role("button", name="Save changes").click()
-    expect(row(page, HEAD_NAME)).to_contain_text(f"Head: {DEPARTMENT}")
+    expect(row(page, HEAD_NAME)).to_contain_text(f"Coordinator: {DEPARTMENT}")
     shot(page, "4-made-head")
 
     # 6. As head, they register a Researcher into their own department

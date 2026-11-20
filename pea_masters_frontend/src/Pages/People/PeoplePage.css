@@ -76,3 +76,41 @@
 .research-output-name { display: block; font-weight: 500; }
 .research-output-table th[scope="row"] small { font-size: 12px; color: var(--muted-foreground); }
 .research-output-missing { color: var(--muted-foreground); font-size: 13px; }
+
+/* Add several people (ImportPeoplePage.tsx) */
+.import-card { display: flex; flex-direction: column; gap: 16px; }
+.import-heading { flex-wrap: wrap; gap: 12px; align-items: center; }
+.import-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.import-info { padding: 10px 14px; border-radius: var(--radius-lg); background: var(--info-soft); color: var(--info); font-size: 13px; line-height: 20px; font-weight: 500; }
+.import-card .form-error-summary { display: flex; align-items: flex-start; gap: 8px; }
+.import-card .form-error-summary svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+.import-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }
+.import-summary-problems { color: var(--destructive); font-weight: 500; }
+.import-filter { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.import-table { min-width: 1000px; table-layout: fixed; }
+.import-table col.c-number { width: 40px; } .import-table col.c-roles { width: 124px; } .import-table col.c-deactivate { width: 92px; } .import-table col.c-remove { width: 52px; }
+.import-table col.c-email { width: 26%; } .import-table col.c-name { width: 18%; }
+.import-table td { padding: 8px; vertical-align: top; }
+.import-table th { padding: 10px 8px; }
+.import-table .form-control { min-height: 36px; padding: 6px 10px; font-size: 13px; line-height: 20px; }
+.import-table select.form-control { padding-right: 28px; background-position: right 6px center; text-overflow: ellipsis; }
+.import-table .field-error { margin-top: 4px; overflow-wrap: anywhere; }
+.import-table tr[data-problem] td { background: color-mix(in srgb, var(--danger-soft) 45%, transparent); }
+.import-number { padding-top: 16px !important; font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; text-align: right; }
+.import-roles { display: flex; flex-direction: column; gap: 4px; border: 0; margin: 0; padding: 6px 0 0; }
+.import-roles label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; white-space: nowrap; cursor: pointer; }
+.import-show-all { align-self: flex-start; }
+.import-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+.import-done { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+.import-done > svg { width: 28px; height: 28px; padding: 4px; border-radius: 99px; background: var(--success-soft, var(--muted)); color: var(--success, var(--foreground)); flex-shrink: 0; }
+.import-done > div:first-of-type { flex: 1 1 320px; display: flex; flex-direction: column; gap: 4px; }
+.import-done h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.import-done p { font-size: 14px; line-height: 22px; color: var(--color-neutral-600); }
+.import-done-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.import-table th .optional { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.import-table tr[data-deactivate]:not([data-problem]) td { background: var(--color-neutral-25, var(--muted)); }
+.import-table tr[data-deactivate] .form-control:disabled { opacity: .45; }
+.import-table .field-hint { margin-top: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.import-deactivate { text-align: center; }
+.import-deactivate .form-checkbox { margin-top: 10px; }
+.import-fixed-role { padding-top: 8px; font-size: 13px; line-height: 20px; color: var(--color-neutral-600); }

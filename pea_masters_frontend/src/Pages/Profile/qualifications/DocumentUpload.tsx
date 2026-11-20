@@ -18,7 +18,7 @@ type Props = {
 
 /**
  * Supporting documents: each file is uploaded as soon as it's chosen (PDF, JPG or PNG, up to 10 MB) and attached to
- * the entry when the entry is saved. Only the owner, their organization's Admins and their head of department can
+ * the entry when the entry is saved. Only the owner, their organization's Admins and their Coordinator can
  * open them.
  */
 export function DocumentUpload({ label, documents, onChange, onBusyChange }: Props) {

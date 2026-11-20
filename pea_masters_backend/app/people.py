@@ -1,6 +1,6 @@
 """People in an organization.
 
-Admins register anyone, set roles and departments, and deactivate people. Coordinators (heads of department)
+Admins register anyone, set roles and departments, and deactivate people. Coordinators
 register Researchers into their own department, correct their names, and deactivate or reactivate them; they
 can't grant roles, move people between departments, or act on other Coordinators and Admins.
 "Member" in the database is shown as "Researcher" in the app."""
@@ -9,14 +9,22 @@ import uuid
 from datetime import date, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import func, or_, select, update
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, EmailStr, Field, TypeAdapter, ValidationError
+from sqlalchemy import func, literal, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import audit
-from app.authz import Action, Actor, authorize, coordinated_members, get_actor, get_organization
+from app.authz import (
+    Action,
+    Actor,
+    authorize,
+    coordinated_members,
+    get_actor,
+    get_organization,
+    target_user_id_in_scope,
+)
 from app.db import get_db
 from app.errors import problem
 from app.models import (
@@ -52,7 +60,7 @@ class PersonOut(BaseModel):
     department: UnitRef | None
     faculty: UnitRef | None  # the department's faculty
     position: UnitRef | None  # academic position, e.g. Associate Professor
-    coordinates: UnitRef | None  # the department this person heads
+    coordinates: UnitRef | None  # the department this person coordinates
     last_login_at: datetime | None
 
 
@@ -196,7 +204,7 @@ def get_person(org_id: uuid.UUID, user_id: uuid.UUID, actor: Actor = Depends(get
 
 # --- rules shared by the changes below ----------------------------------------------------------
 
-def headed_departments(db: Session, org_id: uuid.UUID, coordinator_id: uuid.UUID) -> list[uuid.UUID]:
+def coordinated_departments(db: Session, org_id: uuid.UUID, coordinator_id: uuid.UUID) -> list[uuid.UUID]:
     return list(db.scalars(select(CoordinatorAssignment.unit_id).where(
         CoordinatorAssignment.organization_id == org_id, CoordinatorAssignment.coordinator_user_id == coordinator_id,
         CoordinatorAssignment.target == "unit", CoordinatorAssignment.ends_on.is_(None))))
@@ -209,7 +217,7 @@ def coordinator_may_act_on(db: Session, org_id: uuid.UUID, user_id: uuid.UUID) -
         RoleAssignment.revoked_at.is_(None))))
     if roles - {"member"}:
         raise problem(status.HTTP_403_FORBIDDEN, "researchers_only",
-                      "Heads of department can only manage Researchers. Ask an Admin.")
+                      "Coordinators can only manage Researchers. Ask an Admin.")
 
 
 def other_active_admins(db: Session, org_id: uuid.UUID, user_id: uuid.UUID) -> int:
@@ -340,29 +348,35 @@ def commit_or_conflict(db: Session) -> None:
 
 # --- changes ------------------------------------------------------------------------------------
 
-@router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
-def register_person(org_id: uuid.UUID, body: PersonCreate,
-                    actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
-    get_organization(db, org_id)
-    role = authorize(db, actor, Action.REGISTER_PEOPLE, org_id)
+def allowed_domains(db: Session, org_id: uuid.UUID) -> list[str]:
+    return sorted(d.lower() for d in db.scalars(select(OrganizationDomain.domain).where(
+        OrganizationDomain.organization_id == org_id, OrganizationDomain.verified_at.is_not(None))))
+
+
+def add_person(db: Session, org_id: uuid.UUID, body: PersonCreate, actor: Actor, role: str,
+               *, domains: list[str] | None = None, audited: bool = True, quick_audit: bool = False,
+               reason: str | None = None) -> uuid.UUID:
+    """Registers one person in the caller's transaction, or raises a problem. Shared by the "Add person" form and the
+    spreadsheet import, so both follow exactly the same rules. The caller commits.
+    The import passes the organization's domains (looked up once for all rows) and quick_audit: the audit entry is
+    built from what was just saved instead of reading the person back, which is the same for a new registration."""
     department_id = body.department_id
     if role == "coordinator":
         if set(body.roles) != {"member"} or body.coordinates_unit_id is not None:
             raise problem(status.HTTP_403_FORBIDDEN, "researchers_only",
-                          "Heads of department can register Researchers only. Ask an Admin for other roles.")
-        headed = headed_departments(db, org_id, actor.user.id)
-        if department_id is None and len(headed) == 1:
-            department_id = headed[0]
-        if department_id not in headed:
+                          "Coordinators can register Researchers only. Ask an Admin for other roles.")
+        coordinated = coordinated_departments(db, org_id, actor.user.id)
+        if department_id is None and len(coordinated) == 1:
+            department_id = coordinated[0]
+        if department_id not in coordinated:
             raise problem(status.HTTP_403_FORBIDDEN, "own_department_only",
                           "You can register Researchers in your own department only.")
         if body.position_id is not None:
             raise problem(status.HTTP_403_FORBIDDEN, "admins_set_positions", "Only Admins set academic positions.")
     email = str(body.email).strip().lower()
     domain = email.rpartition("@")[2]
-    allowed = db.scalars(select(OrganizationDomain.domain).where(
-        OrganizationDomain.organization_id == org_id, OrganizationDomain.verified_at.is_not(None))).all()
-    if domain not in {d.lower() for d in allowed}:
+    allowed = domains if domains is not None else allowed_domains(db, org_id)
+    if domain not in allowed:
         raise problem(status.HTTP_422_UNPROCESSABLE_CONTENT, "email_domain",
                       f"Use an address from the organization's domain ({', '.join(sorted(allowed)) or 'none set up'}).")
 
@@ -386,10 +400,154 @@ def register_person(org_id: uuid.UUID, body: PersonCreate,
     set_department(db, membership, department_id, actor)
     if body.position_id is not None:
         set_position(db, membership, body.position_id, actor)
-    audit.record(db, "person.registered", entity_type="user", entity_id=user.id, actor_user_id=actor.user.id,
-                 acting_role=role, organization_id=org_id, after=snapshot(db, org_id, user.id), ip=actor.ip)
+    db.flush()
+    if audited:
+        if quick_audit:  # the same fields snapshot() reads back; a new membership is always active
+            coordinates = body.coordinates_unit_id if "coordinator" in body.roles else None
+            after = {"display_name": user.display_name,
+                     "status": "deactivated" if user.status == "deactivated" or user.deleted_at else
+                     "invited" if user.status == "invited" else "active",
+                     "roles": [r for r in ROLE_ORDER if r in set(body.roles)],
+                     "department": str(department_id) if department_id else None,
+                     "position": str(body.position_id) if body.position_id else None,
+                     "coordinates": str(coordinates) if coordinates else None}
+        else:
+            after = snapshot(db, org_id, user.id)
+        audit.record(db, "person.registered", entity_type="user", entity_id=user.id, actor_user_id=actor.user.id,
+                     acting_role=role, organization_id=org_id, after=after, reason=reason, ip=actor.ip)
+    return user.id
+
+
+@router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
+def register_person(org_id: uuid.UUID, body: PersonCreate,
+                    actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
+    get_organization(db, org_id)
+    role = authorize(db, actor, Action.REGISTER_PEOPLE, org_id)
+    user_id = add_person(db, org_id, body, actor, role)
     commit_or_conflict(db)
-    return one_person(db, org_id, user.id)
+    return one_person(db, org_id, user_id)
+
+
+# --- spreadsheet import -------------------------------------------------------------------------
+
+IMPORT_LIMIT = 1000
+EMAIL = TypeAdapter(EmailStr)
+FORMULA_START = ("=", "+", "-", "@")
+LIST_REASON = "From a list (Add several people)"  # in the audit log
+
+
+class ImportRow(BaseModel):
+    """One row, as the browser read it from the spreadsheet (or the page) and the person checked it. Plain strings,
+    so a bad cell is reported on its own row instead of failing the whole list."""
+    email: str = Field(max_length=320)
+    action: Literal["add", "deactivate"] = "add"
+    # The rest only for "add"
+    display_name: str | None = Field(default=None, max_length=200)
+    roles: list[Role] = Field(default_factory=lambda: ["member"], max_length=3)
+    department_id: uuid.UUID | None = None  # a Coordinator coordinates this department too
+
+
+class ImportIn(BaseModel):
+    rows: list[ImportRow] = Field(min_length=1, max_length=IMPORT_LIMIT)
+    save: bool = False  # false: only check every row and report; nothing is saved
+    reason: str | None = Field(default=None, max_length=500)  # kept in the audit log for deactivations
+
+
+class ImportResult(BaseModel):
+    email: str
+    code: str | None  # null: this row is fine
+    message: str | None
+
+
+class ImportOut(BaseModel):
+    results: list[ImportResult]  # in the order of the rows sent
+    errors: int
+    registered: int  # both 0 unless saved
+    deactivated: int
+
+
+def import_row_problem(row: ImportRow, seen: set[str]) -> HTTPException | None:
+    """Checks that don't need the database."""
+    email = row.email.strip().lower()
+    try:
+        EMAIL.validate_python(email)
+    except ValidationError:
+        return problem(422, "invalid_email", "This isn't a valid email address.")
+    if email in seen:
+        return problem(422, "duplicate_row", "This email is in the list more than once.")
+    if row.action == "deactivate":
+        return None
+    if (row.display_name or "").strip().startswith(FORMULA_START):
+        return problem(422, "formula", "A name can't start with =, +, - or @ (that's how spreadsheet formulas start).")
+    if not row.roles:
+        return problem(422, "roles_required", "Choose at least one role.")
+    if "coordinator" in row.roles and row.department_id is None:
+        return problem(422, "coordinator_needs_department", "A Coordinator needs the department they coordinate.")
+    return None
+
+
+def deactivate_by_email(db: Session, org_id: uuid.UUID, email: str, actor: Actor, role: str, reason: str | None,
+                        audited: bool) -> None:
+    user_id = db.scalar(select(User.id).join(OrganizationMembership, OrganizationMembership.user_id == User.id).where(
+        OrganizationMembership.organization_id == org_id, func.lower(User.email) == email, User.deleted_at.is_(None)))
+    in_scope = user_id is not None and (role != "coordinator" or db.scalar(
+        select(literal(True)).where(target_user_id_in_scope(actor.user.id, org_id, user_id))))
+    if not in_scope:  # Coordinators aren't told whether someone outside their department exists
+        where = " in your department" if role == "coordinator" else ""
+        raise problem(404, "not_registered", f"Nobody with this email is registered{where}.")
+    deactivate_member(db, org_id, user_id, actor, role, reason, audited=audited)
+
+
+@router.post("/import", response_model=ImportOut)
+def import_people(org_id: uuid.UUID, body: ImportIn,
+                  actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
+    """Registers and deactivates up to 1000 people from a list the browser has read from a spreadsheet or the page
+    (the file itself never reaches the server). Admins act on anyone; Coordinators register Researchers into their
+    own department and deactivate their own Researchers, the same rules as the single-person buttons, which this
+    reuses. Each row runs in its own savepoint, so one bad row is reported without hiding the others. Saved only when
+    asked to and every row is fine: all or nothing. People already registered are reported, never changed."""
+    get_organization(db, org_id)
+    role = authorize(db, actor, Action.REGISTER_PEOPLE, org_id)
+
+    results: list[ImportResult] = []
+    seen: set[str] = set()
+    domains = allowed_domains(db, org_id)
+    for row in body.rows:
+        email = row.email.strip().lower()
+        error = import_row_problem(row, seen)
+        seen.add(email)
+        if error is None:
+            try:
+                with db.begin_nested():  # a refused row is undone on its own
+                    if row.action == "deactivate":
+                        deactivate_by_email(db, org_id, email, actor, role, body.reason or LIST_REASON,
+                                            audited=body.save)
+                    else:
+                        person = PersonCreate.model_construct(
+                            email=email, display_name=(row.display_name or "").strip() or None, roles=row.roles,
+                            department_id=row.department_id,
+                            coordinates_unit_id=row.department_id if "coordinator" in row.roles else None,
+                            position_id=None)
+                        add_person(db, org_id, person, actor, role, domains=domains, audited=body.save,
+                                   quick_audit=True, reason=LIST_REASON)
+            except HTTPException as refused:
+                error = refused
+            except IntegrityError:
+                error = problem(409, "conflict", "This row clashes with another one in the list.")
+        detail = error.detail if error is not None else {}
+        results.append(ImportResult(email=row.email.strip(), code=detail.get("code"), message=detail.get("message")))
+
+    errors = sum(1 for result in results if result.code)
+    if not body.save or errors:
+        db.rollback()
+        return ImportOut(results=results, errors=errors, registered=0, deactivated=0)
+    deactivated = sum(1 for row in body.rows if row.action == "deactivate")
+    registered = len(body.rows) - deactivated
+    audit.record(db, "people.imported", entity_type="organization", entity_id=org_id, actor_user_id=actor.user.id,
+                 acting_role=role, organization_id=org_id, after={"registered": registered, "deactivated": deactivated},
+                 reason=body.reason, ip=actor.ip)
+    commit_or_conflict(db)
+    return ImportOut(results=results, errors=0, registered=registered, deactivated=deactivated)
 
 
 @router.patch("/{user_id}", response_model=PersonOut)
@@ -436,11 +594,10 @@ def set_roles(org_id: uuid.UUID, user_id: uuid.UUID, body: RolesUpdate,
     return one_person(db, org_id, user_id)
 
 
-@router.post("/{user_id}/deactivate", response_model=PersonOut)
-def deactivate_person(org_id: uuid.UUID, user_id: uuid.UUID, body: Reason | None = None,
-                      actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
-    get_organization(db, org_id)
-    role = authorize(db, actor, Action.EDIT_PEOPLE, org_id, target_user_id=user_id)
+def deactivate_member(db: Session, org_id: uuid.UUID, user_id: uuid.UUID, actor: Actor, role: str,
+                      reason: str | None, *, audited: bool = True) -> None:
+    """Deactivates someone in the caller's transaction, or raises a problem. Shared by the Deactivate button and the
+    spreadsheet import. The caller has checked that the actor may act on this person; the caller commits."""
     if user_id == actor.user.id:
         raise problem(status.HTTP_409_CONFLICT, "cannot_deactivate_self", "You can't deactivate your own account.")
     membership = membership_of(db, org_id, user_id)
@@ -452,8 +609,7 @@ def deactivate_person(org_id: uuid.UUID, user_id: uuid.UUID, body: Reason | None
             RoleAssignment.organization_id == org_id, RoleAssignment.user_id == user_id,
             RoleAssignment.role == "admin", RoleAssignment.revoked_at.is_(None))):
         ensure_not_last_admin(db, org_id, user_id)
-    reason = body.reason if body else None
-    before = snapshot(db, org_id, user_id)
+    before = snapshot(db, org_id, user_id) if audited else None
 
     membership.status = "inactive"
     membership.left_on = date.today()
@@ -466,10 +622,19 @@ def deactivate_person(org_id: uuid.UUID, user_id: uuid.UUID, body: Reason | None
     # Signed out everywhere, immediately
     db.execute(update(UserSession).where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
                .values(revoked_at=func.now()))
+    db.flush()
+    if audited:
+        audit.record(db, "person.deactivated", entity_type="user", entity_id=user_id, actor_user_id=actor.user.id,
+                     acting_role=role, organization_id=org_id, before=before, after=snapshot(db, org_id, user_id),
+                     reason=reason, ip=actor.ip)
 
-    audit.record(db, "person.deactivated", entity_type="user", entity_id=user_id, actor_user_id=actor.user.id,
-                 acting_role=role, organization_id=org_id, before=before, after=snapshot(db, org_id, user_id),
-                 reason=reason, ip=actor.ip)
+
+@router.post("/{user_id}/deactivate", response_model=PersonOut)
+def deactivate_person(org_id: uuid.UUID, user_id: uuid.UUID, body: Reason | None = None,
+                      actor: Actor = Depends(get_actor), db: Session = Depends(get_db)):
+    get_organization(db, org_id)
+    role = authorize(db, actor, Action.EDIT_PEOPLE, org_id, target_user_id=user_id)
+    deactivate_member(db, org_id, user_id, actor, role, body.reason if body else None)
     commit_or_conflict(db)
     return one_person(db, org_id, user_id)
 

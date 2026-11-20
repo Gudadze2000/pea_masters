@@ -12,12 +12,12 @@ import { localName } from "./people"
 
 type Ref = { id: string; name: Record<string, string> }
 
-/** Someone to get in touch with, e.g. the person's coordinator (head of department) */
+/** Someone to get in touch with, e.g. the person's Coordinator */
 export type Contact = { name: string; email: string }
 
 export type ProfileAffiliation = {
   organization: Ref; faculty: Ref | null; department: Ref | null; position: Ref | null
-  /** Who the person contacts about their evaluation; null when their department has no head */
+  /** Who the person contacts about their evaluation; null when their department has no Coordinator */
   coordinator: Contact | null
 }
 

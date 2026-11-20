@@ -3,7 +3,7 @@ import type { Role } from "./auth"
 
 /* People and organization structure (pea_masters_backend/app/people.py and units.py).
    Structure: organization → faculties (schools) → departments (programs). People belong to a department;
-   each department has one Coordinator, its head. The "member" role is shown as "Researcher". */
+   each department has one Coordinator. The "member" role is shown as "Researcher". */
 
 export type LocalizedName = Record<string, string> // { en, ka? }
 
@@ -15,7 +15,7 @@ export type Unit = UnitRef & {
   kind: UnitKind
   /** A department's faculty */
   parent_id: string | null
-  /** Departments only: their head */
+  /** Departments only: their Coordinator */
   coordinator: { id: string; display_name: string } | null
   /** A faculty counts the people of all its departments */
   member_count: number
@@ -38,7 +38,7 @@ export type Person = {
   faculty: UnitRef | null
   /** Academic position, e.g. Associate Professor */
   position: UnitRef | null
-  /** The department this person heads */
+  /** The department this person coordinates */
   coordinates: UnitRef | null
   last_login_at: string | null
 }
@@ -69,7 +69,7 @@ export function localName(name: LocalizedName, language: "KA" | "EN") {
 export const roleLabels: Record<Role, string> = { admin: "Admin", coordinator: "Coordinator", member: "Researcher" }
 export const roleHints: Record<Role, string> = {
   admin: "The organization's responsible person: manages people, roles and structure.",
-  coordinator: "Head of a department: registers and manages its Researchers.",
+  coordinator: "Coordinates a department: registers and manages its Researchers.",
   member: "Keeps a researcher profile and submits evaluations.",
 }
 export const statusLabels: Record<PersonStatus, string> = { invited: "Invited", active: "Active", deactivated: "Deactivated" }
