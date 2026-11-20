@@ -17,6 +17,7 @@ from app import (
     profile_entries,
     profiles,
     research_output,
+    research_outputs,
     sent_evaluations,
     units,
     wos,
@@ -62,6 +63,7 @@ app.include_router(evaluations.router)
 app.include_router(sent_evaluations.router)
 app.include_router(evaluation_reviews.router)
 app.include_router(notifications.router)
+app.include_router(research_outputs.router)
 app.include_router(wos.router)
 app.include_router(crossref.router)
 app.include_router(research_output.router)

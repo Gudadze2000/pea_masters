@@ -544,3 +544,88 @@ def test_connect_orcid_and_import_works(admin_page: Page, shot):
     expect(card.get_by_role("link", name="Connect ORCID iD")).to_be_visible()
 
     assert not errors, errors
+
+
+DATACITE_DOI = "10.5281/zenodo.7654321"
+DATACITE = {"data": {"attributes": {
+    "titles": [{"title": "Caucasian wheat landraces: genotype data"}],
+    "creators": [{"name": "Admin, Test", "givenName": "Test", "familyName": "Admin"}],
+    "publisher": "Zenodo", "publicationYear": 2025, "version": "2.1", "rightsList": [{"rights": "CC BY 4.0"}],
+    "types": {"resourceTypeGeneral": "Dataset"}}}}
+
+
+def test_research_outputs_on_the_profile(admin_page: Page, shot):
+    """Publications, datasets and software on My profile: offered under "Add to your profile", imported from Web of
+    Science and ORCID (the fakes), found by DOI (Crossref and DataCite answered by the test itself), added by hand."""
+    page = admin_page
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
+    # The browser looks DOIs up in Crossref, then DataCite: answer here instead of the internet
+    page.route("https://api.crossref.org/**", lambda route: route.fulfill(status=404, body="Resource not found."))
+    page.route(f"https://api.datacite.org/dois/{DATACITE_DOI.replace('/', '%2F')}",
+               lambda route: route.fulfill(status=200, json=DATACITE))
+
+    page.goto("/profile")
+    page.locator("#add-more").get_by_role("button", name="Research outputs").click()
+    section = page.locator("#outputs")
+    expect(section).to_contain_text("No research outputs yet")
+
+    # Web of Science: the three documents found by the ResearcherID
+    section.get_by_role("button", name="Import from Web of Science").click()
+    sheet = page.get_by_role("dialog")
+    expect(sheet.locator(".outputs-import-item")).to_have_count(3)
+    sheet.get_by_role("button", name="Add 3 to my profile").click()
+    expect(section.get_by_role("status").filter(has_text="added")).to_have_text(
+        "3 outputs were added to your profile.")
+    publications = section.locator(".outputs-group", has_text="Publications")
+    expect(publications).to_contain_text("Heat-shock proteins in Caucasian wheat")
+
+    # ORCID: its two public works, neither on the profile yet
+    section.get_by_role("button", name="Import from ORCID").click()
+    sheet = page.get_by_role("dialog")
+    expect(sheet.locator(".outputs-import-item")).to_have_count(2)
+    sheet.get_by_role("button", name="Add 2 to my profile").click()
+    expect(section.locator(".outputs-group", has_text="Publications").locator(".count-badge")).to_have_text("5")
+
+    # Importing again: everything is already there
+    section.get_by_role("button", name="Import from Web of Science").click()
+    sheet = page.get_by_role("dialog")
+    expect(sheet.locator(".outputs-import-item.done")).to_have_count(3)
+    expect(sheet.get_by_role("button", name="Add", exact=True)).to_be_disabled()
+    sheet.get_by_role("button", name="Cancel").click()
+
+    # A dataset by DOI: not in Crossref, found in DataCite, checked and added
+    section.get_by_label("Add by DOI").fill(f"https://doi.org/{DATACITE_DOI}")
+    section.get_by_role("button", name="Look up").click()
+    sheet = page.get_by_role("dialog")
+    expect(sheet.get_by_role("heading", name="Check dataset")).to_be_visible()
+    expect(sheet.get_by_label(re.compile("^Repository or publisher"))).to_have_value("Zenodo")
+    expect(sheet.get_by_label(re.compile("^Licence"))).to_have_value("CC BY 4.0")
+    sheet.get_by_role("button", name="Add to my profile").click()
+    datasets = section.locator(".outputs-group", has_text="Datasets")
+    expect(datasets).to_contain_text("Caucasian wheat landraces: genotype data")
+    expect(datasets).to_contain_text("Version 2.1")
+
+    # Software by hand: it needs a repository link or a DOI
+    section.get_by_role("button", name="Add by hand").click()
+    section.get_by_role("button", name="Software or code").click()
+    sheet = page.get_by_role("dialog")
+    sheet.get_by_label(re.compile("^Name")).fill("landrace-tools")
+    sheet.get_by_label(re.compile("^Authors or contributors")).fill("Admin T")
+    sheet.get_by_role("button", name="Add to my profile").click()
+    expect(sheet).to_contain_text("Add a repository link or a DOI")
+    sheet.get_by_label(re.compile("^Repository link")).fill("https://github.com/example/landrace-tools")
+    sheet.get_by_label(re.compile("^Licence")).fill("MIT")
+    sheet.get_by_role("button", name="Add to my profile").click()
+    expect(section.locator(".outputs-group", has_text="Software and code")).to_contain_text("landrace-tools")
+    expect(page.locator(".profile-contents")).to_contain_text("Research outputs")
+    expect(page.get_by_role("dialog")).to_have_count(0)
+    section.scroll_into_view_if_needed()
+    shot(page, "profile-04-research-outputs")
+
+    # Deleting one
+    section.get_by_role("button", name="Delete landrace-tools").click()
+    page.get_by_role("alertdialog").get_by_role("button", name="Delete").click()
+    expect(section.locator(".outputs-group", has_text="Software and code")).to_have_count(0)
+
+    assert not errors, errors

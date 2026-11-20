@@ -86,6 +86,11 @@ of department; photos stay visible inside the organization. Research and
 Teaching interests are kept in `profiles.research` and `profiles.teaching`. Programmes and supervised students will come
 from Argus, which isn't connected yet.
 
+Research outputs (`app/research_outputs.py`, `research_outputs`): publications, datasets, and software and code on
+My profile, kept all year. Added by hand, by DOI (the browser looks it up in Crossref, then DataCite for datasets and
+software), or imported from Web of Science and ORCID (`POST …/research-outputs/import` adds many and skips ones
+already there). One DOI, or without one the same title and year, appears once per person.
+
 CV builder (`app/cv.py`): each person's CV (headline, research statement, links, publications, talks, layout,
 visibility) is one document in `cvs`, saved with the page's Save button or Ctrl+S (`GET`/`PUT /api/v1/me/cv`) and
 checked against its shape before it's stored. Leaving the page with unsaved changes asks first. Qualifications, research and teaching on the CV come from the profile, not from this document.

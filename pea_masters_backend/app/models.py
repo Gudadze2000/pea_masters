@@ -388,3 +388,28 @@ class Notification(Base):
     dedupe_key: Mapped[str | None] = mapped_column(Text)  # reminders: sent once
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     read_at: Mapped[datetime | None]
+
+
+class ResearchOutput(Base):
+    """A publication, dataset or piece of software on a person's profile (app/research_outputs.py)"""
+    __tablename__ = "research_outputs"
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(Text)  # publication | dataset | software
+    subtype: Mapped[str] = mapped_column(Text)  # e.g. "Journal article"
+    status: Mapped[str] = mapped_column(Text, server_default="Published")
+    title: Mapped[str] = mapped_column(Text)
+    authors: Mapped[str] = mapped_column(Text, server_default="")
+    venue: Mapped[str] = mapped_column(Text, server_default="")  # journal, conference, book; or repository
+    year: Mapped[int | None]
+    volume: Mapped[str] = mapped_column(Text, server_default="")
+    issue: Mapped[str] = mapped_column(Text, server_default="")
+    pages: Mapped[str] = mapped_column(Text, server_default="")
+    version: Mapped[str] = mapped_column(Text, server_default="")
+    license: Mapped[str] = mapped_column(Text, server_default="")
+    doi: Mapped[str] = mapped_column(Text, server_default="")
+    url: Mapped[str] = mapped_column(Text, server_default="")
+    description: Mapped[str] = mapped_column(Text, server_default="")
+    source: Mapped[str] = mapped_column(Text, server_default="manual")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
