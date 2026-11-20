@@ -5,6 +5,8 @@ import re
 
 from playwright.sync_api import Page, expect
 
+from tests.e2e.conftest import APP_URL
+
 FACULTY = "School of Business, Technology and Education"
 DEPARTMENT = "Computer Science"
 HEAD_EMAIL, HEAD_NAME = "nika.lomidze@iliauni.edu.ge", "Nika Lomidze"
@@ -188,3 +190,19 @@ def test_admins_set_up_evaluation_periods(admin_page: Page, shot):
     row.get_by_role("button", name="Remove Annual evaluation 2025-2026").click()
     page.get_by_role("dialog").get_by_role("button", name="Remove period").click()
     expect(panel).to_contain_text("No evaluation periods yet")
+
+
+def test_the_privacy_page_is_public(browser, servers, shot):
+    """Google asks for a privacy policy it can read without signing in; the login page links to it."""
+    context = browser.new_context(base_url=APP_URL, viewport={"width": 1400, "height": 900})
+    page = context.new_page()
+    page.goto("/login")
+    page.get_by_role("link", name="Privacy").click()
+    expect(page).to_have_url(re.compile(r"/privacy$"))
+    expect(page.get_by_role("heading", name="Privacy", level=1)).to_be_visible()
+    for heading in ("What PEA keeps", "Who can see it", "Outside services", "Cookies and your browser"):
+        expect(page.get_by_role("heading", name=heading)).to_be_visible()
+    shot(page, "privacy-01-page")
+    page.get_by_role("link", name="Back to sign in").click()
+    expect(page).to_have_url(re.compile(r"/login$"))
+    context.close()

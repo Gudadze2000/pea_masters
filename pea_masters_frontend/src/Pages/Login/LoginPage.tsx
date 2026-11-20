@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router";
+import { Link, Navigate } from "react-router";
 import { useAuth } from "@/lib/auth";
 import { LoginForm } from "./LoginForm";
 import "./LoginPage.css";
@@ -53,7 +53,7 @@ function LoginPage() {
                     </li>
                     <li>
                         <p className="font-medium">Clear deadlines</p>
-                        <p className="text-small text-brand-200">Email reminders before the faculty deadline.</p>
+                        <p className="text-small text-brand-200">A reminder in PEA a week before your deadline.</p>
                     </li>
                 </ul>
             </section>
@@ -71,6 +71,7 @@ function LoginPage() {
                ))}
                </div>
                 <LoginForm />
+                <Link to="/privacy" className="login-privacy">Privacy</Link>
 
             </section>
 
