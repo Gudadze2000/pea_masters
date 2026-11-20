@@ -20,6 +20,7 @@ const CvBuilderPage = page(() => import("./Pages/CvBuilder/CvBuilderPage"), "CvB
 const EvaluationForm = page(() => import("./Pages/EvaluationForm/EvaluationForm"), "EvaluationForm")
 const SettingsPage = page(() => import("./Pages/Settings/SettingsPage"), "SettingsPage")
 const PeoplePage = page(() => import("./Pages/People/PeoplePage"), "PeoplePage")
+const ImportPeoplePage = page(() => import("./Pages/People/ImportPeoplePage"), "ImportPeoplePage")
 const EvaluationFormsPage = page(() => import("./Pages/EvaluationForms/EvaluationFormsPage"), "EvaluationFormsPage")
 const FormEditorPage = page(() => import("./Pages/EvaluationForms/FormEditorPage"), "FormEditorPage")
 const SendEvaluationsPage = page(() => import("./Pages/Evaluations/SendEvaluationsPage"), "SendEvaluationsPage")
@@ -68,6 +69,7 @@ function App() {
         {/* Administration: Admins and Coordinators only */}
         <Route element={<RequireStaff />}>
         <Route path="/admin/people" element={<PeoplePage />} />
+        <Route path="/admin/people/import" element={<ImportPeoplePage />} />
         <Route path="/admin/evaluations" element={<SendEvaluationsPage />} />
         <Route path="/admin/evaluations/:evaluationId" element={<ReviewEvaluationPage />} />
         <Route path="/admin/evaluation-forms" element={<EvaluationFormsPage />} />

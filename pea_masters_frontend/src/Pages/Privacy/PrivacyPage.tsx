@@ -25,7 +25,7 @@ export function PrivacyPage() {
 
         <p className="privacy-lead">
           PEA (Personnel Evaluation and Academic profile) is Ilia State University's system where academic staff keep
-          their profile and CV and submit evaluation forms, and heads of department review them. This page explains what
+          their profile and CV and submit evaluation forms, and Coordinators review them. This page explains what
           PEA keeps about you, who can see it and which outside services it uses.
         </p>
 
@@ -52,7 +52,7 @@ export function PrivacyPage() {
           <h2 id="see">Who can see it</h2>
           <ul>
             <li><strong>You</strong> see everything about yourself.</li>
-            <li><strong>Your head of department</strong> (your coordinator) sees your profile, supporting documents and evaluation forms, to review them.</li>
+            <li><strong>Your Coordinator</strong> sees your profile, supporting documents and evaluation forms, to review them.</li>
             <li><strong>Your organization's Admins</strong> see the same for everyone in the organization, to manage PEA.</li>
             <li><strong>Other people in your organization</strong> may see your name and photo, for example where you are someone's coordinator.</li>
             <li><strong>The people who maintain PEA</strong> can reach the information when they need to keep PEA running.</li>

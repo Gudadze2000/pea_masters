@@ -1,7 +1,7 @@
 """People's display names.
 
 Where a name comes from, in order of trust:
-  manual        a person corrected it (an Admin, a head of department, later the person themselves): never overwritten
+  manual        a person corrected it (an Admin, a Coordinator, later the person themselves): never overwritten
   google        the official name from ISU's Google Workspace directory, refreshed at every sign-in
   registration  typed or guessed from the email when the person was registered: replaced at their first sign-in
 """

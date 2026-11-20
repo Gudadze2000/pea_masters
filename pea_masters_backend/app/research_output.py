@@ -1,6 +1,6 @@
-"""Research output overview: the Web of Science documents of the people an Admin or head of department manages,
+"""Research output overview: the Web of Science documents of the people an Admin or Coordinator manages,
 per person and per year, found by the ResearcherID / ORCID iD on each profile. Admins see the whole organization or one
-faculty or department; heads of department see their own department. Each person's search is cached for a day
+faculty or department; Coordinators see their own department. Each person's search is cached for a day
 (app/wos.py), so opening the overview again costs no requests."""
 
 import uuid

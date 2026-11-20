@@ -90,7 +90,8 @@ def test_profile_is_one_page_with_contents(admin_page: Page, shot, tmp_path):
     # A new profile has no sample entries: the fixed parts, and every section waiting in "Add to your profile"
     contents = page.get_by_role("navigation", name="On this page")
     for label in ("General information", "Teaching", "Research"):
-        expect(contents.get_by_role("button", name=re.compile(label))).to_be_visible()
+        # "Research" but not "Research outputs", which is there too once the outputs have loaded
+        expect(contents.get_by_role("button", name=re.compile(rf"{label}(?! outputs)"))).to_be_visible()
     expect(contents.get_by_role("button", name=re.compile(r"^Add \d+ more sections"))).to_be_visible()
     add_more = page.get_by_role("region", name="Add to your profile")
     expect(add_more.get_by_role("button", name="Awards")).to_be_visible()

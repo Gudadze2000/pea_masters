@@ -3,7 +3,7 @@
 Every protected endpoint calls `authorize(...)`, which runs the same steps:
   1. who is asking (the signed-in user, from the session cookie)
   2. their roles in the organization the request is about (Root counts everywhere)
-  3. scope: a Coordinator (head of department) only reaches the Researchers of the department they head
+  3. scope: a Coordinator only reaches the Researchers of the department they coordinate
   4. the record's state is checked by the endpoint itself (e.g. "already deactivated")
   5. refusals are written to the audit log; endpoints audit the changes they make
 
@@ -50,7 +50,7 @@ class Action(StrEnum):
 
 
 # Which organization roles may perform each action. Root (the developers) may do everything, everywhere.
-# Roles: admin = the organization's responsible person; coordinator = head of a department;
+# Roles: admin = the organization's responsible person; coordinator = coordinates a department;
 # member = Researcher. Coordinators act only on Researchers of their own department (see people.py).
 POLICY: dict[Action, frozenset[str]] = {
     Action.VIEW_PEOPLE: frozenset({"admin", "coordinator"}),
@@ -131,7 +131,7 @@ def authorize(db: Session, actor: Actor, action: Action, org_id: uuid.UUID,
 
 
 def coordinated_members(coordinator_id: uuid.UUID, org_id: uuid.UUID, include_inactive: bool = False) -> Select:
-    """User ids of the people a Coordinator handles: everyone currently in the department they head (and its
+    """User ids of the people a Coordinator handles: everyone currently in the department they coordinate (and its
     sub-units), plus anyone assigned to them individually. Deactivated people only with include_inactive."""
     ca = CoordinatorAssignment
     scope = (

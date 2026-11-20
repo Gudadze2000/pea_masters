@@ -11,7 +11,7 @@ import { LANGUAGES, LEVELS, levelLabel } from "./languages"
  */
 
 export type EntryValues = Record<string, string>
-/** An uploaded supporting document; url opens it (the owner, their Admins and head of department) */
+/** An uploaded supporting document; url opens it (the owner, their Admins and Coordinator) */
 export type EntryDocument = { id: string; name: string; size: number; type: string; url?: string }
 
 /** One entry of a profile section. The profile is the person's own: saved entries are on it, with no review. */

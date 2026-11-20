@@ -35,7 +35,7 @@ const YEARS = Array.from({ length: thisYear - FIRST_YEAR + 1 }, (_, i) => thisYe
 
 /**
  * Web of Science output of the people the viewer manages, per person and per year. Admins pick the whole organization,
- * a faculty or a department; heads of department see their own department.
+ * a faculty or a department; Coordinators see their own department.
  */
 export function ResearchOutputPanel({ orgId, units, canPickUnit }: { orgId: string; units: Unit[]; canPickUnit: boolean }) {
   const { language } = useLanguage()

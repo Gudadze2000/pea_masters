@@ -14,7 +14,7 @@ type Props = {
 
 type Editing = { kind: UnitKind; unit: Unit | null; facultyId?: string }
 
-/** Faculties (schools) and their departments (programs), with each department's head and Researcher count. */
+/** Faculties (schools) and their departments (programs), with each department's Coordinator and Researcher count. */
 export function StructurePanel({ orgId, units, onChanged }: Props) {
   const { language } = useLanguage()
   const [editing, setEditing] = useState<Editing | null>(null)
@@ -27,7 +27,7 @@ export function StructurePanel({ orgId, units, onChanged }: Props) {
         <div className="card-heading structure-heading">
           <div>
             <h2 id="structure-heading">Faculties and departments</h2>
-            <p className="card-subtitle">Researchers belong to a department. Each department has one head (Coordinator).</p>
+            <p className="card-subtitle">Researchers belong to a department. Each department has one Coordinator.</p>
           </div>
           <div className="structure-actions">
             <Button variant="outline" className="dashboard-button" onClick={() => setEditing({ kind: "faculty", unit: null })}><Plus />Add faculty</Button>
@@ -66,7 +66,7 @@ export function StructurePanel({ orgId, units, onChanged }: Props) {
                 <div className="data-table-wrap">
                   <table className="data-table">
                     <thead>
-                      <tr><th scope="col">Department</th><th scope="col">Head (Coordinator)</th><th scope="col">Researchers</th><th scope="col"><span className="sr-only">Actions</span></th></tr>
+                      <tr><th scope="col">Department</th><th scope="col">Coordinator</th><th scope="col">Researchers</th><th scope="col"><span className="sr-only">Actions</span></th></tr>
                     </thead>
                     <tbody>
                       {group.departments.length === 0
@@ -74,7 +74,7 @@ export function StructurePanel({ orgId, units, onChanged }: Props) {
                         : group.departments.map(unit => (
                           <tr key={unit.id}>
                             <td className="font-medium">{localName(unit.name, language)}</td>
-                            <td>{unit.coordinator?.display_name ?? <span className="muted">No head yet</span>}</td>
+                            <td>{unit.coordinator?.display_name ?? <span className="muted">No Coordinator yet</span>}</td>
                             <td>{unit.member_count}</td>
                             <td>
                               <div className="row-actions">
