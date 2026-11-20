@@ -1,10 +1,11 @@
 """The CV builder's CV: one document per person with what they write for the CV itself (headline, research statement,
-links, publications, talks) and how it's laid out and shared. Qualifications, research and teaching come from the
-profile and aren't copied here. Saving (the page's Save button) sends the whole document; it's checked
-against the shape below (anything unknown is dropped) before it's stored."""
+links, talks) and how it's laid out and shared. Qualifications, research, teaching and research outputs (publications,
+datasets, software) come from the profile and aren't copied here; the CV only lists the outputs it leaves out.
+Saving (the page's Save button) sends the whole document; it's checked against the shape below (anything unknown is
+dropped) before it's stored. Publications still sent by an older page are moved to the profile's research outputs."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -14,7 +15,8 @@ from sqlalchemy.orm import Session
 from app import audit
 from app.auth.sessions import client_ip, current_user
 from app.db import get_db
-from app.models import Cv, User
+from app.models import Cv, ResearchOutput, User
+from app.research_outputs import OutputIn, existing_keys, key_of
 
 router = APIRouter(tags=["cv"])
 
@@ -27,8 +29,8 @@ def text(limit: int, default: str = ""):
     return Field(default, max_length=limit)
 
 
-SectionId = Literal["summary", "interests", "appointments", "education", "publications", "grants", "talks", "teaching",
-                    "supervision", "awards", "memberships", "service", "patents", "languages", "metrics"]
+SectionId = Literal["summary", "interests", "appointments", "education", "publications", "outputs", "grants", "talks",
+                    "teaching", "supervision", "awards", "memberships", "service", "patents", "languages", "metrics"]
 
 
 class Publication(Part):
@@ -102,13 +104,19 @@ class CvData(Part):
     profiles: Profiles = Field(default_factory=Profiles)
     useProfileInterests: bool = True  # noqa: N815
     interests: list[str] = Field(default_factory=list, max_length=30)
-    publications: list[Publication] = Field(default_factory=list, max_length=500)
+    # Research outputs (on the profile) this CV leaves out; everything else is shown
+    hiddenOutputs: list[Annotated[str, Field(max_length=64)]] = Field(default_factory=list, max_length=2000)  # noqa: N815
     talks: list[Talk] = Field(default_factory=list, max_length=200)
     metrics: Metrics = Field(default_factory=Metrics)
 
 
+class CvDataIn(CvData):
+    # Sent only by pages from before publications moved to the profile: moved there when saved
+    publications: list[Publication] = Field(default_factory=list, max_length=500)
+
+
 class CvIn(BaseModel):
-    data: CvData
+    data: CvDataIn
 
 
 class CvOut(BaseModel):
@@ -122,9 +130,36 @@ def my_cv(user: User = Depends(current_user), db: Session = Depends(get_db)):
     return CvOut(data=CvData.model_validate(cv.data) if cv else None, updated_at=cv.updated_at if cv else None)
 
 
+def move_publications(db: Session, user: User, publications: list[Publication]) -> int:
+    """Publications sent with a CV go to the profile's research outputs, skipping ones already there"""
+    keys = existing_keys(db, user)
+    moved = 0
+    for pub in publications:
+        year = int(pub.year) if pub.year.isdigit() and 1900 <= int(pub.year) <= 2100 else None
+        try:
+            output = OutputIn(kind="publication", subtype=pub.type, status=pub.status, title=pub.title or "Untitled",
+                              authors=pub.authors, venue=pub.venue, year=year, volume=pub.volume, issue=pub.issue,
+                              pages=pub.pages, doi=pub.doi, url=pub.url, source="cv")
+        except ValueError:
+            output = OutputIn(kind="publication", subtype=pub.type, status=pub.status, title=pub.title or "Untitled",
+                              authors=pub.authors, venue=pub.venue, year=year, source="cv")  # without a bad DOI or link
+        key = key_of(output.doi, output.title, output.year)
+        if key in keys:
+            continue
+        keys.add(key)
+        db.add(ResearchOutput(user_id=user.id, **output.model_dump()))
+        moved += 1
+    return moved
+
+
 @router.put("/api/v1/me/cv", response_model=CvOut)
 def save_cv(body: CvIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    data = body.data.model_dump()
+    if body.data.publications:
+        moved = move_publications(db, user, body.data.publications)
+        if moved:
+            audit.record(db, "research_output.imported", entity_type="research_output", entity_id=user.id,
+                         actor_user_id=user.id, after={"added": moved, "sources": ["cv"]}, ip=client_ip(request))
+    data = CvData.model_validate(body.data.model_dump(exclude={"publications"})).model_dump()
     data["interests"] = list(dict.fromkeys(item.strip()[:120] for item in data["interests"] if item.strip()))
     before = db.get(Cv, user.id)
     if (before.data.get("visibility") if before else "private") != data["visibility"]:

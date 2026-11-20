@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react"
-import { BookOpen, Calendar, Code2, Database, Download, Hash, Link2, LoaderCircle, Pencil, Plus, Scale, Search, Tag, Trash2 } from "lucide-react"
+import { BookOpen, Calendar, Code2, Database, Download, FileUp, Hash, Link2, LoaderCircle, Pencil, Plus, Scale, Search, Tag, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RecordSheet } from "@/components/forms/RecordSheet"
 import type { FieldDef } from "@/components/forms/field-types"
@@ -10,6 +10,7 @@ import {
   type OutputDraft, type OutputKind, type ResearchOutput,
 } from "@/lib/research-outputs"
 import { ConfirmDialog } from "@/Pages/CvBuilder/cv-ui"
+import { BibtexSheet } from "./BibtexSheet"
 import { OutputImportSheet, type ImportSource } from "./OutputImportSheet"
 import { SectionLoading } from "./SectionLoading"
 import "../qualifications/QualificationsPage.css"
@@ -74,13 +75,22 @@ function check(kind: OutputKind, values: Record<string, string>) {
 
 type Editor = { output: ResearchOutput | null; draft: OutputDraft; session: number }
 
-function OutputCard({ output, onEdit, onDelete }: { output: ResearchOutput; onEdit: () => void; onDelete: () => void }) {
+/** In the CV builder: which outputs this CV shows */
+export type CvChoice = { hidden: Set<string>; onToggle: (id: string, shown: boolean) => void }
+
+function OutputCard({ output, onEdit, onDelete, cv }: { output: ResearchOutput; onEdit: () => void; onDelete: () => void; cv?: CvChoice }) {
   const authors = output.authors.split(";").map(name => name.trim()).filter(Boolean).join(", ")
   return (
     <li className="entry-card output-card">
       <div className="entry-card-heading">
         <h4>{output.title}</h4>
         <div className="entry-card-actions">
+          {cv && (
+            <label className="output-on-cv">
+              <input type="checkbox" checked={!cv.hidden.has(output.id)} onChange={event => cv.onToggle(output.id, event.target.checked)} />
+              On this CV
+            </label>
+          )}
           {output.status !== "Published" && output.kind === "publication" && <span className="status-badge status-submitted">{output.status}</span>}
           <Button variant="outline" size="icon" className="icon-button" aria-label={`Edit ${output.title}`} onClick={onEdit}><Pencil /></Button>
           <Button variant="outline" size="icon" className="icon-button danger" aria-label={`Delete ${output.title}`} onClick={onDelete}><Trash2 /></Button>
@@ -104,12 +114,16 @@ function OutputCard({ output, onEdit, onDelete }: { output: ResearchOutput; onEd
  * Research outputs on My profile: publications, datasets, and software and code, kept all year. Added by DOI
  * (Crossref, then DataCite), by hand, or imported from Web of Science or ORCID.
  */
-export function ResearchOutputsSection({ onEmptied }: { onEmptied?: () => void }) {
+export function ResearchOutputsSection({ onEmptied, cv }: {
+  onEmptied?: () => void
+  /** Shown in the CV builder: each output gets an "On this CV" tick */
+  cv?: CvChoice
+}) {
   const { status, outputs } = useOutputs()
   const [editor, setEditor] = useState<Editor | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [choosingKind, setChoosingKind] = useState(false)
-  const [importFrom, setImportFrom] = useState<ImportSource | null>(null)
+  const [importFrom, setImportFrom] = useState<ImportSource | "bibtex" | null>(null)
   const [deleting, setDeleting] = useState<ResearchOutput | null>(null)
   const [notice, setNotice] = useState("")
   const session = useRef(0)
@@ -149,15 +163,18 @@ export function ResearchOutputsSection({ onEmptied }: { onEmptied?: () => void }
   const counts = KIND_ORDER.map(k => ({ kind: k, items: outputs.filter(o => o.kind === k) }))
 
   return (
-    <section id="outputs" className="dashboard-card profile-section outputs-section" aria-labelledby="outputs-heading">
+    <section id="outputs" className="dashboard-card outputs-section" aria-labelledby="outputs-heading">
       <div className="card-heading outputs-heading">
         <div>
           <h2 id="outputs-heading">Research outputs {outputs.length > 0 && <span className="count-badge">{outputs.length}</span>}</h2>
-          <p className="outputs-subtitle">Your publications, datasets, and software and code, kept here all year.</p>
+          <p className="outputs-subtitle">{cv
+            ? "These are kept on My profile: adding or changing one here changes your profile too. Untick any this CV shouldn't show."
+            : "Your publications, datasets, and software and code, kept here all year."}</p>
         </div>
         <div className="outputs-actions">
           <Button variant="outline" className="dashboard-button compact" onClick={() => setImportFrom("wos")}><Download />Import from Web of Science</Button>
           <Button variant="outline" className="dashboard-button compact" onClick={() => setImportFrom("orcid")}><Download />Import from ORCID</Button>
+          <Button variant="outline" className="dashboard-button compact" onClick={() => setImportFrom("bibtex")}><FileUp />Import BibTeX</Button>
           <Button className="dashboard-button compact" aria-expanded={choosingKind} onClick={() => setChoosingKind(value => !value)}><Plus />Add by hand</Button>
         </div>
       </div>
@@ -186,7 +203,7 @@ export function ResearchOutputsSection({ onEmptied }: { onEmptied?: () => void }
           <h3>{OUTPUT_KINDS[group.kind].plural} <span className="count-badge">{group.items.length}</span></h3>
           <ul className="entry-list">
             {group.items.map(output => (
-              <OutputCard key={output.id} output={output} onEdit={() => open(output, output)} onDelete={() => setDeleting(output)} />
+              <OutputCard key={output.id} output={output} cv={cv} onEdit={() => open(output, output)} onDelete={() => setDeleting(output)} />
             ))}
           </ul>
         </div>
@@ -208,12 +225,13 @@ export function ResearchOutputsSection({ onEmptied }: { onEmptied?: () => void }
         />
       )}
 
-      {importFrom && <OutputImportSheet source={importFrom} existingKeys={keys} onImport={importDrafts} onClose={() => setImportFrom(null)} />}
+      {importFrom === "bibtex" && <BibtexSheet existingKeys={keys} onImport={importDrafts} onClose={() => setImportFrom(null)} />}
+      {importFrom && importFrom !== "bibtex" && <OutputImportSheet source={importFrom} existingKeys={keys} onImport={importDrafts} onClose={() => setImportFrom(null)} />}
 
       <ConfirmDialog
         open={deleting !== null}
         title={`Delete “${deleting?.title ?? ""}”?`}
-        description="It's removed from your profile. Your CV and evaluation forms keep what they already have."
+        description={cv ? "It's removed from your profile, and so from this CV. To keep it on your profile but not on this CV, untick “On this CV” instead." : "It's removed from your profile and from your CV. Evaluation forms keep what they already have."}
         confirmLabel="Delete"
         danger
         onConfirm={() => {

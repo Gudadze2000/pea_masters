@@ -88,13 +88,16 @@ from Argus, which isn't connected yet.
 
 Research outputs (`app/research_outputs.py`, `research_outputs`): publications, datasets, and software and code on
 My profile, kept all year. Added by hand, by DOI (the browser looks it up in Crossref, then DataCite for datasets and
-software), or imported from Web of Science and ORCID (`POST …/research-outputs/import` adds many and skips ones
-already there). One DOI, or without one the same title and year, appears once per person.
+software), or imported from Web of Science, ORCID or a BibTeX file (`POST …/research-outputs/import` adds many and skips
+ones already there). One DOI, or without one the same title and year, appears once per person.
 
-CV builder (`app/cv.py`): each person's CV (headline, research statement, links, publications, talks, layout,
-visibility) is one document in `cvs`, saved with the page's Save button or Ctrl+S (`GET`/`PUT /api/v1/me/cv`) and
-checked against its shape before it's stored. Leaving the page with unsaved changes asks first. Qualifications, research and teaching on the CV come from the profile, not from this document.
-Making a CV public or private is recorded in the audit log; ordinary saves aren't.
+CV builder (`app/cv.py`): each person's CV (headline, research statement, links, talks, layout, visibility, and which
+research outputs it leaves out) is one document in `cvs`, saved with the page's Save button or Ctrl+S
+(`GET`/`PUT /api/v1/me/cv`) and checked against its shape before it's stored. Leaving the page with unsaved changes asks
+first. Qualifications, research, teaching and research outputs on the CV come from the profile, not from this document:
+its "Research outputs" tab is the profile's section, with an "On this CV" tick per output. CVs used to keep their own
+publications; migration 0018 moved them to research outputs, and publications an older page still sends are moved there
+when it saves. Making a CV public or private is recorded in the audit log; ordinary saves aren't.
 
 Evaluations (`app/evaluations.py`): Admins set up evaluation periods (name, opening day, deadline, which publication
 years count) under People → Evaluation periods; deadlines are whole days, Tbilisi time. Forms have parts → items →

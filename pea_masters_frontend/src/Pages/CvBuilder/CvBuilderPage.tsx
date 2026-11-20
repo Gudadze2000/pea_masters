@@ -10,6 +10,7 @@ import { SERVER_IDENTIFIERS } from "@/Pages/Profile/sections/IdentifiersCard"
 import { savedResearch, useProfileData } from "@/Pages/Profile/profile-data"
 import { useStore } from "@/lib/store"
 import { buildCvSections, sectionCounts } from "./cv-content"
+import { loadOutputs, useOutputs } from "@/lib/research-outputs"
 import { browserCv, cvApi, forgetBrowserCv, initialCv, normaliseCv, type CvData, type Visibility } from "./cv-model"
 import { ConfirmDialog, Segmented } from "./cv-ui"
 import type { ChangeCv } from "./form-utils"
@@ -26,7 +27,7 @@ import "./CvBuilderPage.css"
 
 const TABS = [
   { id: "profile", label: "Profile & links" },
-  { id: "publications", label: "Publications" },
+  { id: "publications", label: "Research outputs" },
   { id: "talks", label: "Talks" },
   { id: "layout", label: "Sections & layout" },
 ] as const
@@ -59,6 +60,8 @@ export function CvBuilderPage() {
   const { profile } = useMyProfile()
   useProfileData()
   const research = useStore(savedResearch)
+  // Publications, datasets and software come from My profile → Research outputs
+  const { outputs } = useOutputs()
   const { entries } = useQualifications()
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading")
   const [cv, setCv] = useState<CvData>(initialCv)
@@ -116,7 +119,9 @@ export function CvBuilderPage() {
     try {
       const stored = await cvApi.get()
       const fromServer = stored.data ? normaliseCv(stored.data) : null
-      const fromBrowser = fromServer ? null : browserCv()
+      const legacy = fromServer ? null : browserCv()
+      // The publications it held go along with the first save; the server moves them to the profile
+      const fromBrowser = legacy ? (({ publications: _publications, ...rest }) => rest)(legacy) : null
       const data = fromServer ?? fromBrowser ?? initialCv
       setCv(data)
       setSavedCv(fromBrowser ? initialCv : data)  // a browser copy counts as unsaved until it reaches the server
@@ -124,7 +129,7 @@ export function CvBuilderPage() {
       setLoadState("ready")
       if (fromBrowser) {
         // A CV this browser kept before CVs moved to the server: move it over once, then forget the browser copy
-        await cvApi.save(fromBrowser).then(saved => { setSavedCv(fromBrowser); setSavedAt(Date.parse(saved.updated_at)); forgetBrowserCv(); flash("Your CV from this browser is now saved on the server.") })
+        await cvApi.save(legacy!).then(saved => { setSavedCv(fromBrowser); setSavedAt(Date.parse(saved.updated_at)); forgetBrowserCv(); void loadOutputs(); flash("Your CV from this browser is now saved on the server.") })
           .catch(() => setSaveState("failed"))
       }
     } catch {
@@ -176,8 +181,9 @@ export function CvBuilderPage() {
   /* ---------- preview ---------- */
 
   const asVisitor = previewMode === "visitor"
-  const sections = useMemo(() => buildCvSections(cv, entries, { asVisitor, ownFamilyName: person.familyName, research }), [cv, entries, asVisitor, person.familyName, research])
-  const counts = useMemo(() => sectionCounts(cv, entries, research), [cv, entries, research])
+  const sections = useMemo(() => buildCvSections(cv, entries, { asVisitor, ownFamilyName: person.familyName, research, outputs }), [cv, entries, asVisitor, person.familyName, research, outputs])
+  const counts = useMemo(() => sectionCounts(cv, entries, research, outputs), [cv, entries, research, outputs])
+  const shownOutputs = outputs.filter(output => !cv.hiddenOutputs.includes(output.id)).length
 
   // The PDF is always the full CV, whatever preview mode is selected
   const downloadPdf = () => {
@@ -305,7 +311,7 @@ export function CvBuilderPage() {
                     onKeyDown={event => onTabKeyDown(event, index)}
                   >
                     {item.label}
-                    {item.id === "publications" && <span className="count-badge">{cv.publications.length}</span>}
+                    {item.id === "publications" && <span className="count-badge">{shownOutputs}</span>}
                     {item.id === "talks" && <span className="count-badge">{cv.talks.length}</span>}
                   </button>
                 ))}

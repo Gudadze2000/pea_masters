@@ -34,3 +34,19 @@ p.outputs-import-status { flex-direction: row; align-items: center; }
 @media (max-width: 575.98px) {
   .outputs-doi-row { flex-direction: column; }
 }
+
+.output-on-cv { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 20px; font-weight: 500; color: var(--color-neutral-700); white-space: nowrap; cursor: pointer; }
+.output-on-cv input { width: 16px; height: 16px; accent-color: var(--primary); }
+
+/* Import BibTeX (BibtexSheet.tsx) */
+.outputs-dropzone { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 24px; border: 1px dashed var(--input); border-radius: var(--radius-lg); text-align: center; cursor: pointer; }
+.outputs-dropzone:hover { border-color: var(--ring); }
+.outputs-dropzone svg { width: 22px; height: 22px; color: var(--muted-foreground); }
+.outputs-dropzone-title { font-size: 14px; line-height: 20px; font-weight: 500; }
+.outputs-dropzone-hint { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.outputs-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 18px; }
+
+/* Its own layout, so it looks the same in the CV builder, which doesn't load My profile's stylesheet */
+.outputs-section { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 24px; }
+/* The "Loading…" placeholder (SectionLoading.tsx) uses .profile-section, defined on My profile; same layout here */
+.profile-section { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 24px; }

@@ -461,20 +461,29 @@ def test_publications_are_found_by_researcher_id(admin_page: Page, organization,
     expect(page.get_by_label("Total citations")).to_have_value("50")
     expect(page.get_by_label("Source")).to_have_value("Web of Science")
 
-    page.get_by_role("tab", name="Publications").click()
+    # Its research outputs are the profile's: importing here adds them to the profile, and the CV shows them
+    page.get_by_role("tab", name="Research outputs").click()
     page.get_by_role("button", name="Import from Web of Science").click()
     sheet = page.get_by_role("dialog")
-    expect(sheet.locator(".cv-wos-item")).to_have_count(3)
+    expect(sheet.locator(".outputs-import-item")).to_have_count(3)
     expect(sheet).to_contain_text("Planta · 2025")  # "PLANTA" in Web of Science
     shot(page, "cv-01-import-from-wos")
-    sheet.get_by_role("button", name="Add 3 publications").click()
-    added = page.get_by_role("status").filter(has_text="from Web of Science")
-    expect(added).to_have_text("3 publications added from Web of Science.")
-    expect(page.locator(".cv-pub-card", has_text="Seed bank digitisation in Georgia")).to_be_visible()
+    sheet.get_by_role("button", name="Add 3 to my profile").click()
+    expect(page.get_by_role("status").filter(has_text="added")).to_have_text("3 outputs were added to your profile.")
+    expect(page.locator(".output-card", has_text="Seed bank digitisation in Georgia")).to_be_visible()
+    expect(page.locator(".cv-publications li", has_text="Seed bank digitisation in Georgia")).not_to_have_count(0)
 
-    # Opening the import again: everything is already on the CV
+    # Opening the import again: everything is already on the profile
     page.get_by_role("button", name="Import from Web of Science").click()
     expect(page.get_by_role("dialog").get_by_role("button", name="Add", exact=True)).to_be_disabled()
+    page.get_by_role("dialog").get_by_role("button", name="Cancel").click()
+
+    # The same publications on My profile
+    page.goto("/profile#outputs")
+    publications = page.locator("#outputs .outputs-group", has_text="Publications")
+    for title in ("Heat-shock proteins in Caucasian wheat", "Root architecture of drought-tolerant wheat",
+                  "Seed bank digitisation in Georgia"):
+        expect(publications).to_contain_text(title)
 
     assert not errors, errors
 
@@ -527,16 +536,27 @@ def test_connect_orcid_and_import_works(admin_page: Page, shot):
     shot(page, "profile-03-orcid-connected")
 
     page.get_by_role("button", name="CV builder").click()
-    page.get_by_role("tab", name="Publications").click()
+    page.get_by_role("tab", name="Research outputs").click()
     page.get_by_role("button", name="Import from ORCID").click()
     sheet = page.get_by_role("dialog")
     expect(sheet).to_contain_text(f"2 public works on ORCID record {fake_clarivate.ORCID_ID}.")
-    expect(sheet.locator(".cv-wos-item")).to_have_count(2)
-    sheet.get_by_role("button", name="Add 2 publications").click()
-    expect(page.get_by_role("status").filter(has_text="from ORCID")).to_contain_text("2 publications added from ORCID.")
-    expect(page.locator(".cv-pub-card", has_text="Seed banks of Georgia")).to_contain_text("Admin T")
+    expect(sheet.locator(".outputs-import-item")).to_have_count(2)
+    sheet.get_by_role("button", name="Add 2 to my profile").click()
+    expect(page.get_by_role("status").filter(has_text="added")).to_contain_text("2 outputs were added to your profile.")
+    seed_banks = page.locator(".output-card", has_text="Seed banks of Georgia")
+    expect(seed_banks).to_contain_text("Admin T")
+
+    # Each CV chooses which of the profile's outputs it shows
+    on_cv = page.locator(".cv-publications li", has_text="Seed banks of Georgia")
+    expect(on_cv).not_to_have_count(0)
+    seed_banks.get_by_label("On this CV").uncheck()
+    expect(on_cv).to_have_count(0)
     page.get_by_role("button", name="Save", exact=True).click()
     expect(page.locator(".cv-save-status")).to_contain_text("Saved ·")
+    page.reload()
+    page.get_by_role("tab", name="Research outputs").click()
+    on_this_cv = page.locator(".output-card", has_text="Seed banks of Georgia").get_by_label("On this CV")
+    expect(on_this_cv).not_to_be_checked()
 
     page.get_by_role("button", name="My profile", exact=True).click()
     card.get_by_role("button", name="Disconnect to change it").click()
@@ -554,9 +574,10 @@ DATACITE = {"data": {"attributes": {
     "types": {"resourceTypeGeneral": "Dataset"}}}}
 
 
-def test_research_outputs_on_the_profile(admin_page: Page, shot):
-    """Publications, datasets and software on My profile: offered under "Add to your profile", imported from Web of
-    Science and ORCID (the fakes), found by DOI (Crossref and DataCite answered by the test itself), added by hand."""
+def test_research_outputs_on_the_profile(admin_page: Page, google_sign_in, shot):
+    """Publications, datasets and software on My profile: offered under "Add to your profile" while empty, found by DOI
+    (Crossref and DataCite answered by the test itself), added by hand. The Web of Science and ORCID imports are tested
+    from the CV builder above, which adds to the same list."""
     page = admin_page
     errors: list[str] = []
     page.on("pageerror", lambda error: errors.append(str(error)))
@@ -565,34 +586,20 @@ def test_research_outputs_on_the_profile(admin_page: Page, shot):
     page.route(f"https://api.datacite.org/dois/{DATACITE_DOI.replace('/', '%2F')}",
                lambda route: route.fulfill(status=200, json=DATACITE))
 
-    page.goto("/profile")
-    page.locator("#add-more").get_by_role("button", name="Research outputs").click()
+    # Someone with no outputs yet is offered the section under "Add to your profile"
+    eka = google_sign_in(RESEARCHER[1], RESEARCHER[0])
+    eka.goto("/profile")
+    expect(eka.locator("#outputs")).to_have_count(0)
+    eka.locator("#add-more").get_by_role("button", name="Research outputs").click()
+    expect(eka.locator("#outputs")).to_contain_text("No research outputs yet")
+
+    # The Admin's profile holds the publications imported in the CV builder above (Web of Science and ORCID)
+    page.goto("/profile#outputs")
     section = page.locator("#outputs")
-    expect(section).to_contain_text("No research outputs yet")
-
-    # Web of Science: the three documents found by the ResearcherID
-    section.get_by_role("button", name="Import from Web of Science").click()
-    sheet = page.get_by_role("dialog")
-    expect(sheet.locator(".outputs-import-item")).to_have_count(3)
-    sheet.get_by_role("button", name="Add 3 to my profile").click()
-    expect(section.get_by_role("status").filter(has_text="added")).to_have_text(
-        "3 outputs were added to your profile.")
     publications = section.locator(".outputs-group", has_text="Publications")
-    expect(publications).to_contain_text("Heat-shock proteins in Caucasian wheat")
-
-    # ORCID: its two public works, neither on the profile yet
-    section.get_by_role("button", name="Import from ORCID").click()
-    sheet = page.get_by_role("dialog")
-    expect(sheet.locator(".outputs-import-item")).to_have_count(2)
-    sheet.get_by_role("button", name="Add 2 to my profile").click()
-    expect(section.locator(".outputs-group", has_text="Publications").locator(".count-badge")).to_have_text("5")
-
-    # Importing again: everything is already there
-    section.get_by_role("button", name="Import from Web of Science").click()
-    sheet = page.get_by_role("dialog")
-    expect(sheet.locator(".outputs-import-item.done")).to_have_count(3)
-    expect(sheet.get_by_role("button", name="Add", exact=True)).to_be_disabled()
-    sheet.get_by_role("button", name="Cancel").click()
+    for title in ("Seed bank digitisation in Georgia", "Barley in the Caucasus", "Seed banks of Georgia"):
+        expect(publications).to_contain_text(title)
+    expect(page.locator("#add-more").get_by_role("button", name="Research outputs")).to_have_count(0)
 
     # A dataset by DOI: not in Crossref, found in DataCite, checked and added
     section.get_by_label("Add by DOI").fill(f"https://doi.org/{DATACITE_DOI}")

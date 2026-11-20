@@ -154,7 +154,8 @@ def test_profile_is_one_page_with_contents(admin_page: Page, shot, tmp_path):
 
 def test_a_cv_kept_in_the_browser_moves_to_the_server(admin_page: Page):
     """CVs used to live in the browser and start from a sample CV. Opening the CV builder moves the browser copy to the
-    server once, without the sample items, and forgets the browser copy."""
+    server once, without the sample items, and forgets the browser copy. Its publications go to the profile's research
+    outputs."""
     page = admin_page
     page.goto("/home")
     old_cv = {"data": {"version": 1, "visibility": "private", "personal": {
@@ -176,6 +177,10 @@ def test_a_cv_kept_in_the_browser_moves_to_the_server(admin_page: Page):
 
     page.reload()
     expect(page.locator(".cv-paper")).to_contain_text("My own book")  # it's on the server now
+    # Its publication went to My profile → Research outputs, where CVs now take publications from
+    page.goto("/profile#outputs")
+    expect(page.locator("#outputs")).to_contain_text("My own book")
+    expect(page.locator("#outputs")).not_to_contain_text("(sample)")
 
 
 def test_research_saved_on_the_profile_appears_on_the_cv(admin_page: Page):
